@@ -68,6 +68,16 @@ public class KubernetesAppDeployerProperties {
 	 */
 	private String cpu = "500m";
 
+	/**
+	 * Maximum allowed restarts for app that fails due to an error or excessive resource use.
+	 */
+	private int maxTerminatedErrorRestarts = 2;
+
+	/**
+	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
+	 */
+	private int maxCrashLoopBackOffRestarts = 4;
+
 //TODO: maybe?
 //	/**
 //	 * The list of additional libraries to include at runtime.
@@ -128,5 +138,21 @@ public class KubernetesAppDeployerProperties {
 
 	public void setCpu(String cpu) {
 		this.cpu = cpu;
+	}
+
+	public int getMaxTerminatedErrorRestarts() {
+		return maxTerminatedErrorRestarts;
+	}
+
+	public void setMaxTerminatedErrorRestarts(int maxTerminatedErrorRestarts) {
+		this.maxTerminatedErrorRestarts = maxTerminatedErrorRestarts;
+	}
+
+	public int getMaxCrashLoopBackOffRestarts() {
+		return maxCrashLoopBackOffRestarts;
+	}
+
+	public void setMaxCrashLoopBackOffRestarts(int maxCrashLoopBackOffRestarts) {
+		this.maxCrashLoopBackOffRestarts = maxCrashLoopBackOffRestarts;
 	}
 }

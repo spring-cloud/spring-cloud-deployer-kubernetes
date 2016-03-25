@@ -240,10 +240,10 @@ public class KubernetesAppDeployer implements AppDeployer {
 		String moduleId = id;
 
 		if (list == null) {
-			statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, null));
+			statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, null, properties));
 		} else {
 			for (Pod pod : list.getItems()) {
-				statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, pod));
+				statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, pod, properties));
 			}
 		}
 		return statusBuilder.build();

@@ -35,11 +35,13 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
 	private final Pod pod;
 	private final String moduleId;
+	private KubernetesAppDeployerProperties properties;
 	private ContainerStatus containerStatus;
 
-	public KubernetesAppInstanceStatus(String moduleId, Pod pod) {
+	public KubernetesAppInstanceStatus(String moduleId, Pod pod, KubernetesAppDeployerProperties properties) {
 		this.moduleId = moduleId;
 		this.pod = pod;
+		this.properties = properties;
 		// we assume one container per pod
 		if (pod != null && pod.getStatus().getContainerStatuses().size() == 1) {
 			this.containerStatus = pod.getStatus().getContainerStatuses().get(0);
@@ -62,7 +64,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	 * Maps Kubernetes phases/states onto Spring Cloud Deployer states
 	 */
 	private DeploymentState mapState() {
-		
+
 		switch (pod.getStatus().getPhase()) {
 			
 			case "Pending":
@@ -78,21 +80,33 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 					return DeploymentState.deployed;
 				}
 				// if we are being killed repeatedly due to OOM or using too much CPU
-				else if (containerStatus.getRestartCount() > 2 &&
+				else if (containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts() &&
 							containerStatus.getLastState() != null &&
 							containerStatus.getLastState().getTerminated() != null &&
 							(containerStatus.getLastState().getTerminated().getExitCode() == 137 ||
 							 containerStatus.getLastState().getTerminated().getExitCode() == 143)) {
 						return DeploymentState.failed;
 				}
-				// if we are being restarted repeatedly due to the same problem, consider the app crashed
-				else if (containerStatus.getRestartCount() > 2 &&
+				// if we are being restarted repeatedly due to the same error, consider the app crashed
+				else if (containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts() &&
 							containerStatus.getLastState() != null &&
 							containerStatus.getState() != null &&
 							containerStatus.getLastState().getTerminated() != null &&
 							containerStatus.getState().getTerminated() != null &&
+							containerStatus.getLastState().getTerminated().getReason().contains("Error") &&
+							containerStatus.getState().getTerminated().getReason().contains("Error") &&
 							containerStatus.getLastState().getTerminated().getExitCode().equals(
 									containerStatus.getState().getTerminated().getExitCode())) {
+						return DeploymentState.failed;
+				}
+				// if we are being restarted repeatedly and we're in a CrashLoopBackOff, consider the app crashed
+				else if (containerStatus.getRestartCount() > properties.getMaxCrashLoopBackOffRestarts() &&
+							containerStatus.getLastState() != null &&
+							containerStatus.getState() != null &&
+							containerStatus.getLastState().getTerminated() != null &&
+							containerStatus.getState().getWaiting() != null &&
+							containerStatus.getState().getWaiting().getReason() != null &&
+							containerStatus.getState().getWaiting().getReason().contains("CrashLoopBackOff")) {
 						return DeploymentState.failed;
 				}
 				// if we were terminated and not restarted, we consider this undeployed
