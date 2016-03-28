@@ -17,9 +17,7 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import io.fabric8.kubernetes.api.model.Container;
@@ -66,8 +64,6 @@ public class KubernetesAppDeployer implements AppDeployer {
 
 	private final ContainerFactory containerFactory;
 
-	private List<Logger> loggers = new ArrayList<>();
-
 	@Autowired
 	public KubernetesAppDeployer(KubernetesAppDeployerProperties properties,
 	                             KubernetesClient client) {
@@ -80,11 +76,6 @@ public class KubernetesAppDeployer implements AppDeployer {
 		this.properties = properties;
 		this.client = client;
 		this.containerFactory = containerFactory;
-		this.registerCustomerLogger(logger);
-	}
-
-	public void registerCustomerLogger(Logger logger) {
-		this.loggers.add(logger);
 	}
 
 	@Override
@@ -106,7 +97,7 @@ public class KubernetesAppDeployer implements AppDeployer {
 			externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
 		}
 		logger.debug("Creating service: {} on {}", KubernetesUtils.createKubernetesName(appName), externalPort);
-		createService(appName, request, idMap, externalPort);
+		createService(appName, idMap, externalPort);
 
 		logger.debug("Creating repl controller: {} on {}", KubernetesUtils.createKubernetesName(appName), externalPort);
 		createReplicationController(appName, request, idMap, externalPort);
@@ -115,10 +106,6 @@ public class KubernetesAppDeployer implements AppDeployer {
 	}
 
 
-	/**
-	 *
-	 * @param id
-	 */
 	@Override
 	public void undeploy(String id) {
 
@@ -194,7 +181,7 @@ public class KubernetesAppDeployer implements AppDeployer {
 		return podSpec.build();
 	}
 
-	private void createService(String id, AppDeploymentRequest request, Map<String, String> idMap, int externalPort) {
+	private void createService(String id, Map<String, String> idMap, int externalPort) {
 		client.services().inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
 					.withName(KubernetesUtils.createKubernetesName(id)) // does not allow . in the name
@@ -220,11 +207,10 @@ public class KubernetesAppDeployer implements AppDeployer {
 		String appId = KubernetesUtils.createKubernetesName(request.getDefinition().getName());
 		map.put(SPRING_APP_KEY, appId);
 		String groupId = request.getEnvironmentProperties().get(GROUP_PROPERTY_KEY);
-		if (groupId == null) groupId = "default";//TODO: testing
 		if (groupId != null) {
 			map.put(SPRING_GROUP_KEY, groupId);
 		}
-		String deploymentId = null;
+		String deploymentId;
 		if (groupId == null) {
 			deploymentId = String.format("%s", request.getDefinition().getName());
 		}
@@ -237,13 +223,12 @@ public class KubernetesAppDeployer implements AppDeployer {
 
 	private AppStatus buildModuleStatus(String id, PodList list) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
-		String moduleId = id;
 
 		if (list == null) {
-			statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, null, properties));
+			statusBuilder.with(new KubernetesAppInstanceStatus(id, null, properties));
 		} else {
 			for (Pod pod : list.getItems()) {
-				statusBuilder.with(new KubernetesAppInstanceStatus(moduleId, pod, properties));
+				statusBuilder.with(new KubernetesAppInstanceStatus(id, pod, properties));
 			}
 		}
 		return statusBuilder.build();
