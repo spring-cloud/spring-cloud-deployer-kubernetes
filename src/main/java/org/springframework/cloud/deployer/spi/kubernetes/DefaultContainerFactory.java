@@ -56,15 +56,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 		String image = null;
 		//TODO: what's the proper format for a Docker URI?
 		try {
-			String uri = request.getResource().getURI().toString();
-			if (uri.startsWith("docker:")) {
-				image = uri.substring(7);
-			}
-			else {
-				throw new IllegalArgumentException("Invalid URI: " + uri + ". Docker URIs must start with docker:");
-			}
+			image = request.getResource().getURI().getSchemeSpecificPart();
 		} catch (IOException e) {
-			throw new IllegalArgumentException("Unable to create URI for " + request.getResource(), e);
+			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 		logger.debug("Using Docker image: " + image);
 		container.withName(KubernetesUtils.createKubernetesName(request.getDefinition().getName()))

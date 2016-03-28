@@ -19,11 +19,10 @@ package org.springframework.cloud.deployer.resource.docker;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.springframework.core.io.AbstractResource;
 import org.springframework.core.io.Resource;
-import org.springframework.util.ResourceUtils;
+import org.springframework.util.Assert;
 
 //TODO: move to shared location for CF and Mesos use
 
@@ -34,12 +33,19 @@ import org.springframework.util.ResourceUtils;
  */
 public class DockerResource extends AbstractResource {
 
+	private static String DOCKER_URI_SCHEME = "docker";
+
 	private String scheme = "docker";
 
-	private String registry;
+	private URI uri;
 
 	public DockerResource(String registry) {
-		this.registry = registry;
+		this.uri = URI.create(DOCKER_URI_SCHEME + ":" + registry);
+	}
+
+	public DockerResource(URI uri) {
+		Assert.isTrue("docker".equals(uri.getScheme()), "A 'docker' scheme is required");
+		this.uri = uri;
 	}
 
 	@Override
@@ -54,24 +60,11 @@ public class DockerResource extends AbstractResource {
 
 	@Override
 	public URI getURI() throws IOException {
-		String id = this.scheme + ":" + registry;
-		try {
-			return ResourceUtils.toURI(id);
-		} catch (URISyntaxException e) {
-			throw new IllegalStateException("Unable to create URI for " + id, e);
-		}
-	}
-
-	public String getScheme() {
-		return scheme;
-	}
-
-	public String getRegistry() {
-		return registry;
+		return uri;
 	}
 
 	@Override
 	public String toString() {
-		return "DockerResource '" + registry +"'";
+		return "DockerResource " + uri;
 	}
 }

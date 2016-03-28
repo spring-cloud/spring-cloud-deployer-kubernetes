@@ -20,16 +20,29 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.junit.Test;
 
-/**
- */
 public class DockerResourceTests {
 
+	String image = "sringcloud/hello-kube:latest";
+
 	@Test
-	public void testUri() throws IOException {
-		DockerResource r = new DockerResource("trisberg/hello-kube:latest");
-		assertThat(r.getURI().toString(), is(r.getScheme() + ":" + r.getRegistry()));
+	public void testResource() throws IOException, URISyntaxException {
+		DockerResource r = new DockerResource(image);
+		assertThat(r.getURI().getSchemeSpecificPart(), is(image));
+	}
+
+	@Test
+	public void testUri() throws IOException, URISyntaxException {
+		DockerResource r = new DockerResource(URI.create("docker:" + image));
+		assertThat(r.getURI().getSchemeSpecificPart(), is(image));
+	}
+
+	@Test(expected=IllegalArgumentException.class)
+	public void testInvalidUri() throws IOException, URISyntaxException {
+		DockerResource r = new DockerResource(URI.create("http:" + image));
 	}
 }
