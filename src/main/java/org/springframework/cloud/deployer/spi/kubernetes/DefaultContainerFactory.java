@@ -17,12 +17,14 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
@@ -61,8 +63,17 @@ public class DefaultContainerFactory implements ContainerFactory {
 			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 		logger.info("Using Docker image: " + image);
+
+		//TODO: make this configurable!
+		List<EnvVar> envVars = new ArrayList<>();
+		envVars.add(new EnvVar("SPRING_RABBITMQ_HOST", "${RABBITMQ_SERVICE_HOST}", null));
+		envVars.add(new EnvVar("SPRING_RABBITMQ_PORT", "${RABBITMQ_SERVICE_PORT}", null));
+		envVars.add(new EnvVar("SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS", "${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT}", null));
+		envVars.add(new EnvVar("SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES", "${ZK_SERVICE_HOST}:${ZK_SERVICE_PORT}", null));
+
 		container.withName(appId)
 				.withImage(image)
+				.withEnv(envVars)
 				.withArgs(createCommandArgs(request))
 				.addNewPort()
 					.withContainerPort(port)

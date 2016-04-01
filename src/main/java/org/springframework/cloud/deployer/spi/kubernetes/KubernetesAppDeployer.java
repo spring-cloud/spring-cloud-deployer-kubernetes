@@ -29,6 +29,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 
@@ -246,11 +247,11 @@ public class KubernetesAppDeployer implements AppDeployer {
 	}
 
 	private Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
-		String memOverride = request.getDefinition().getProperties().get("kubernetes.memory");
+		String memOverride = request.getEnvironmentProperties().get("spring.cloud.deployer.kubernetes.memory");
 		if (memOverride == null)
 			memOverride = properties.getMemory();
 
-		String cpuOverride = request.getDefinition().getProperties().get("kubernetes.cpu");
+		String cpuOverride = request.getEnvironmentProperties().get("spring.cloud.deployer.kubernetes.cpu");
 		if (cpuOverride == null)
 			cpuOverride = properties.getCpu();
 
