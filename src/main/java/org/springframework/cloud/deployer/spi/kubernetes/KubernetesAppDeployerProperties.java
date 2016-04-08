@@ -78,6 +78,12 @@ public class KubernetesAppDeployerProperties {
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
 
+	/**
+	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
+	 */
+	private boolean createLoadBalancer = false;
+
+
 	public String getImagePullSecret() {
 		return imagePullSecret;
 	}
@@ -148,5 +154,13 @@ public class KubernetesAppDeployerProperties {
 
 	public void setMaxCrashLoopBackOffRestarts(int maxCrashLoopBackOffRestarts) {
 		this.maxCrashLoopBackOffRestarts = maxCrashLoopBackOffRestarts;
+	}
+
+	public boolean isCreateLoadBalancer() {
+		return createLoadBalancer;
+	}
+
+	public void setCreateLoadBalancer(boolean createLoadBalancer) {
+		this.createLoadBalancer = createLoadBalancer;
 	}
 }

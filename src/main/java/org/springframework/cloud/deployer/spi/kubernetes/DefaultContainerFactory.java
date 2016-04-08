@@ -90,7 +90,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	/**
 	 * Create a readiness probe for the /health endpoint exposed by each module.
 	 */
-	protected Probe createProbe(Integer externalPort, long timeout, long initialDelay) {
+	protected Probe createProbe(Integer externalPort, int timeout, int initialDelay) {
 		return new ProbeBuilder()
 			.withHttpGet(
 				new HTTPGetActionBuilder()
