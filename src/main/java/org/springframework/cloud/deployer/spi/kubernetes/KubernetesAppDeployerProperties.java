@@ -69,6 +69,11 @@ public class KubernetesAppDeployerProperties {
 	private String cpu = "500m";
 
 	/**
+	 * Environment variables to set for any deployed app container.
+	 */
+	private String[] environmentVariables = new String[]{};
+
+	/**
 	 * Maximum allowed restarts for app that fails due to an error or excessive resource use.
 	 */
 	private int maxTerminatedErrorRestarts = 2;
@@ -138,6 +143,14 @@ public class KubernetesAppDeployerProperties {
 
 	public void setCpu(String cpu) {
 		this.cpu = cpu;
+	}
+
+	public String[] getEnvironmentVariables() {
+		return environmentVariables;
+	}
+
+	public void setEnvironmentVariables(String[] environmentVariables) {
+		this.environmentVariables = environmentVariables;
 	}
 
 	public int getMaxTerminatedErrorRestarts() {

@@ -32,6 +32,7 @@ import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.util.Assert;
 
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
@@ -64,12 +65,12 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 		logger.info("Using Docker image: " + image);
 
-		//TODO: make this configurable!
 		List<EnvVar> envVars = new ArrayList<>();
-		envVars.add(new EnvVar("SPRING_RABBITMQ_HOST", "${RABBITMQ_SERVICE_HOST}", null));
-		envVars.add(new EnvVar("SPRING_RABBITMQ_PORT", "${RABBITMQ_SERVICE_PORT}", null));
-		envVars.add(new EnvVar("SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS", "${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT}", null));
-		envVars.add(new EnvVar("SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES", "${ZK_SERVICE_HOST}:${ZK_SERVICE_PORT}", null));
+		for (String envVar : properties.getEnvironmentVariables()) {
+			String[] strings = envVar.split("=", 2);
+			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
+			envVars.add(new EnvVar(strings[0], strings[1], null));
+		}
 
 		container.withName(appId)
 				.withImage(image)
