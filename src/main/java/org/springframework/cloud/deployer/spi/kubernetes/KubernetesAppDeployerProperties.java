@@ -69,9 +69,14 @@ public class KubernetesAppDeployerProperties {
 	private String cpu = "500m";
 
 	/**
-	 * Environment variables to set for any deployed app container.
+	 * Environment variables to set for any deployed app container. To be used for service binding.
 	 */
 	private String[] environmentVariables = new String[]{};
+
+	/**
+	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
+	 */
+	private boolean createLoadBalancer = false;
 
 	/**
 	 * Maximum allowed restarts for app that fails due to an error or excessive resource use.
@@ -82,11 +87,6 @@ public class KubernetesAppDeployerProperties {
 	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
-
-	/**
-	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
-	 */
-	private boolean createLoadBalancer = false;
 
 
 	public String getImagePullSecret() {
