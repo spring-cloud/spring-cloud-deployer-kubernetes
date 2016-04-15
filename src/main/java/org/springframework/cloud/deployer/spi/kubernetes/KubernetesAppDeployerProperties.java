@@ -25,6 +25,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesAppDeployerProperties {
 
+	private static String KUBERNETES_NAMESPACE =
+			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";
+
+	/**
+	 * Namespace to use.
+	 */
+	private String namespace = KUBERNETES_NAMESPACE;
+
 	/**
 	 * Secrets for a access a private registry to pull images.
 	 */
@@ -35,7 +43,7 @@ public class KubernetesAppDeployerProperties {
 	 * should start checking its health status.
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int livenessProbeDelay = 30;
+	private int livenessProbeDelay = 10;
 
 	/**
 	 * Timeout in seconds for the Kubernetes liveness check of the app container.
@@ -49,7 +57,7 @@ public class KubernetesAppDeployerProperties {
 	 * should start checking if the module is fully up and running.
 	 */
 	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int readinessProbeDelay = 20;
+	private int readinessProbeDelay = 10;
 
 	/**
 	 * Timeout in seconds that the app container has to respond to its
@@ -88,6 +96,14 @@ public class KubernetesAppDeployerProperties {
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
 
+
+	public String getNamespace() {
+		return namespace;
+	}
+
+	public void setNamespace(String namespace) {
+		this.namespace = namespace;
+	}
 
 	public String getImagePullSecret() {
 		return imagePullSecret;

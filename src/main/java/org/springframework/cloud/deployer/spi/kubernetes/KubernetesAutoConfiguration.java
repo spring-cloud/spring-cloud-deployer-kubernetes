@@ -57,7 +57,7 @@ public class KubernetesAutoConfiguration {
 
 	@Bean
 	public KubernetesClient kubernetesClient() {
-		return new DefaultKubernetesClient();
+		return new DefaultKubernetesClient().inNamespace(properties.getNamespace());
 	}
 
 	@Bean
