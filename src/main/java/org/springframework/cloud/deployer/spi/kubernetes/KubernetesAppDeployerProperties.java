@@ -87,6 +87,11 @@ public class KubernetesAppDeployerProperties {
 	private boolean createLoadBalancer = false;
 
 	/**
+	 * Time to wait for load balancer to be available before attempting delete of service (in minutes).
+	 */
+	private int minutesToWaitForService = 5;
+
+	/**
 	 * Maximum allowed restarts for app that fails due to an error or excessive resource use.
 	 */
 	private int maxTerminatedErrorRestarts = 2;
@@ -167,6 +172,14 @@ public class KubernetesAppDeployerProperties {
 
 	public void setEnvironmentVariables(String[] environmentVariables) {
 		this.environmentVariables = environmentVariables;
+	}
+
+	public int getMinutesToWaitForLoadBalancer() {
+		return minutesToWaitForService;
+	}
+
+	public void setMinutesToWaitForService(int minutesToWaitForService) {
+		this.minutesToWaitForService = minutesToWaitForService;
 	}
 
 	public int getMaxTerminatedErrorRestarts() {

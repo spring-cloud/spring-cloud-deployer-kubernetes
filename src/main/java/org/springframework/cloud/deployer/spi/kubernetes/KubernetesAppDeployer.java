@@ -116,7 +116,8 @@ public class KubernetesAppDeployer implements AppDeployer {
 			if ("LoadBalancer".equals(client.services().withName(appId).get().getSpec().getType())) {
 				Service svc = client.services().withName(appId).get();
 				int tries = 0;
-				while (tries++ < 30) {
+				int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
+				while (tries++ < maxWait) {
 					if (svc.getStatus().getLoadBalancer() != null &&
 							svc.getStatus().getLoadBalancer().getIngress() != null &&
 							svc.getStatus().getLoadBalancer().getIngress().isEmpty()) {

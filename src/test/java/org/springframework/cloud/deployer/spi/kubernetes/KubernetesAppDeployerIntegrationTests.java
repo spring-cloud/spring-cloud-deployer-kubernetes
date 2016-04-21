@@ -34,7 +34,7 @@ import org.springframework.core.io.Resource;
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
 	@ClassRule
-	public static KubernetesTestSupport marathonAvailable = new KubernetesTestSupport();
+	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
 
 	@Autowired
 	private AppDeployer appDeployer;
