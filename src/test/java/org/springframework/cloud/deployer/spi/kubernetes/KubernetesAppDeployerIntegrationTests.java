@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import org.junit.ClassRule;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -30,6 +32,9 @@ import org.springframework.core.io.Resource;
  */
 @SpringApplicationConfiguration(classes = {KubernetesAutoConfiguration.class})
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
+
+	@ClassRule
+	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
 
 	@Autowired
 	private AppDeployer appDeployer;

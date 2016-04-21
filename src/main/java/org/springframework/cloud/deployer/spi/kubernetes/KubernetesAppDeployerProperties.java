@@ -25,6 +25,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesAppDeployerProperties {
 
+	private static String KUBERNETES_NAMESPACE =
+			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";
+
+	/**
+	 * Namespace to use.
+	 */
+	private String namespace = KUBERNETES_NAMESPACE;
+
 	/**
 	 * Secrets for a access a private registry to pull images.
 	 */
@@ -35,7 +43,7 @@ public class KubernetesAppDeployerProperties {
 	 * should start checking its health status.
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int livenessProbeDelay = 30;
+	private int livenessProbeDelay = 10;
 
 	/**
 	 * Timeout in seconds for the Kubernetes liveness check of the app container.
@@ -49,7 +57,7 @@ public class KubernetesAppDeployerProperties {
 	 * should start checking if the module is fully up and running.
 	 */
 	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int readinessProbeDelay = 20;
+	private int readinessProbeDelay = 10;
 
 	/**
 	 * Timeout in seconds that the app container has to respond to its
@@ -69,6 +77,21 @@ public class KubernetesAppDeployerProperties {
 	private String cpu = "500m";
 
 	/**
+	 * Environment variables to set for any deployed app container. To be used for service binding.
+	 */
+	private String[] environmentVariables = new String[]{};
+
+	/**
+	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
+	 */
+	private boolean createLoadBalancer = false;
+
+	/**
+	 * Time to wait for load balancer to be available before attempting delete of service (in minutes).
+	 */
+	private int minutesToWaitForService = 5;
+
+	/**
 	 * Maximum allowed restarts for app that fails due to an error or excessive resource use.
 	 */
 	private int maxTerminatedErrorRestarts = 2;
@@ -77,6 +100,15 @@ public class KubernetesAppDeployerProperties {
 	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
+
+
+	public String getNamespace() {
+		return namespace;
+	}
+
+	public void setNamespace(String namespace) {
+		this.namespace = namespace;
+	}
 
 	public String getImagePullSecret() {
 		return imagePullSecret;
@@ -134,6 +166,22 @@ public class KubernetesAppDeployerProperties {
 		this.cpu = cpu;
 	}
 
+	public String[] getEnvironmentVariables() {
+		return environmentVariables;
+	}
+
+	public void setEnvironmentVariables(String[] environmentVariables) {
+		this.environmentVariables = environmentVariables;
+	}
+
+	public int getMinutesToWaitForLoadBalancer() {
+		return minutesToWaitForService;
+	}
+
+	public void setMinutesToWaitForService(int minutesToWaitForService) {
+		this.minutesToWaitForService = minutesToWaitForService;
+	}
+
 	public int getMaxTerminatedErrorRestarts() {
 		return maxTerminatedErrorRestarts;
 	}
@@ -148,5 +196,13 @@ public class KubernetesAppDeployerProperties {
 
 	public void setMaxCrashLoopBackOffRestarts(int maxCrashLoopBackOffRestarts) {
 		this.maxCrashLoopBackOffRestarts = maxCrashLoopBackOffRestarts;
+	}
+
+	public boolean isCreateLoadBalancer() {
+		return createLoadBalancer;
+	}
+
+	public void setCreateLoadBalancer(boolean createLoadBalancer) {
+		this.createLoadBalancer = createLoadBalancer;
 	}
 }

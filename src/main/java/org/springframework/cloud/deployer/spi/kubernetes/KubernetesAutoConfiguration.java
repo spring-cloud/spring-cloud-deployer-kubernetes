@@ -51,13 +51,13 @@ public class KubernetesAutoConfiguration {
 	@Bean
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
 	                                 ContainerFactory containerFactory) {
-		// Return same instance for now, to satisfy server application wiring
+		// Return NO-OP instance for now, to satisfy server application wiring
 		return new KubernetesTaskLauncher();
 	}
 
 	@Bean
 	public KubernetesClient kubernetesClient() {
-		return new DefaultKubernetesClient();
+		return new DefaultKubernetesClient().inNamespace(properties.getNamespace());
 	}
 
 	@Bean

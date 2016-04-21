@@ -17,12 +17,14 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
@@ -30,6 +32,7 @@ import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.util.Assert;
 
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
@@ -61,8 +64,17 @@ public class DefaultContainerFactory implements ContainerFactory {
 			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 		logger.info("Using Docker image: " + image);
+
+		List<EnvVar> envVars = new ArrayList<>();
+		for (String envVar : properties.getEnvironmentVariables()) {
+			String[] strings = envVar.split("=", 2);
+			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
+			envVars.add(new EnvVar(strings[0], strings[1], null));
+		}
+
 		container.withName(appId)
 				.withImage(image)
+				.withEnv(envVars)
 				.withArgs(createCommandArgs(request))
 				.addNewPort()
 					.withContainerPort(port)
@@ -79,7 +91,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	/**
 	 * Create a readiness probe for the /health endpoint exposed by each module.
 	 */
-	protected Probe createProbe(Integer externalPort, long timeout, long initialDelay) {
+	protected Probe createProbe(Integer externalPort, int timeout, int initialDelay) {
 		return new ProbeBuilder()
 			.withHttpGet(
 				new HTTPGetActionBuilder()

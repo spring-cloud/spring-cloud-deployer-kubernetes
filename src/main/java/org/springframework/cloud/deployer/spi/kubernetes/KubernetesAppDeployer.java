@@ -29,6 +29,8 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 
@@ -107,17 +109,38 @@ public class KubernetesAppDeployer implements AppDeployer {
 
 
 	@Override
-	public void undeploy(String id) {
-
-		String appId = fixKubeId(id);
+	public void undeploy(String appId) {
 		logger.debug("Undeploying module: {}", appId);
 
-		Map<String, String> selector = new HashMap<>();
-		selector.put(SPRING_APP_KEY, appId);
 		try {
-			client.services().withLabels(selector).delete();
-			client.replicationControllers().withLabels(selector).delete();
-			client.pods().withLabels(selector).delete();
+			if ("LoadBalancer".equals(client.services().withName(appId).get().getSpec().getType())) {
+				Service svc = client.services().withName(appId).get();
+				int tries = 0;
+				int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
+				while (tries++ < maxWait) {
+					if (svc.getStatus().getLoadBalancer() != null &&
+							svc.getStatus().getLoadBalancer().getIngress() != null &&
+							svc.getStatus().getLoadBalancer().getIngress().isEmpty()) {
+						logger.debug("Waiting for LoadBalancer, try {}", tries);
+						try {
+							Thread.sleep(10000L);
+						} catch (InterruptedException e) {
+						}
+						svc = client.services().withName(appId).get();
+					} else {
+						break;
+					}
+				}
+				logger.debug("LoadBalancer Ingress: {}", svc.getStatus().getLoadBalancer().getIngress());
+			}
+			Boolean svcDeleted = client.services().withName(appId).delete();
+			logger.debug("Deleted service for: {} {}", appId, svcDeleted);
+			Boolean rcDeleted = client.replicationControllers().withName(appId).delete();
+			logger.debug("Deleted replication controller for: {} {}", appId, rcDeleted);
+			Map<String, String> selector = new HashMap<>();
+			selector.put(SPRING_APP_KEY, appId);
+			Boolean podDeleted = client.pods().withLabels(selector).delete();
+			logger.debug("Deleted pods for: {} {}", appId, podDeleted);
 		} catch (KubernetesClientException e) {
 			logger.error(e.getMessage(), e);
 			throw new RuntimeException(e);
@@ -125,13 +148,11 @@ public class KubernetesAppDeployer implements AppDeployer {
 	}
 
 	@Override
-	public AppStatus status(String id) {
-
-		String appId = fixKubeId(id);
+	public AppStatus status(String appId) {
 		Map<String, String> selector = new HashMap<>();
 		selector.put(SPRING_APP_KEY, appId);
 		PodList list = client.pods().withLabels(selector).list();
-		AppStatus status = buildModuleStatus(appId, list);
+		AppStatus status = buildAppStatus(appId, list);
 		logger.debug("Status for app: {} is {}", appId, status);
 
 		return status;
@@ -184,18 +205,22 @@ public class KubernetesAppDeployer implements AppDeployer {
 	}
 
 	private void createService(String appId, Map<String, String> idMap, int externalPort) {
+		ServiceSpecBuilder spec = new ServiceSpecBuilder();
+		if (properties.isCreateLoadBalancer()) {
+			spec.withType("LoadBalancer");
+		}
+		spec.withSelector(idMap)
+				.addNewPort()
+					.withPort(externalPort)
+				.endPort();
+
 		client.services().inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
 					.withName(appId)
 					.withLabels(idMap)
 					.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 					.endMetadata()
-				.withNewSpec()
-					.withSelector(idMap)
-					.addNewPort()
-						.withPort(externalPort)
-						.endPort()
-					.endSpec()
+				.withSpec(spec.build())
 				.done();
 	}
 
@@ -224,15 +249,11 @@ public class KubernetesAppDeployer implements AppDeployer {
 		else {
 			deploymentId = String.format("%s-%s", groupId, request.getDefinition().getName());
 		}
-		return fixKubeId(deploymentId);
-	}
-
-	private String fixKubeId(String id) {
 		// Kubernetes does not allow . in the name
-		return id.replace('.', '-');
+		return deploymentId.replace('.', '-');
 	}
 
-	private AppStatus buildModuleStatus(String id, PodList list) {
+	private AppStatus buildAppStatus(String id, PodList list) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
 
 		if (list == null) {
@@ -246,11 +267,11 @@ public class KubernetesAppDeployer implements AppDeployer {
 	}
 
 	private Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
-		String memOverride = request.getDefinition().getProperties().get("kubernetes.memory");
+		String memOverride = request.getEnvironmentProperties().get("spring.cloud.deployer.kubernetes.memory");
 		if (memOverride == null)
 			memOverride = properties.getMemory();
 
-		String cpuOverride = request.getDefinition().getProperties().get("kubernetes.cpu");
+		String cpuOverride = request.getEnvironmentProperties().get("spring.cloud.deployer.kubernetes.cpu");
 		if (cpuOverride == null)
 			cpuOverride = properties.getCpu();
 
