@@ -16,14 +16,31 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
+import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.hamcrest.Matchers;
 import org.junit.ClassRule;
+import org.junit.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppStatus;
+import org.springframework.cloud.deployer.spi.core.AppDefinition;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
 import org.springframework.core.io.Resource;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
  * Integration tests for {@link KubernetesAppDeployer}.
@@ -39,9 +56,64 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Autowired
 	private AppDeployer appDeployer;
 
+	@Autowired
+	KubernetesClient kubernetesClient;
+
+	@Autowired
+	ContainerFactory containerFactory;
+
 	@Override
 	protected AppDeployer appDeployer() {
 		return appDeployer;
+	}
+
+	@Test
+	public void testFailedDeploymentWithLoadBalancer() {
+		KubernetesAppDeployerProperties lbProperties = new KubernetesAppDeployerProperties();
+		lbProperties.setCreateLoadBalancer(true);
+		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = integrationTestProcessor();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.memory", "128Mi");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = lbAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(failed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		lbAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testGoodDeploymentWithLoadBalancer() {
+		KubernetesAppDeployerProperties lbProperties = new KubernetesAppDeployerProperties();
+		lbProperties.setCreateLoadBalancer(true);
+		lbProperties.setMinutesToWaitForLoadBalancer(1);
+		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = integrationTestProcessor();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = lbAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		lbAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
 
 	@Override

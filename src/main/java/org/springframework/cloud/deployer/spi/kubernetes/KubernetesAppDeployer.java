@@ -113,13 +113,18 @@ public class KubernetesAppDeployer implements AppDeployer {
 		logger.debug("Undeploying module: {}", appId);
 
 		try {
-			if ("LoadBalancer".equals(client.services().withName(appId).get().getSpec().getType())) {
+			if (!status(appId).getState().equals(DeploymentState.failed) &&
+					"LoadBalancer".equals(client.services().withName(appId).get().getSpec().getType())) {
 				Service svc = client.services().withName(appId).get();
 				int tries = 0;
-				while (tries++ < 30) {
-					if (svc.getStatus().getLoadBalancer() != null &&
+				int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
+				while (tries++ < maxWait) {
+					if (svc.getStatus() != null && svc.getStatus().getLoadBalancer() != null &&
 							svc.getStatus().getLoadBalancer().getIngress() != null &&
 							svc.getStatus().getLoadBalancer().getIngress().isEmpty()) {
+						if (tries % 6 == 0) {
+							logger.warn("Waiting for LoadBalancer to complete before deleting it ...");
+						}
 						logger.debug("Waiting for LoadBalancer, try {}", tries);
 						try {
 							Thread.sleep(10000L);
