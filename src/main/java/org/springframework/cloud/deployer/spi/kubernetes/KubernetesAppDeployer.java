@@ -160,7 +160,7 @@ public class KubernetesAppDeployer implements AppDeployer {
 	private ReplicationController createReplicationController(
 			String appId, AppDeploymentRequest request,
 			Map<String, String> idMap, int externalPort) {
-		String countProperty = request.getDefinition().getProperties().get(COUNT_PROPERTY_KEY);
+		String countProperty = request.getEnvironmentProperties().get(COUNT_PROPERTY_KEY);
 		int count = (countProperty != null) ? Integer.parseInt(countProperty) : 1;
 		ReplicationController rc = new ReplicationControllerBuilder()
 				.withNewMetadata()
