@@ -99,7 +99,7 @@ public class KubernetesAppDeployer implements AppDeployer {
 			externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
 		}
 		logger.debug("Creating service: {} on {}", appId, externalPort);
-		createService(appId, idMap, externalPort);
+		createService(appId, request, idMap, externalPort);
 
 		logger.debug("Creating repl controller: {} on {}", appId, externalPort);
 		createReplicationController(appId, request, idMap, externalPort);
@@ -208,9 +208,19 @@ public class KubernetesAppDeployer implements AppDeployer {
 		return podSpec.build();
 	}
 
-	private void createService(String appId, Map<String, String> idMap, int externalPort) {
+	private void createService(String appId, AppDeploymentRequest request, Map<String, String> idMap, int externalPort) {
 		ServiceSpecBuilder spec = new ServiceSpecBuilder();
-		if (properties.isCreateLoadBalancer()) {
+		boolean isCreateLoadBalancer = false;
+		String createLoadBalancer = request.getEnvironmentProperties().get("spring.cloud.deployer.kubernetes.createLoadBalancer");
+		if (createLoadBalancer == null) {
+			isCreateLoadBalancer = properties.isCreateLoadBalancer();
+		}
+		else {
+			if ("true".equals(createLoadBalancer.toLowerCase())) {
+				isCreateLoadBalancer = true;
+			}
+		}
+		if (isCreateLoadBalancer) {
 			spec.withType("LoadBalancer");
 		}
 		spec.withSelector(idMap)
