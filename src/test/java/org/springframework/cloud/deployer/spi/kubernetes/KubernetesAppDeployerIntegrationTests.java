@@ -70,7 +70,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Test
 	public void testFailedDeploymentWithLoadBalancer() {
 		log.info("Testing {}...", "FailedDeploymentWithLoadBalancer");
-		KubernetesAppDeployerProperties lbProperties = new KubernetesAppDeployerProperties();
+		KubernetesDeployerProperties lbProperties = new KubernetesDeployerProperties();
 		lbProperties.setCreateLoadBalancer(true);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
@@ -97,7 +97,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Test
 	public void testGoodDeploymentWithLoadBalancer() {
 		log.info("Testing {}...", "GoodDeploymentWithLoadBalancer");
-		KubernetesAppDeployerProperties lbProperties = new KubernetesAppDeployerProperties();
+		KubernetesDeployerProperties lbProperties = new KubernetesDeployerProperties();
 		lbProperties.setCreateLoadBalancer(true);
 		lbProperties.setMinutesToWaitForLoadBalancer(1);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);

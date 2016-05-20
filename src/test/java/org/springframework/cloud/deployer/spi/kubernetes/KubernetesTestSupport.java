@@ -40,11 +40,11 @@ public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<K
 
 	@Configuration
 	@EnableAutoConfiguration
-	@EnableConfigurationProperties(KubernetesAppDeployerProperties.class)
+	@EnableConfigurationProperties(KubernetesDeployerProperties.class)
 	public static class Config {
 
 		@Autowired
-		private KubernetesAppDeployerProperties properties;
+		private KubernetesDeployerProperties properties;
 
 		@Bean
 		public KubernetesClient kubernetesClient() {

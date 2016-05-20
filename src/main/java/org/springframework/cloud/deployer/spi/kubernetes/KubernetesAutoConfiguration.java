@@ -35,12 +35,12 @@ import org.springframework.core.Ordered;
  * @author Thomas Risberg
  */
 @Configuration
-@EnableConfigurationProperties(KubernetesAppDeployerProperties.class)
+@EnableConfigurationProperties(KubernetesDeployerProperties.class)
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 public class KubernetesAutoConfiguration {
 	
 	@Autowired
-	private KubernetesAppDeployerProperties properties;
+	private KubernetesDeployerProperties properties;
 
 	@Bean
 	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
@@ -51,8 +51,7 @@ public class KubernetesAutoConfiguration {
 	@Bean
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
 	                                 ContainerFactory containerFactory) {
-		// Return NO-OP instance for now, to satisfy server application wiring
-		return new KubernetesTaskLauncher();
+		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
 	}
 
 	@Bean

@@ -23,7 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Thomas Risberg
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
-public class KubernetesAppDeployerProperties {
+public class KubernetesDeployerProperties {
 
 	private static String KUBERNETES_NAMESPACE =
 			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";

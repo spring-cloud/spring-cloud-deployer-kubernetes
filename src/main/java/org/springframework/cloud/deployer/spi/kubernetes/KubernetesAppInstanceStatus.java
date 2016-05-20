@@ -38,10 +38,10 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	private static Logger logger = LoggerFactory.getLogger(KubernetesAppInstanceStatus.class);
 	private final Pod pod;
 	private final String moduleId;
-	private KubernetesAppDeployerProperties properties;
+	private KubernetesDeployerProperties properties;
 	private ContainerStatus containerStatus;
 
-	public KubernetesAppInstanceStatus(String moduleId, Pod pod, KubernetesAppDeployerProperties properties) {
+	public KubernetesAppInstanceStatus(String moduleId, Pod pod, KubernetesDeployerProperties properties) {
 		this.moduleId = moduleId;
 		this.pod = pod;
 		this.properties = properties;

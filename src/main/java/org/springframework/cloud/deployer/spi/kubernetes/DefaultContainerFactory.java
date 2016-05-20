@@ -47,14 +47,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	private static final String HEALTH_ENDPOINT = "/health";
 
-	private final KubernetesAppDeployerProperties properties;
+	private final KubernetesDeployerProperties properties;
 
-	public DefaultContainerFactory(KubernetesAppDeployerProperties properties) {
+	public DefaultContainerFactory(KubernetesDeployerProperties properties) {
 		this.properties = properties;
 	}
 
 	@Override
-	public Container create(String appId, AppDeploymentRequest request, int port) {
+	public Container create(String appId, AppDeploymentRequest request, Integer port) {
 		ContainerBuilder container = new ContainerBuilder();
 		String image = null;
 		//TODO: what's the proper format for a Docker URI?
@@ -75,8 +75,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 		container.withName(appId)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(createCommandArgs(request))
-				.addNewPort()
+				.withArgs(createCommandArgs(request));
+		if (port != null) {
+			container.addNewPort()
 					.withContainerPort(port)
 				.endPort()
 				.withReadinessProbe(
@@ -85,6 +86,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 				.withLivenessProbe(
 						createProbe(port, properties.getLivenessProbeTimeout(),
 								properties.getLivenessProbeDelay()));
+		}
 		return container.build();
 	}
 
