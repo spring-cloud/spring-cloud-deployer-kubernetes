@@ -110,7 +110,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		selector.put(SPRING_APP_KEY, id);
 		PodList list = client.pods().withLabels(selector).list();
 		TaskStatus status = buildTaskStatus(properties, id, list);
-		logger.debug("Status for app: {} is {}", id, status);
+		logger.debug("Status for task: {} is {}", id, status);
 
 		return status;
 	}
