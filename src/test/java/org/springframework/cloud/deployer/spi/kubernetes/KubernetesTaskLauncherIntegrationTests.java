@@ -19,9 +19,10 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.deployer.spi.task.LaunchState.complete;
+import static org.springframework.cloud.deployer.spi.task.LaunchState.failed;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
-import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 import org.hamcrest.BaseMatcher;
@@ -29,6 +30,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -61,7 +63,7 @@ public class KubernetesTaskLauncherIntegrationTests {
 	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
 
 	@Autowired
-	private TaskLauncher taskLauncher;
+	TaskLauncher taskLauncher;
 
 	@Autowired
 	KubernetesClient kubernetesClient;
@@ -69,16 +71,13 @@ public class KubernetesTaskLauncherIntegrationTests {
 	@Autowired
 	ContainerFactory containerFactory;
 
-//	@Override
-	protected TaskLauncher taskLauncher() {
-		return taskLauncher;
-	}
-
-
 	@Test
 	public void testSimpleLaunch() {
 		logger.info("Testing {}...", "SimpleLaunch");
-		AppDefinition definition = new AppDefinition(this.randomName(), (Map)null);
+		HashMap properties = new HashMap();
+		properties.put("killDelay", "1000");
+		properties.put("exitCode", "0");
+		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info("Launching {}...", request.getDefinition().getName());
@@ -95,7 +94,10 @@ public class KubernetesTaskLauncherIntegrationTests {
 	@Test
 	public void testReLaunch() {
 		logger.info("Testing {}...", "ReLaunch");
-		AppDefinition definition = new AppDefinition(this.randomName(), (Map)null);
+		HashMap properties = new HashMap();
+		properties.put("killDelay", "1000");
+		properties.put("exitCode", "0");
+		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info("Launching {}...", request.getDefinition().getName());
@@ -113,6 +115,30 @@ public class KubernetesTaskLauncherIntegrationTests {
 		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
 	}
 
+	@Test
+	@Ignore
+	// This doesn't currently work - the pod gets recreated repeatedly.
+	// Would be nice if it didn't since we set "restartPolicy: Never"
+	// see https://github.com/kubernetes/kubernetes/issues/24533
+	public void testFailedLaunch() {
+		logger.info("Testing {}...", "FailedLaunch");
+		HashMap properties = new HashMap();
+		properties.put("killDelay", "1000");
+		properties.put("exitCode", "1");
+		AppDefinition definition = new AppDefinition(this.randomName(), properties);
+		Resource resource = integrationTestTask();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+		logger.info("Launching {}...", request.getDefinition().getName());
+		String deploymentId = taskLauncher.launch(request);
+		logger.info("Launched {} ", deploymentId);
+
+		Timeout timeout = launchTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", is(failed))), timeout.maxAttempts, timeout.pause));
+
+		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+	}
+
 	protected String randomName() {
 		// Kubernetest app names must start with a letter and can only be 24 characters long
 		return "job-" + UUID.randomUUID().toString().substring(0, 18);
@@ -120,7 +146,7 @@ public class KubernetesTaskLauncherIntegrationTests {
 
 	//	@Override
 	protected Resource integrationTestTask() {
-		return new DockerResource("trisberg/deployer-test-task");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app");
 	}
 
 	protected Timeout launchTimeout() {
