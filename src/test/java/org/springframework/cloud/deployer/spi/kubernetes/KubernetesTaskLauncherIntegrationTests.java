@@ -18,13 +18,9 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
 import static org.springframework.cloud.deployer.spi.task.LaunchState.complete;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,13 +37,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
-import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -90,8 +83,30 @@ public class KubernetesTaskLauncherIntegrationTests {
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info("Launching {}...", request.getDefinition().getName());
 		String deploymentId = taskLauncher.launch(request);
+		logger.info("Launched {} ", deploymentId);
 
 		Timeout timeout = launchTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
+
+		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+	}
+
+	@Test
+	public void testReLaunch() {
+		logger.info("Testing {}...", "ReLaunch");
+		AppDefinition definition = new AppDefinition(this.randomName(), (Map)null);
+		Resource resource = integrationTestTask();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+		logger.info("Launching {}...", request.getDefinition().getName());
+		String deploymentId = taskLauncher.launch(request);
+		logger.info("Launched {} ", deploymentId);
+		Timeout timeout = launchTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
+
+		deploymentId = taskLauncher.launch(request);
+		logger.info("Re-launched {} ", deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
 

@@ -20,34 +20,24 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
-import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
-import io.fabric8.kubernetes.api.model.extensions.JobBuilder;
+import io.fabric8.kubernetes.api.model.extensions.Job;
 import io.fabric8.kubernetes.api.model.extensions.JobSpec;
 import io.fabric8.kubernetes.api.model.extensions.JobSpecBuilder;
 import io.fabric8.kubernetes.api.model.extensions.JobStatus;
-import io.fabric8.kubernetes.api.model.extensions.LabelSelectorBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 
@@ -83,6 +73,13 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	@Override
 	public String launch(AppDeploymentRequest request) {
 		String appId = createDeploymentId(request);
+		TaskStatus status = status(appId);
+		if (!status.getState().equals(LaunchState.unknown)) {
+			if (status.getState().equals(LaunchState.launching) || status.getState().equals(LaunchState.running)) {
+				throw new IllegalStateException("Task " + appId + " is already active with a state of " + status);
+			}
+			deleteJob(appId);
+		}
 		Map<String, String> idMap = createIdMap(appId, request);
 
 		logger.debug("Deploying app: {}", appId);
@@ -162,9 +159,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private void deleteJob(String id) {
 		try {
-			Map<String, String> selector = new HashMap<>();
-			selector.put(SPRING_APP_KEY, id);
-			PodList list = client.pods().withLabels(selector).list();
 			Boolean jobDeleted = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).delete();
 			if (jobDeleted) {
 				logger.debug("Deleted job successfully: {}", id);
@@ -172,19 +166,25 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			else {
 				logger.debug("Delete failed for job: {}", id);
 			}
+			Map<String, String> selector = new HashMap<>();
+			selector.put(SPRING_APP_KEY, id);
+			PodList list = client.pods().withLabels(selector).list();
 			for (Pod p : list.getItems()) {
 				logger.debug("Deleting pod: {}", p.getMetadata().getName());
 				client.pods().inNamespace(client.getNamespace()).withName(p.getMetadata().getName()).delete();
 			}
 		} catch (KubernetesClientException e) {
 			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e);
+			throw e;
 		}
 	}
 
 	TaskStatus buildTaskStatus(KubernetesDeployerProperties properties, String id, PodList list) {
-		JobStatus jobStatus =
-				client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).get().getStatus();
+		Job job = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).get();
+		if (job == null) {
+			return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
+		}
+		JobStatus jobStatus = job.getStatus();
 		if (jobStatus == null) {
 			return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 		}
