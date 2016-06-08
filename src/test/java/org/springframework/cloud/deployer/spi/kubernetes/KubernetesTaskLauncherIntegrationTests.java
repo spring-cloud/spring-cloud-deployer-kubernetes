@@ -22,7 +22,9 @@ import static org.springframework.cloud.deployer.spi.task.LaunchState.complete;
 import static org.springframework.cloud.deployer.spi.task.LaunchState.failed;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.hamcrest.BaseMatcher;
@@ -74,7 +76,7 @@ public class KubernetesTaskLauncherIntegrationTests {
 	@Test
 	public void testSimpleLaunch() {
 		logger.info("Testing {}...", "SimpleLaunch");
-		HashMap properties = new HashMap();
+		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
@@ -94,7 +96,7 @@ public class KubernetesTaskLauncherIntegrationTests {
 	@Test
 	public void testReLaunch() {
 		logger.info("Testing {}...", "ReLaunch");
-		HashMap properties = new HashMap();
+		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
@@ -122,7 +124,7 @@ public class KubernetesTaskLauncherIntegrationTests {
 	// see https://github.com/kubernetes/kubernetes/issues/24533
 	public void testFailedLaunch() {
 		logger.info("Testing {}...", "FailedLaunch");
-		HashMap properties = new HashMap();
+		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "1");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
@@ -135,6 +137,29 @@ public class KubernetesTaskLauncherIntegrationTests {
 		Timeout timeout = launchTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", is(failed))), timeout.maxAttempts, timeout.pause));
+
+		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+	}
+
+	/**
+	 * Tests that command line args can be passed in.
+	 */
+	@Test
+	public void testCommandLineArgs() {
+		logger.info("Testing {}...", "CommandLineArgs");
+		Map<String, String> properties = new HashMap<>();
+		properties.put("killDelay", "1000");
+		AppDefinition definition = new AppDefinition(this.randomName(), properties);
+		Resource resource = integrationTestTask();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, Collections.emptyMap(),
+				Collections.singletonList("--exitCode=0"));
+		logger.info("Launching {}...", request.getDefinition().getName());
+		String deploymentId = taskLauncher.launch(request);
+		logger.info("Launched {} ", deploymentId);
+
+		Timeout timeout = launchTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
 
 		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
 	}
