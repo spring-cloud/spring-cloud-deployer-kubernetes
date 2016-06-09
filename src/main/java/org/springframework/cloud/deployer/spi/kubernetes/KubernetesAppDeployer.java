@@ -76,23 +76,28 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		logger.debug("Deploying app: {}", appId);
 
-		AppStatus status = status(appId);
-		if (!status.getState().equals(DeploymentState.unknown)) {
-			throw new IllegalStateException(String.format("App '%s' is already deployed", appId));
+		try {
+			AppStatus status = status(appId);
+			if (!status.getState().equals(DeploymentState.unknown)) {
+				throw new IllegalStateException(String.format("App '%s' is already deployed", appId));
+			}
+
+			int externalPort = 8080;
+			Map<String, String> parameters = request.getDefinition().getProperties();
+			if (parameters.containsKey(SERVER_PORT_KEY)) {
+				externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
+			}
+			logger.debug("Creating service: {} on {}", appId, externalPort);
+			createService(appId, request, idMap, externalPort);
+
+			logger.debug("Creating repl controller: {} on {}", appId, externalPort);
+			createReplicationController(appId, request, idMap, externalPort);
+
+			return appId;
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			throw e;
 		}
-
-		int externalPort = 8080;
-		Map<String, String> parameters = request.getDefinition().getProperties();
-		if (parameters.containsKey(SERVER_PORT_KEY)) {
-			externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
-		}
-		logger.debug("Creating service: {} on {}", appId, externalPort);
-		createService(appId, request, idMap, externalPort);
-
-		logger.debug("Creating repl controller: {} on {}", appId, externalPort);
-		createReplicationController(appId, request, idMap, externalPort);
-
-		return appId;
 	}
 
 
@@ -132,9 +137,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			selector.put(SPRING_APP_KEY, appId);
 			Boolean podDeleted = client.pods().withLabels(selector).delete();
 			logger.debug("Deleted pods for: {} {}", appId, podDeleted);
-		} catch (KubernetesClientException e) {
+		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e);
+			throw e;
 		}
 	}
 
