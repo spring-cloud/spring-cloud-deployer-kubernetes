@@ -94,7 +94,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			createReplicationController(appId, request, idMap, externalPort);
 
 			return appId;
-		} catch (Exception e) {
+		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
 			throw e;
 		}
@@ -137,7 +137,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			selector.put(SPRING_APP_KEY, appId);
 			Boolean podDeleted = client.pods().withLabels(selector).delete();
 			logger.debug("Deleted pods for: {} {}", appId, podDeleted);
-		} catch (Exception e) {
+		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
 			throw e;
 		}

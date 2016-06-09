@@ -85,10 +85,14 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		String appId = createDeploymentId(request);
 		Map<String, String> idMap = createIdMap(appId, request);
 
-		logger.debug("Deploying app: {}", appId);
 		logger.debug("Launching job: {}", appId);
-		createJob(appId, request, idMap);
-		return appId;
+		try {
+			createJob(appId, request, idMap);
+			return appId;
+		} catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
+			throw e;
+		}
 	}
 
 	@Override
@@ -176,9 +180,9 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 				logger.debug("Deleting pod: {}", p.getMetadata().getName());
 				client.pods().inNamespace(client.getNamespace()).withName(p.getMetadata().getName()).delete();
 			}
-		} catch (KubernetesClientException e) {
+		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e);
+			throw e;
 		}
 	}
 
