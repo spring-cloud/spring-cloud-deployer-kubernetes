@@ -45,7 +45,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	private static Logger logger = LoggerFactory.getLogger(DefaultContainerFactory.class);
 
-	private static final String HEALTH_ENDPOINT = "/health";
+	private static final String LIVENESS_ENDPOINT = "/health";
+
+	private static final String READINESS_ENDPOINT = "/info";
 
 	private final KubernetesDeployerProperties properties;
 
@@ -81,11 +83,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 					.withContainerPort(port)
 				.endPort()
 				.withReadinessProbe(
-						createProbe(port, properties.getReadinessProbeTimeout(),
-								properties.getReadinessProbeDelay()))
+						createProbe(port, READINESS_ENDPOINT, properties.getReadinessProbeTimeout(),
+								properties.getReadinessProbeDelay(), properties.getReadinessPeriod()))
 				.withLivenessProbe(
-						createProbe(port, properties.getLivenessProbeTimeout(),
-								properties.getLivenessProbeDelay()));
+						createProbe(port, LIVENESS_ENDPOINT, properties.getLivenessProbeTimeout(),
+								properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod()));
 		}
 		return container.build();
 	}
@@ -93,16 +95,17 @@ public class DefaultContainerFactory implements ContainerFactory {
 	/**
 	 * Create a readiness probe for the /health endpoint exposed by each module.
 	 */
-	protected Probe createProbe(Integer externalPort, int timeout, int initialDelay) {
+	protected Probe createProbe(Integer externalPort, String endpoint, int timeout, int initialDelay, int period) {
 		return new ProbeBuilder()
 			.withHttpGet(
 				new HTTPGetActionBuilder()
-					.withPath(HEALTH_ENDPOINT)
+					.withPath(endpoint)
 					.withNewPort(externalPort)
 					.build()
 			)
 			.withTimeoutSeconds(timeout)
 			.withInitialDelaySeconds(initialDelay)
+			.withPeriodSeconds(period)
 			.build();
 	}
 

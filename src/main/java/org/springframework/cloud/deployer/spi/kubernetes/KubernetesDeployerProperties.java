@@ -46,6 +46,12 @@ public class KubernetesDeployerProperties {
 	private int livenessProbeDelay = 10;
 
 	/**
+	 * Period in seconds for performing the Kubernetes liveness check of the app container.
+	 */
+	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	private int livenessProbePeriod = 60;
+
+	/**
 	 * Timeout in seconds for the Kubernetes liveness check of the app container.
 	 * If the health check takes longer than this value to return it is assumed as 'unavailable'.
 	 */
@@ -58,6 +64,12 @@ public class KubernetesDeployerProperties {
 	 */
 	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int readinessProbeDelay = 10;
+
+	/**
+	 * Period in seconds to perform the readiness check of the app container.
+	 */
+	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	private int readinessPeriod = 10;
 
 	/**
 	 * Timeout in seconds that the app container has to respond to its
@@ -126,6 +138,14 @@ public class KubernetesDeployerProperties {
 		this.livenessProbeDelay = livenessProbeDelay;
 	}
 
+	public int getLivenessProbePeriod() {
+		return livenessProbePeriod;
+	}
+
+	public void setLivenessProbePeriod(int livenessProbePeriod) {
+		this.livenessProbePeriod = livenessProbePeriod;
+	}
+
 	public int getLivenessProbeTimeout() {
 		return livenessProbeTimeout;
 	}
@@ -140,6 +160,14 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessProbeDelay(int readinessProbeDelay) {
 		this.readinessProbeDelay = readinessProbeDelay;
+	}
+
+	public int getReadinessPeriod() {
+		return readinessPeriod;
+	}
+
+	public void setReadinessPeriod(int readinessPeriod) {
+		this.readinessPeriod = readinessPeriod;
 	}
 
 	public int getReadinessProbeTimeout() {
