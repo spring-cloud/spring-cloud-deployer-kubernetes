@@ -43,7 +43,7 @@ public class KubernetesDeployerProperties {
 	 * should start checking its health status.
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int livenessProbeDelay = 10;
+	private int livenessProbeDelay = 60;
 
 	/**
 	 * Timeout in seconds for the Kubernetes liveness check of the app container.
@@ -57,7 +57,7 @@ public class KubernetesDeployerProperties {
 	 * should start checking if the module is fully up and running.
 	 */
 	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private int readinessProbeDelay = 10;
+	private int readinessProbeDelay = 60;
 
 	/**
 	 * Timeout in seconds that the app container has to respond to its
