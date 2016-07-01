@@ -56,7 +56,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	}
 
 	@Override
-	public Container create(String appId, AppDeploymentRequest request, Integer port) {
+	public Container create(String appId, AppDeploymentRequest request, Integer port, int index) {
 		ContainerBuilder container = new ContainerBuilder();
 		String image = null;
 		//TODO: what's the proper format for a Docker URI?
@@ -73,14 +73,16 @@ public class DefaultContainerFactory implements ContainerFactory {
 			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
 			envVars.add(new EnvVar(strings[0], strings[1], null));
 		}
+		envVars.add(new EnvVar("INSTANCE_INDEX", String.valueOf(index), null));
 
-		container.withName(appId)
+		int containerPort = port + index;
+		container.withName(appId + "-" + index)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(createCommandArgs(request));
+				.withArgs(createCommandArgs(request, containerPort));
 		if (port != null) {
 			container.addNewPort()
-					.withContainerPort(port)
+					.withContainerPort(containerPort)
 				.endPort()
 				.withReadinessProbe(
 						createProbe(port, READINESS_ENDPOINT, properties.getReadinessProbeTimeout(),
@@ -112,13 +114,16 @@ public class DefaultContainerFactory implements ContainerFactory {
 	/**
 	 * Create command arguments
 	 */
-	protected List<String> createCommandArgs(AppDeploymentRequest request) {
+	protected List<String> createCommandArgs(AppDeploymentRequest request, int port) {
 		List<String> cmdArgs = new LinkedList<String>();
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
 		for (Map.Entry<String, String> entry : args.entrySet()) {
-			cmdArgs.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
+			if (!"server.port".equals(entry)) {
+				cmdArgs.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
+			}
 		}
+		cmdArgs.add(String.format("--%s=%s", "server.port", port));
 		// add provided command line args
 		cmdArgs.addAll(request.getCommandlineArguments());
 		logger.debug("Using command args: " + cmdArgs);

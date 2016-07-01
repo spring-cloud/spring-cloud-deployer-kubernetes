@@ -45,8 +45,8 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 		this.moduleId = moduleId;
 		this.pod = pod;
 		this.properties = properties;
-		// we assume one container per pod
-		if (pod != null && pod.getStatus().getContainerStatuses().size() == 1) {
+		// we assume one container per pod - if more than one the status is for the first one
+		if (pod != null && pod.getStatus().getContainerStatuses().size() >= 1) {
 			this.containerStatus = pod.getStatus().getContainerStatuses().get(0);
 		} else {
 			this.containerStatus = null;

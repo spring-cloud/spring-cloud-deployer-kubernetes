@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static io.fabric8.kubernetes.api.model.KubernetesKind.List;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +28,8 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.DoneablePod;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
@@ -35,6 +39,8 @@ import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.ClientPodResource;
+import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 
 /**
  * A deployer that targets Kubernetes.
@@ -134,8 +140,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			logger.debug("Deleted replication controller for: {} {}", appId, rcDeleted);
 			Map<String, String> selector = new HashMap<>();
 			selector.put(SPRING_APP_KEY, appId);
-			Boolean podDeleted = client.pods().withLabels(selector).delete();
-			logger.debug("Deleted pods for: {} {}", appId, podDeleted);
+			PodList pods = client.pods().withLabels(selector).list();
+			for (Pod pod : pods.getItems()) {
+				String podName = pod.getMetadata().getName();
+				Boolean podDeleted = client.pods().withName(podName).cascading(true).delete();
+				logger.debug("Deleted pod: {} {}", podName, podDeleted);
+			}
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
 			throw e;
@@ -156,8 +166,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	private ReplicationController createReplicationController(
 			String appId, AppDeploymentRequest request,
 			Map<String, String> idMap, int externalPort) {
-		String countProperty = request.getDeploymentProperties().get(COUNT_PROPERTY_KEY);
-		int count = (countProperty != null) ? Integer.parseInt(countProperty) : 1;
+//		String countProperty = request.getDeploymentProperties().get(COUNT_PROPERTY_KEY);
+//		int count = (countProperty != null) ? Integer.parseInt(countProperty) : 1;
+		int count = 1;
 		ReplicationController rc = new ReplicationControllerBuilder()
 				.withNewMetadata()
 				.withName(appId)
@@ -188,14 +199,19 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
 		}
 
-		Container container = containerFactory.create(appId, request, port);
+		String countProperty = request.getDeploymentProperties().get(COUNT_PROPERTY_KEY);
+		int count = (countProperty != null) ? Integer.parseInt(countProperty) : 1;
 
-		// add memory and cpu resource limits
-		ResourceRequirements req = new ResourceRequirements();
-		req.setLimits(deduceResourceLimits(properties, request));
-		container.setResources(req);
+		for (int index = 0; index < count; index++) {
+			Container container = containerFactory.create(appId, request, port, index);
 
-		podSpec.addToContainers(container);
+			// add memory and cpu resource limits
+			ResourceRequirements req = new ResourceRequirements();
+			req.setLimits(deduceResourceLimits(properties, request));
+			container.setResources(req);
+
+			podSpec.addToContainers(container);
+		}
 		return podSpec.build();
 	}
 
