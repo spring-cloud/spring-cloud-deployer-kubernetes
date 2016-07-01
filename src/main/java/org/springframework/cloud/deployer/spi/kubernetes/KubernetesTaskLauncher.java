@@ -117,7 +117,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	private Container createContainer(String appId, AppDeploymentRequest request) {
-		Container container = containerFactory.create(appId, request, null);
+		Container container = containerFactory.create(appId, request, null, 1);
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
 		req.setLimits(deduceResourceLimits(properties, request));
