@@ -67,8 +67,8 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	 * Maps Kubernetes phases/states onto Spring Cloud Deployer states
 	 */
 	private DeploymentState mapState() {
-		logger.debug("Phase [" + pod.getStatus().getPhase() + "]");
-		logger.debug("ContainerStatus [" + containerStatus + "]");
+		logger.debug("{} - Phase [ {} ]", pod.getMetadata().getName(), pod.getStatus().getPhase());
+		logger.debug("{} - ContainerStatus [ {} ]", pod.getMetadata().getName(), containerStatus);
 		switch (pod.getStatus().getPhase()) {
 			
 			case "Pending":

@@ -51,7 +51,7 @@ public class AbstractKubernetesDeployer {
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
 	 * to "select" the right ReplicationControllers.
 	 */
-	Map<String, String> createIdMap(String appId, AppDeploymentRequest request) {
+	Map<String, String> createIdMap(String appId, AppDeploymentRequest request, Integer instanceIndex) {
 		//TODO: handling of app and group ids
 		Map<String, String> map = new HashMap<>();
 		map.put(SPRING_APP_KEY, appId);
@@ -59,7 +59,8 @@ public class AbstractKubernetesDeployer {
 		if (groupId != null) {
 			map.put(SPRING_GROUP_KEY, groupId);
 		}
-		map.put(SPRING_DEPLOYMENT_KEY, createDeploymentId(request));
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+		map.put(SPRING_DEPLOYMENT_KEY, appInstanceId);
 		return map;
 	}
 
@@ -78,7 +79,6 @@ public class AbstractKubernetesDeployer {
 
 	AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
-
 		if (list == null) {
 			statusBuilder.with(new KubernetesAppInstanceStatus(id, null, properties));
 		} else {

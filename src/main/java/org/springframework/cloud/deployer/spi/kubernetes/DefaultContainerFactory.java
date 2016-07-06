@@ -56,10 +56,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	}
 
 	@Override
-	public Container create(String appId, AppDeploymentRequest request, Integer port) {
-		ContainerBuilder container = new ContainerBuilder();
+	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
 		String image = null;
-		//TODO: what's the proper format for a Docker URI?
 		try {
 			image = request.getResource().getURI().getSchemeSpecificPart();
 		} catch (IOException e) {
@@ -73,8 +71,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
 			envVars.add(new EnvVar(strings[0], strings[1], null));
 		}
+		if (instanceIndex != null) {
+			envVars.add(new EnvVar("INSTANCE_INDEX", instanceIndex.toString(), null));
+		}
 
-		container.withName(appId)
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+
+		ContainerBuilder container = new ContainerBuilder();
+		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
 				.withArgs(createCommandArgs(request));

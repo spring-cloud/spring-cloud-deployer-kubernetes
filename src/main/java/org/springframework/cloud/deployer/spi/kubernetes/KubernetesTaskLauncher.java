@@ -39,7 +39,6 @@ import io.fabric8.kubernetes.api.model.extensions.JobSpec;
 import io.fabric8.kubernetes.api.model.extensions.JobSpecBuilder;
 import io.fabric8.kubernetes.api.model.extensions.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 
 /**
  * A task launcher that targets Kubernetes.
@@ -80,7 +79,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			}
 			deleteJob(appId);
 		}
-		Map<String, String> idMap = createIdMap(appId, request);
+		Map<String, String> idMap = createIdMap(appId, request, null);
 
 		logger.debug("Launching job: {}", appId);
 		try {
@@ -117,7 +116,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	private Container createContainer(String appId, AppDeploymentRequest request) {
-		Container container = containerFactory.create(appId, request, null);
+		Container container = containerFactory.create(appId, request, null, null);
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
 		req.setLimits(deduceResourceLimits(properties, request));

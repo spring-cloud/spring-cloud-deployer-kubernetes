@@ -27,6 +27,6 @@ import io.fabric8.kubernetes.api.model.Container;
  */
 public interface ContainerFactory {
 
-	Container create(String appId, AppDeploymentRequest request, Integer externalPort);
+	Container create(String appId, AppDeploymentRequest request, Integer externalPort, Integer instanceIndex);
 
 }
