@@ -31,6 +31,8 @@ import io.fabric8.kubernetes.api.model.ProbeBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.util.Assert;
 
@@ -72,7 +74,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(strings[0], strings[1], null));
 		}
 		if (instanceIndex != null) {
-			envVars.add(new EnvVar("INSTANCE_INDEX", instanceIndex.toString(), null));
+			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
 
 		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
