@@ -51,7 +51,7 @@ public class AbstractKubernetesDeployer {
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
 	 * to "select" the right ReplicationControllers.
 	 */
-	Map<String, String> createIdMap(String appId, AppDeploymentRequest request, Integer instanceIndex) {
+	protected Map<String, String> createIdMap(String appId, AppDeploymentRequest request, Integer instanceIndex) {
 		//TODO: handling of app and group ids
 		Map<String, String> map = new HashMap<>();
 		map.put(SPRING_APP_KEY, appId);
@@ -64,7 +64,7 @@ public class AbstractKubernetesDeployer {
 		return map;
 	}
 
-	String createDeploymentId(AppDeploymentRequest request) {
+	protected String createDeploymentId(AppDeploymentRequest request) {
 		String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
 		String deploymentId;
 		if (groupId == null) {
@@ -77,7 +77,7 @@ public class AbstractKubernetesDeployer {
 		return deploymentId.replace('.', '-');
 	}
 
-	AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
+	protected AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
 		if (list == null) {
 			statusBuilder.with(new KubernetesAppInstanceStatus(id, null, properties));
@@ -89,7 +89,7 @@ public class AbstractKubernetesDeployer {
 		return statusBuilder.build();
 	}
 
-	Map<String, Quantity> deduceResourceLimits(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+	protected Map<String, Quantity> deduceResourceLimits(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.memory");
 		if (memOverride == null)
 			memOverride = properties.getMemory();

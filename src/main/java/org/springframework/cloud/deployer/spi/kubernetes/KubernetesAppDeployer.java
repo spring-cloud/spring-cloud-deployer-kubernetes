@@ -81,11 +81,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				throw new IllegalStateException(String.format("App '%s' is already deployed", appId));
 			}
 
-			int externalPort = 8080;
-			Map<String, String> parameters = request.getDefinition().getProperties();
-			if (parameters.containsKey(SERVER_PORT_KEY)) {
-				externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
-			}
+			int externalPort = getExternalPort(request);
 
 			String countProperty = request.getDeploymentProperties().get(COUNT_PROPERTY_KEY);
 			int count = (countProperty != null) ? Integer.parseInt(countProperty) : 1;
@@ -117,7 +113,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			throw e;
 		}
 	}
-
 
 	@Override
 	public void undeploy(String appId) {
@@ -184,6 +179,16 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		logger.debug("Status for app: {} is {}", appId, status);
 
 		return status;
+	}
+
+	protected int getExternalPort(final AppDeploymentRequest request) {
+		int externalPort = 8080;
+		Map<String, String> parameters = request.getDefinition().getProperties();
+		if (parameters.containsKey(SERVER_PORT_KEY)) {
+			externalPort = Integer.valueOf(parameters.get(SERVER_PORT_KEY));
+		}
+
+		return externalPort;
 	}
 
 	private ReplicationController createReplicationController(
