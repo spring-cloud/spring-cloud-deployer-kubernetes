@@ -72,13 +72,16 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Testing {}...", "FailedDeploymentWithLoadBalancer");
 		KubernetesDeployerProperties lbProperties = new KubernetesDeployerProperties();
 		lbProperties.setCreateLoadBalancer(true);
+		lbProperties.setLivenessProbePeriod(10);
+		lbProperties.setMaxTerminatedErrorRestarts(1);
+		lbProperties.setMaxCrashLoopBackOffRestarts(1);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = integrationTestProcessor();
 		Map<String, String> props = new HashMap<>();
 		// setting to small memory value will cause app to fail to be deployed
-		props.put("spring.cloud.deployer.kubernetes.memory", "128Mi");
+		props.put("spring.cloud.deployer.kubernetes.memory", "8Mi");
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 
 		log.info("Deploying {}...", request.getDefinition().getName());
