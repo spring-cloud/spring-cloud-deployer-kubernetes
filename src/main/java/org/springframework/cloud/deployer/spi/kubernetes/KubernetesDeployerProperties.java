@@ -125,6 +125,10 @@ public class KubernetesDeployerProperties {
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
 
+	/**
+	 * The image pull policy to use for Pod deployments in Kubernetes.
+	 */
+	private ImagePullPolicy imagePullPolicy = ImagePullPolicy.Always;
 
 	public String getNamespace() {
 		return namespace;
@@ -260,5 +264,13 @@ public class KubernetesDeployerProperties {
 
 	public void setMaxCrashLoopBackOffRestarts(int maxCrashLoopBackOffRestarts) {
 		this.maxCrashLoopBackOffRestarts = maxCrashLoopBackOffRestarts;
+	}
+
+	public ImagePullPolicy getImagePullPolicy() {
+		return imagePullPolicy;
+	}
+
+	public void setImagePullPolicy(ImagePullPolicy imagePullPolicy) {
+		this.imagePullPolicy = imagePullPolicy;
 	}
 }

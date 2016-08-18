@@ -94,4 +94,25 @@ public class AbstractKubernetesDeployer {
 		return limits;
 	}
 
+	/**
+	 * Get the image pull policy for the deployment request. If it is not present use the server default.
+	 *
+	 * @param properties The server properties.
+	 * @param request The deployment request.
+	 * @return The image pull policy to use for the container in the request.
+	 */
+	ImagePullPolicy deduceImagePullPolicy(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+		String pullPolicyOverride =
+				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.imagePullPolicy");
+
+		ImagePullPolicy pullPolicy;
+		if (pullPolicyOverride == null) {
+			pullPolicy = properties.getImagePullPolicy();
+		} else {
+			pullPolicy = ImagePullPolicy.valueOf(pullPolicyOverride);
+		}
+		logger.debug("Using imagePullPolicy " + pullPolicy);
+		return pullPolicy;
+	}
+
 }

@@ -126,6 +126,8 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		ResourceRequirements req = new ResourceRequirements();
 		req.setLimits(deduceResourceLimits(properties, request));
 		container.setResources(req);
+		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
+		container.setImagePullPolicy(pullPolicy.name());
 		return container;
 	}
 

@@ -244,6 +244,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ResourceRequirements req = new ResourceRequirements();
 		req.setLimits(deduceResourceLimits(properties, request));
 		container.setResources(req);
+		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
+		container.setImagePullPolicy(pullPolicy.name());
 
 		podSpec.addToContainers(container);
 		return podSpec.build();
