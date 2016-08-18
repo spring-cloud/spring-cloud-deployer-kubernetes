@@ -25,6 +25,40 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
 
+	/**
+	 * Encapsulates resources for Kubernetes Container resource requests and limits
+	 */
+	public static class Resources {
+
+		private String cpu;
+
+		private String memory;
+
+		public Resources() {
+		}
+
+		public Resources(String cpu, String memory) {
+			this.cpu = cpu;
+			this.memory = memory;
+		}
+
+		public String getCpu() {
+			return cpu;
+		}
+
+		public void setCpu(String cpu) {
+			this.cpu = cpu;
+		}
+
+		public String getMemory() {
+			return memory;
+		}
+
+		public void setMemory(String memory) {
+			this.memory = memory;
+		}
+	}
+
 	private static String KUBERNETES_NAMESPACE =
 			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";
 
@@ -92,13 +126,29 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * Memory to allocate for a Pod.
+	 *
+	 * @deprecated Use spring.cloud.deployer.kubernetes.limits.memory
 	 */
+	@Deprecated
 	private String memory = "512Mi";
 
 	/**
 	 * CPU to allocate for a Pod.
+	 *
+	 * @deprecated Use spring.cloud.deployer.kubernetes.limits.cpu
 	 */
+	@Deprecated
 	private String cpu = "500m";
+
+	/**
+	 * Memory and CPU limits (i.e. maximum needed values) to allocate for a Pod.
+	 */
+	private Resources limits = new Resources("500m", "512Mi");
+
+	/**
+	 * Memory and CPU requests (i.e. guaranteed needed values) to allocate for a Pod.
+	 */
+	private Resources requests = new Resources("500m", "512Mi");
 
 	/**
 	 * Environment variables to set for any deployed app container. To be used for service binding.
@@ -124,7 +174,6 @@ public class KubernetesDeployerProperties {
 	 * Maximum allowed restarts for app that is in a CrashLoopBackOff.
 	 */
 	private int maxCrashLoopBackOffRestarts = 4;
-
 
 	public String getNamespace() {
 		return namespace;
@@ -206,18 +255,34 @@ public class KubernetesDeployerProperties {
 		this.readinessProbePath = readinessProbePath;
 	}
 
+	/**
+	 * @deprecated Use {@link #getLimits()}
+	 */
+	@Deprecated
 	public String getMemory() {
 		return memory;
 	}
 
+	/**
+	 * @deprecated Use {@link #setLimits(Resources)}
+	 */
+	@Deprecated
 	public void setMemory(String memory) {
 		this.memory = memory;
 	}
 
+	/**
+	 * @deprecated Use {@link #getLimits()}
+	 */
+	@Deprecated
 	public String getCpu() {
 		return cpu;
 	}
 
+	/**
+	 * @deprecated Use {@link #setLimits(Resources)}
+	 */
+	@Deprecated
 	public void setCpu(String cpu) {
 		this.cpu = cpu;
 	}
@@ -260,5 +325,21 @@ public class KubernetesDeployerProperties {
 
 	public void setMaxCrashLoopBackOffRestarts(int maxCrashLoopBackOffRestarts) {
 		this.maxCrashLoopBackOffRestarts = maxCrashLoopBackOffRestarts;
+	}
+
+	public Resources getLimits() {
+		return limits;
+	}
+
+	public void setLimits(Resources limits) {
+		this.limits = limits;
+	}
+
+	public Resources getRequests() {
+		return requests;
+	}
+
+	public void setRequests(Resources requests) {
+		this.requests = requests;
 	}
 }

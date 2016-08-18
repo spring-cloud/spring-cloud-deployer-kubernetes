@@ -125,6 +125,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
 		req.setLimits(deduceResourceLimits(properties, request));
+		req.setRequests(deduceResourceRequests(properties, request));
 		container.setResources(req);
 		return container;
 	}
