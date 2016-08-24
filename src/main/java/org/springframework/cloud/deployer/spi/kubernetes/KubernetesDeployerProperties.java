@@ -59,6 +59,12 @@ public class KubernetesDeployerProperties {
 	private int livenessProbeTimeout = 2;
 
 	/**
+	 * Path that app container has to respond to for liveness check.
+	 */
+	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	private String livenessProbePath = "/health";
+
+	/**
 	 * Delay in seconds when the readiness check of the app container
 	 * should start checking if the module is fully up and running.
 	 */
@@ -77,6 +83,12 @@ public class KubernetesDeployerProperties {
 	 */
 	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int readinessProbeTimeout = 2;
+
+	/**
+	 * Path that app container has to respond to for readiness check.
+	 */
+	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	private String readinessProbePath = "/info";
 
 	/**
 	 * Memory to allocate for a Pod.
@@ -154,6 +166,14 @@ public class KubernetesDeployerProperties {
 		this.livenessProbeTimeout = livenessProbeTimeout;
 	}
 
+	public String getLivenessProbePath() {
+		return livenessProbePath;
+	}
+
+	public void setLivenessProbePath(String livenessProbePath) {
+		this.livenessProbePath = livenessProbePath;
+	}
+
 	public int getReadinessProbeDelay() {
 		return readinessProbeDelay;
 	}
@@ -176,6 +196,14 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessProbeTimeout(int readinessProbeTimeout) {
 		this.readinessProbeTimeout = readinessProbeTimeout;
+	}
+
+	public String getReadinessProbePath() {
+		return readinessProbePath;
+	}
+
+	public void setReadinessProbePath(String readinessProbePath) {
+		this.readinessProbePath = readinessProbePath;
 	}
 
 	public String getMemory() {

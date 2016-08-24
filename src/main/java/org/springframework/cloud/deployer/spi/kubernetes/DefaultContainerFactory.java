@@ -47,10 +47,6 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	private static Logger logger = LoggerFactory.getLogger(DefaultContainerFactory.class);
 
-	private static final String LIVENESS_ENDPOINT = "/health";
-
-	private static final String READINESS_ENDPOINT = "/info";
-
 	private final KubernetesDeployerProperties properties;
 
 	public DefaultContainerFactory(KubernetesDeployerProperties properties) {
@@ -87,13 +83,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 		if (port != null) {
 			container.addNewPort()
 					.withContainerPort(port)
-				.endPort()
-				.withReadinessProbe(
-						createProbe(port, READINESS_ENDPOINT, properties.getReadinessProbeTimeout(),
-								properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod()))
-				.withLivenessProbe(
-						createProbe(port, LIVENESS_ENDPOINT, properties.getLivenessProbeTimeout(),
-								properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod()));
+					.endPort()
+					.withReadinessProbe(
+							createProbe(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
+									properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod()))
+					.withLivenessProbe(
+							createProbe(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
+									properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod()));
 		}
 		return container.build();
 	}
@@ -103,16 +99,16 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	protected Probe createProbe(Integer externalPort, String endpoint, int timeout, int initialDelay, int period) {
 		return new ProbeBuilder()
-			.withHttpGet(
-				new HTTPGetActionBuilder()
-					.withPath(endpoint)
-					.withNewPort(externalPort)
-					.build()
-			)
-			.withTimeoutSeconds(timeout)
-			.withInitialDelaySeconds(initialDelay)
-			.withPeriodSeconds(period)
-			.build();
+				.withHttpGet(
+						new HTTPGetActionBuilder()
+								.withPath(endpoint)
+								.withNewPort(externalPort)
+								.build()
+				)
+				.withTimeoutSeconds(timeout)
+				.withInitialDelaySeconds(initialDelay)
+				.withPeriodSeconds(period)
+				.build();
 	}
 
 	/**
