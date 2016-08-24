@@ -25,6 +25,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
@@ -153,15 +154,27 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Override
-	public void testParameterPassing() {
-		log.info("Testing {}...", "ParameterPassing");
-		super.testParameterPassing();
+	public void testApplicationPropertiesPassing() {
+		log.info("Testing {}...", "ApplicationPropertiesPassing");
+		super.testApplicationPropertiesPassing();
+	}
+
+	@Override
+	public void testCommandLineArgumentsPassing() {
+		log.info("Testing {}...", "CommandLineArgumentsPassing");
+		super.testCommandLineArgumentsPassing();
+	}
+
+	@Override
+	public void testMultipleInstancesDeploymentAndPartialState() {
+		log.info("Testing {}...", "MultipleInstancesDeploymentAndPartialState");
+		super.testMultipleInstancesDeploymentAndPartialState();
 	}
 
 	@Override
 	protected String randomName() {
 		// Kubernetest app names must start with a letter and can only be 24 characters long
-		return "app-" + super.randomName().substring(0, 18);
+		return "app-" + UUID.randomUUID().toString().substring(0, 18);
 	}
 
 	@Override
