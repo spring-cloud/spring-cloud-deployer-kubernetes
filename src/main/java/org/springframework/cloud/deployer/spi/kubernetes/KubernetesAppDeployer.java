@@ -35,6 +35,7 @@ import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
@@ -253,6 +254,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ServiceSpecBuilder spec = new ServiceSpecBuilder();
 		boolean isCreateLoadBalancer = false;
 		String createLoadBalancer = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.createLoadBalancer");
+		String createNodePort = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.createNodePort");
+
+		if (createLoadBalancer != null && createNodePort != null) {
+			throw new IllegalArgumentException("Cannot create NodePort and LoadBalancer at the same time.");
+		}
+
 		if (createLoadBalancer == null) {
 			isCreateLoadBalancer = properties.isCreateLoadBalancer();
 		}
@@ -261,13 +268,28 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				isCreateLoadBalancer = true;
 			}
 		}
+
 		if (isCreateLoadBalancer) {
 			spec.withType("LoadBalancer");
 		}
+
+		ServicePort servicePort = new ServicePort();
+		servicePort.setPort(externalPort);
+
+		if (createNodePort != null) {
+			spec.withType("NodePort");
+			if (!"true".equals(createNodePort.toLowerCase())) {
+				try {
+					Integer nodePort = Integer.valueOf(createNodePort);
+					servicePort.setNodePort(nodePort);
+				} catch (NumberFormatException e) {
+					throw new IllegalArgumentException(String.format("Invalid value: %s: provided port is not valid.", createNodePort));
+				}
+			}
+		}
+
 		spec.withSelector(idMap)
-				.addNewPort()
-					.withPort(externalPort)
-				.endPort();
+			.addNewPortLike(servicePort).endPort();
 
 		client.services().inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
