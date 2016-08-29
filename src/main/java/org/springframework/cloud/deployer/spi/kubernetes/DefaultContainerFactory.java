@@ -115,14 +115,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * Create command arguments
 	 */
 	protected List<String> createCommandArgs(AppDeploymentRequest request) {
-		List<String> cmdArgs = new LinkedList<String>();
-		// add properties from deployment request
-		Map<String, String> args = request.getDefinition().getProperties();
-		for (Map.Entry<String, String> entry : args.entrySet()) {
-			cmdArgs.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
-		}
-		// add provided command line args
-		cmdArgs.addAll(request.getCommandlineArguments());
+		List<String> cmdArgs = request.getCommandlineArguments();
 		logger.debug("Using command args: " + cmdArgs);
 		return cmdArgs;
 	}
