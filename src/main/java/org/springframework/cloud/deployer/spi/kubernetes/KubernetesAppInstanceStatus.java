@@ -19,11 +19,12 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.app.AppInstanceStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 
@@ -35,7 +36,7 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
  */
 public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
-	private static Logger logger = LoggerFactory.getLogger(KubernetesAppInstanceStatus.class);
+	private static Log logger = LogFactory.getLog(KubernetesAppInstanceStatus.class);
 	private final Pod pod;
 	private final String moduleId;
 	private KubernetesDeployerProperties properties;
@@ -67,8 +68,8 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	 * Maps Kubernetes phases/states onto Spring Cloud Deployer states
 	 */
 	private DeploymentState mapState() {
-		logger.debug("{} - Phase [ {} ]", pod.getMetadata().getName(), pod.getStatus().getPhase());
-		logger.debug("{} - ContainerStatus [ {} ]", pod.getMetadata().getName(), containerStatus);
+		logger.debug(String.format("%s - Phase [ %s ]", pod.getMetadata().getName(), pod.getStatus().getPhase()));
+		logger.debug(String.format("%s - ContainerStatus [ %s ]", pod.getMetadata().getName(), containerStatus));
 		switch (pod.getStatus().getPhase()) {
 			
 			case "Pending":

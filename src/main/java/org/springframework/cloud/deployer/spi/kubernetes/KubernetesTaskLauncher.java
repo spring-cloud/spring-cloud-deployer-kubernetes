@@ -16,9 +16,14 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.hashids.Hashids;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -27,17 +32,11 @@ import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
-import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.extensions.Job;
-import io.fabric8.kubernetes.api.model.extensions.JobSpec;
-import io.fabric8.kubernetes.api.model.extensions.JobSpecBuilder;
-import io.fabric8.kubernetes.api.model.extensions.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
@@ -74,16 +73,13 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		String appId = createDeploymentId(request);
 		TaskStatus status = status(appId);
 		if (!status.getState().equals(LaunchState.unknown)) {
-			if (status.getState().equals(LaunchState.launching) || status.getState().equals(LaunchState.running)) {
-				throw new IllegalStateException("Task " + appId + " is already active with a state of " + status);
-			}
-			deleteJob(appId);
+			throw new IllegalStateException("Task " + appId + " already exists with a state of " + status);
 		}
 		Map<String, String> idMap = createIdMap(appId, request, null);
 
-		logger.debug("Launching job: {}", appId);
+		logger.debug(String.format("Launching pod for task: %s", appId));
 		try {
-			createJob(appId, request, idMap);
+			createPod(appId, request, idMap);
 			return appId;
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -93,26 +89,35 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Override
 	public void cancel(String id) {
-		logger.debug("Cancelling job: {}", id);
-		//ToDo: what does cancel mean? Kubernetes doesn't have stop - just delete
-		delete(id);
+		logger.debug(String.format("Cancelling task: %s", id));
+		//ToDo: what does cancel mean? Kubernetes doesn't have stop - just cleanup
+		cleanup(id);
 	}
 
 //	@Override //TODO: should be part of interface
-	public void delete(String id) {
-		logger.debug("Deleting job: {}", id);
-		deleteJob(id);
+	public void cleanup(String... id) {
+		Set<String> ids = new HashSet(Arrays.asList(id));
+		for (String taskId : ids) {
+			logger.debug(String.format("Deleting pod for task: %s", id));
+			deletePod(taskId);
+		}
 	}
 
 	@Override
 	public TaskStatus status(String id) {
-		Map<String, String> selector = new HashMap<>();
-		selector.put(SPRING_APP_KEY, id);
-		PodList list = client.pods().withLabels(selector).list();
-		TaskStatus status = buildTaskStatus(properties, id, list);
-		logger.debug("Status for task: {} is {}", id, status);
+		TaskStatus status = buildTaskStatus(id);
+		logger.debug(String.format("Status for task: %s is %s", id, status));
 
 		return status;
+	}
+
+	protected String createDeploymentId(AppDeploymentRequest request) {
+		String name = request.getDefinition().getName();
+		Hashids hashids = new Hashids(name);
+		String hashid = hashids.encode(System.currentTimeMillis());
+		String deploymentId = name + "-" + hashid;
+		// Kubernetes does not allow . in the name and does not allow uppercase in the name
+		return deploymentId.replace('.', '-').toLowerCase();
 	}
 
 	private Container createContainer(String appId, AppDeploymentRequest request) {
@@ -138,43 +143,30 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		return podSpec.build();
 	}
 
-	private void createJob(String appId, AppDeploymentRequest request, Map<String, String> idMap) {
-		Map<String, String> jobLabelMap = new HashMap<>();
-		jobLabelMap.put("job-name", appId);
-		jobLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-		JobSpec spec = new JobSpecBuilder()
-			.withTemplate(new PodTemplateSpec(
-					new ObjectMetaBuilder()
-							.withLabels(jobLabelMap)
-							.addToLabels(idMap)
-							.build(),
-					createPodSpec(appId, request))).build();
-		client.extensions().jobs()
+	private void createPod(String appId, AppDeploymentRequest request, Map<String, String> idMap) {
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", appId);
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+		PodSpec spec = createPodSpec(appId, request);
+		client.pods()
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
-					.withName(appId)
-					.withLabels(jobLabelMap)
-					.addToLabels(idMap)
+				.withName(appId)
+				.withLabels(podLabelMap)
+				.addToLabels(idMap)
 				.endMetadata()
 				.withSpec(spec)
 				.done();
 	}
 
-	private void deleteJob(String id) {
+	private void deletePod(String id) {
 		try {
-			Boolean jobDeleted = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).delete();
-			if (jobDeleted) {
-				logger.debug("Deleted job successfully: {}", id);
+			Boolean podDeleted = client.pods().inNamespace(client.getNamespace()).withName(id).delete();
+			if (podDeleted) {
+				logger.debug(String.format("Deleted pod successfully: %s", id));
 			}
 			else {
-				logger.debug("Delete failed for job: {}", id);
-			}
-			Map<String, String> selector = new HashMap<>();
-			selector.put(SPRING_APP_KEY, id);
-			PodList list = client.pods().withLabels(selector).list();
-			for (Pod p : list.getItems()) {
-				logger.debug("Deleting pod: {}", p.getMetadata().getName());
-				client.pods().inNamespace(client.getNamespace()).withName(p.getMetadata().getName()).delete();
+				logger.debug(String.format("Delete failed for pod: %s", id));
 			}
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -182,35 +174,31 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 	}
 
-	TaskStatus buildTaskStatus(KubernetesDeployerProperties properties, String id, PodList list) {
-		Job job = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).get();
-		if (job == null) {
+	TaskStatus buildTaskStatus(String id) {
+		Pod pod = client.pods().inNamespace(client.getNamespace()).withName(id).get();
+		if (pod == null) {
 			return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 		}
-		JobStatus jobStatus = job.getStatus();
-		if (jobStatus == null) {
+		PodStatus podStatus = pod.getStatus();
+		if (podStatus == null) {
 			return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 		}
-
-		if (jobStatus.getActive() != null) {
-			if (jobStatus.getActive().intValue() > 0) {
-				return new TaskStatus(id, LaunchState.running, new HashMap<>());
-			}
-			else {
+		if (podStatus.getPhase() != null) {
+			if (podStatus.getPhase().equals("Pending")) {
 				return new TaskStatus(id, LaunchState.launching, new HashMap<>());
 			}
-		}
-
-		if (list == null || list.getItems().isEmpty()) {
-			return new TaskStatus(id, LaunchState.launching, new HashMap<>());
-		}
-
-		//ToDo: needs tweaking if we launch multiple pods per task
-		if (jobStatus.getSucceeded() != null && jobStatus.getSucceeded().intValue() == list.getItems().size()) {
-			return new TaskStatus(id, LaunchState.complete, new HashMap<>());
+			else if (podStatus.getPhase().equals("Failed")) {
+				return new TaskStatus(id, LaunchState.failed, new HashMap<>());
+			}
+			else if (podStatus.getPhase().equals("Succeeded")) {
+				return new TaskStatus(id, LaunchState.complete, new HashMap<>());
+			}
+			else {
+				return new TaskStatus(id, LaunchState.running, new HashMap<>());
+			}
 		}
 		else {
-			return new TaskStatus(id, LaunchState.failed, new HashMap<>());
+			return new TaskStatus(id, LaunchState.launching, new HashMap<>());
 		}
 	}
 

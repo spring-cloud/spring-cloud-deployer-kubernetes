@@ -22,16 +22,19 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.hamcrest.core.Is;
+import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
@@ -44,6 +47,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.deployer.spi.task.LaunchState.complete;
 import static org.springframework.cloud.deployer.spi.task.LaunchState.failed;
@@ -58,7 +62,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
 @RunWith(SpringJUnit4ClassRunner.class)
 public class KubernetesTaskLauncherIntegrationTests {
 
-	protected static final Logger logger = LoggerFactory.getLogger(KubernetesTaskLauncherIntegrationTests.class);
+	private static final Log logger = LogFactory.getLog(KubernetesTaskLauncherIntegrationTests.class);
 
 	@ClassRule
 	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
@@ -74,70 +78,67 @@ public class KubernetesTaskLauncherIntegrationTests {
 
 	@Test
 	public void testSimpleLaunch() {
-		logger.info("Testing {}...", "SimpleLaunch");
+		logger.info("Testing SimpleLaunch...");
 		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
-		logger.info("Launching {}...", request.getDefinition().getName());
+		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
-		logger.info("Launched {} ", deploymentId);
+		logger.info(String.format("Launched %s ", deploymentId));
 
 		Timeout timeout = launchTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
 
-		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+		((KubernetesTaskLauncher)taskLauncher).cleanup(deploymentId);
 	}
 
 	@Test
 	public void testReLaunch() {
-		logger.info("Testing {}...", "ReLaunch");
+		logger.info("Testing ReLaunch...");
 		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
-		logger.info("Launching {}...", request.getDefinition().getName());
-		String deploymentId = taskLauncher.launch(request);
-		logger.info("Launched {} ", deploymentId);
+		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
+		String deploymentId1 = taskLauncher.launch(request);
+		logger.info(String.format("Launched %s ", deploymentId1));
+		String deploymentId2 = taskLauncher.launch(request);
+		logger.info(String.format("Re-launched %s ", deploymentId2));
+		MatcherAssert.assertThat(deploymentId1, not(Is.is(deploymentId2)));
+
 		Timeout timeout = launchTimeout();
-		assertThat(deploymentId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
+		Assert.assertThat(deploymentId1, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(complete))), timeout.maxAttempts, timeout.pause));
+		Assert.assertThat(deploymentId2, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(complete))), timeout.maxAttempts, timeout.pause));
 
-		deploymentId = taskLauncher.launch(request);
-		logger.info("Re-launched {} ", deploymentId);
-		assertThat(deploymentId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
-
-		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+		((KubernetesTaskLauncher)taskLauncher).cleanup(deploymentId1, deploymentId2);
 	}
 
 	@Test
-	@Ignore
-	// This doesn't currently work - the pod gets recreated repeatedly.
-	// Would be nice if it didn't since we set "restartPolicy: Never"
-	// see https://github.com/kubernetes/kubernetes/issues/24533
 	public void testFailedLaunch() {
-		logger.info("Testing {}...", "FailedLaunch");
+		logger.info("Testing FailedLaunch...");
 		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "1");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
-		logger.info("Launching {}...", request.getDefinition().getName());
+		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
-		logger.info("Launched {} ", deploymentId);
+		logger.info(String.format("Launched %s", deploymentId));
 
 		Timeout timeout = launchTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", is(failed))), timeout.maxAttempts, timeout.pause));
 
-		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+		((KubernetesTaskLauncher)taskLauncher).cleanup(deploymentId);
 	}
 
 	/**
@@ -145,30 +146,28 @@ public class KubernetesTaskLauncherIntegrationTests {
 	 */
 	@Test
 	public void testCommandLineArgs() {
-		logger.info("Testing {}...", "CommandLineArgs");
+		logger.info("Testing CommandLineArgs...");
 		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
 		Resource resource = integrationTestTask();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, Collections.emptyMap(),
 				Collections.singletonList("--exitCode=0"));
-		logger.info("Launching {}...", request.getDefinition().getName());
+		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
-		logger.info("Launched {} ", deploymentId);
+		logger.info(String.format("Launched %s ", deploymentId));
 
 		Timeout timeout = launchTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", is(complete))), timeout.maxAttempts, timeout.pause));
 
-		((KubernetesTaskLauncher)taskLauncher).delete(deploymentId);
+		((KubernetesTaskLauncher)taskLauncher).cleanup(deploymentId);
 	}
 
 	protected String randomName() {
-		// Kubernetest app names must start with a letter and can only be 24 characters long
-		return "job-" + UUID.randomUUID().toString().substring(0, 18);
+		return "task-" + UUID.randomUUID().toString().substring(0, 18);
 	}
 
-	//	@Override
 	protected Resource integrationTestTask() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}

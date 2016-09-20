@@ -73,7 +73,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	public String deploy(AppDeploymentRequest request) {
 
 		String appId = createDeploymentId(request);
-		logger.debug("Deploying app: {}", appId);
+		logger.debug(String.format("Deploying app: %s", appId));
 
 		try {
 			AppStatus status = status(appId);
@@ -93,17 +93,17 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				for (int index=0 ; index < count ; index++) {
 					String indexedId = appId + "-" + index;
 					Map<String, String> idMap = createIdMap(appId, request, index);
-					logger.debug("Creating service: {} on {} with index {}", appId, externalPort, index);
+					logger.debug(String.format("Creating service: %s on %d with index %d", appId, externalPort, index));
 					createService(indexedId, request, idMap, externalPort);
-					logger.debug("Creating repl controller: {} on {} with index {}", appId, externalPort, index);
+					logger.debug(String.format("Creating repl controller: %s with index %d", appId, index));
 					createReplicationController(indexedId, request, idMap, externalPort, 1, index);
 				}
 			}
 			else {
 				Map<String, String> idMap = createIdMap(appId, request, null);
-				logger.debug("Creating service: {} on {}", appId, externalPort);
+				logger.debug(String.format("Creating service: %s on {}", appId, externalPort));
 				createService(appId, request, idMap, externalPort);
-				logger.debug("Creating repl controller: {} on {}", appId, externalPort);
+				logger.debug(String.format("Creating repl controller: %s", appId));
 				createReplicationController(appId, request, idMap, externalPort, count, null);
 			}
 
@@ -116,13 +116,13 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	@Override
 	public void undeploy(String appId) {
-		logger.debug("Undeploying app: {}", appId);
+		logger.debug(String.format("Undeploying app: %s", appId));
 
 		List<ReplicationController> apps =
 			client.replicationControllers().withLabel(SPRING_APP_KEY, appId).list().getItems();
 		for (ReplicationController rc : apps) {
 			String appIdToDelete = rc.getMetadata().getName();
-			logger.debug("Deleting svc, rc and pods for: {}", appIdToDelete);
+			logger.debug(String.format("Deleting svc, rc and pods for: %s", appIdToDelete));
 
 			Service svc = client.services().withName(appIdToDelete).get();
 			try {
@@ -136,7 +136,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 							if (tries % 6 == 0) {
 								logger.warn("Waiting for LoadBalancer to complete before deleting it ...");
 							}
-							logger.debug("Waiting for LoadBalancer, try {}", tries);
+							logger.debug(String.format("Waiting for LoadBalancer, try %d", tries));
 							try {
 								Thread.sleep(10000L);
 							} catch (InterruptedException e) {
@@ -146,16 +146,17 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 							break;
 						}
 					}
-					logger.debug("LoadBalancer Ingress: {}", svc.getStatus().getLoadBalancer().getIngress());
+					logger.debug(String.format("LoadBalancer Ingress: %s",
+							svc.getStatus().getLoadBalancer().getIngress().toString()));
 				}
 				Boolean svcDeleted = client.services().withName(appIdToDelete).delete();
-				logger.debug("Deleted service for: {} {}", appIdToDelete, svcDeleted);
+				logger.debug(String.format("Deleted service for: %s %b", appIdToDelete, svcDeleted));
 				Boolean rcDeleted = client.replicationControllers().withName(appIdToDelete).delete();
-				logger.debug("Deleted replication controller for: {} {}", appIdToDelete, rcDeleted);
+				logger.debug(String.format("Deleted replication controller for: %s %b", appIdToDelete, rcDeleted));
 				Map<String, String> selector = new HashMap<>();
 				selector.put(SPRING_APP_KEY, appIdToDelete);
 				Boolean podDeleted = client.pods().withLabels(selector).delete();
-				logger.debug("Deleted pods for: {} {}", appIdToDelete, podDeleted);
+				logger.debug(String.format("Deleted pods for: %s %b", appIdToDelete, podDeleted));
 			} catch (RuntimeException e) {
 				logger.error(e.getMessage(), e);
 				throw e;
@@ -169,14 +170,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		selector.put(SPRING_APP_KEY, appId);
 		PodList list = client.pods().withLabels(selector).list();
 		if (logger.isDebugEnabled()) {
-			logger.debug("Building AppStatus for app: {}", appId);
-			logger.debug("Pods for appId {}: {}", appId, list.getItems().size());
+			logger.debug(String.format("Building AppStatus for app: %s", appId));
+			logger.debug(String.format("Pods for appId %s: %d", appId, list.getItems().size()));
 			for (Pod pod : list.getItems()) {
-				logger.debug("Pod: {}", pod.getMetadata().getName());
+				logger.debug(String.format("Pod: %s", pod.getMetadata().getName()));
 			}
 		}
 		AppStatus status = buildAppStatus(properties, appId, list);
-		logger.debug("Status for app: {} is {}", appId, status);
+		logger.debug(String.format("Status for app: %s is %s", appId, status));
 
 		return status;
 	}
@@ -189,6 +190,19 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		}
 
 		return externalPort;
+	}
+
+	protected String createDeploymentId(AppDeploymentRequest request) {
+		String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
+		String deploymentId;
+		if (groupId == null) {
+			deploymentId = String.format("%s", request.getDefinition().getName());
+		}
+		else {
+			deploymentId = String.format("%s-%s", groupId, request.getDefinition().getName());
+		}
+		// Kubernetes does not allow . in the name and does not allow uppercase in the name
+		return deploymentId.replace('.', '-').toLowerCase();
 	}
 
 	private ReplicationController createReplicationController(

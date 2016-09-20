@@ -22,15 +22,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -45,7 +45,7 @@ import org.springframework.util.Assert;
  */
 public class DefaultContainerFactory implements ContainerFactory {
 
-	private static Logger logger = LoggerFactory.getLogger(DefaultContainerFactory.class);
+	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
 
 	private final KubernetesDeployerProperties properties;
 

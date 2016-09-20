@@ -160,7 +160,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Override
 	protected String randomName() {
-		// Kubernetest app names must start with a letter and can only be 24 characters long
+		// Kubernetest service names must start with a letter and can only be 24 characters long
 		return "app-" + UUID.randomUUID().toString().substring(0, 18);
 	}
 

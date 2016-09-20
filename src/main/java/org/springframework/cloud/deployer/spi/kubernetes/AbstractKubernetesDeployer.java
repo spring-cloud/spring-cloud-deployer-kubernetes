@@ -19,8 +19,9 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.hashids.Hashids;
 
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
@@ -45,7 +46,7 @@ public class AbstractKubernetesDeployer {
 	protected static final String SPRING_MARKER_KEY = "role";
 	protected static final String SPRING_MARKER_VALUE = "spring-app";
 
-	protected static final Logger logger = LoggerFactory.getLogger(AbstractKubernetesDeployer.class);
+	protected static final Log logger = LogFactory.getLog(AbstractKubernetesDeployer.class);
 
 	/**
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
@@ -62,19 +63,6 @@ public class AbstractKubernetesDeployer {
 		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 		map.put(SPRING_DEPLOYMENT_KEY, appInstanceId);
 		return map;
-	}
-
-	protected String createDeploymentId(AppDeploymentRequest request) {
-		String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
-		String deploymentId;
-		if (groupId == null) {
-			deploymentId = String.format("%s", request.getDefinition().getName());
-		}
-		else {
-			deploymentId = String.format("%s-%s", groupId, request.getDefinition().getName());
-		}
-		// Kubernetes does not allow . in the name
-		return deploymentId.replace('.', '-');
 	}
 
 	protected AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
