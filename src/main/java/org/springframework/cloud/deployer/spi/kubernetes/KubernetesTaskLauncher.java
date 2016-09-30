@@ -145,7 +145,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private void createPod(String appId, AppDeploymentRequest request, Map<String, String> idMap) {
 		Map<String, String> podLabelMap = new HashMap<>();
-		podLabelMap.put("task-name", appId);
+		podLabelMap.put("task-name", request.getDefinition().getName());
 		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
 		PodSpec spec = createPodSpec(appId, request);
 		client.pods()
