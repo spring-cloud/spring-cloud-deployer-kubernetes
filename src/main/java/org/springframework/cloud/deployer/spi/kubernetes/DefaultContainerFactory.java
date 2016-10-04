@@ -73,6 +73,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
 
+		//Create EnvVar entries for additional variables set at the app level
+		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
+		//image supports it.
+		envVars.addAll(getAppEnvironmentVariables(request));
+
 		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 
 		ContainerBuilder container = new ContainerBuilder();
@@ -82,7 +87,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 				.withArgs(createCommandArgs(request));
 		if (port != null) {
 			container.addNewPort()
-						.withContainerPort(port)
+					.withContainerPort(port)
 					.endPort()
 					.withReadinessProbe(
 							createProbe(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
@@ -125,6 +130,30 @@ public class DefaultContainerFactory implements ContainerFactory {
 		cmdArgs.addAll(request.getCommandlineArguments());
 		logger.debug("Using command args: " + cmdArgs);
 		return cmdArgs;
+	}
+
+	/**
+	 *
+	 * @param request AppDeploymentRequest - used to gather application specific
+	 * environment variables
+	 * @return a List of EnvVar objects for app specific environment settings
+	 */
+	private List<EnvVar> getAppEnvironmentVariables(AppDeploymentRequest request) {
+		List<EnvVar> appEnvVarList = new ArrayList<>();
+		String appEnvVar = request.getDeploymentProperties()
+				.get("spring.cloud.deployer.kubernetes.environmentVariables");
+		if (appEnvVar != null) {
+			String[] appEnvVars = appEnvVar.split(",");
+			for (String envVar : appEnvVars) {
+				logger.info("Adding environment variable from AppDeploymentRequest: "
+						+ envVar);
+				String[] strings = envVar.split("=", 2);
+				Assert.isTrue(strings.length == 2,
+						"Invalid environment variable declared: " + envVar);
+				appEnvVarList.add(new EnvVar(strings[0], strings[1], null));
+			}
+		}
+		return appEnvVarList;
 	}
 
 }
