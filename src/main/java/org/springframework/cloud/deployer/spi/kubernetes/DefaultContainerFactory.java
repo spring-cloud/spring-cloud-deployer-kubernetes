@@ -18,6 +18,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -63,22 +64,26 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 		logger.info("Using Docker image: " + image);
 
-		List<EnvVar> envVars = new ArrayList<>();
+		Map<String, String> envVarsMap = new HashMap<>();
 		for (String envVar : properties.getEnvironmentVariables()) {
 			String[] strings = envVar.split("=", 2);
 			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
-			envVars.add(new EnvVar(strings[0], strings[1], null));
+			envVarsMap.put(strings[0], strings[1]);
+		}
+		//Create EnvVar entries for additional variables set at the app level
+		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
+		//image supports it.
+		envVarsMap.putAll(getAppEnvironmentVariables(request));
+
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+
+		List<EnvVar> envVars = new ArrayList<>();
+		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
+			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
 		if (instanceIndex != null) {
 			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
-
-		//Create EnvVar entries for additional variables set at the app level
-		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
-		//image supports it.
-		envVars.addAll(getAppEnvironmentVariables(request));
-
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 
 		ContainerBuilder container = new ContainerBuilder();
 		container.withName(appInstanceId)
@@ -138,8 +143,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * environment variables
 	 * @return a List of EnvVar objects for app specific environment settings
 	 */
-	private List<EnvVar> getAppEnvironmentVariables(AppDeploymentRequest request) {
-		List<EnvVar> appEnvVarList = new ArrayList<>();
+	private Map<String, String> getAppEnvironmentVariables(AppDeploymentRequest request) {
+		Map<String, String> appEnvVarMap = new HashMap<>();
 		String appEnvVar = request.getDeploymentProperties()
 				.get("spring.cloud.deployer.kubernetes.environmentVariables");
 		if (appEnvVar != null) {
@@ -150,10 +155,10 @@ public class DefaultContainerFactory implements ContainerFactory {
 				String[] strings = envVar.split("=", 2);
 				Assert.isTrue(strings.length == 2,
 						"Invalid environment variable declared: " + envVar);
-				appEnvVarList.add(new EnvVar(strings[0], strings[1], null));
+				appEnvVarMap.put(strings[0], strings[1]);
 			}
 		}
-		return appEnvVarList;
+		return appEnvVarMap;
 	}
 
 }
