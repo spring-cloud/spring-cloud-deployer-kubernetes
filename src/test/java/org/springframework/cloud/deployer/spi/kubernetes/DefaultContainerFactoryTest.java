@@ -122,6 +122,29 @@ public class DefaultContainerFactoryTest {
 		assertTrue(65535 == containerPorts.get(2).getContainerPort());
 	}
 
+    @Test
+    public void createWithInvalidPort() {
+        KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+        DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+                kubernetesDeployerProperties);
+
+        AppDefinition definition = new AppDefinition("app-test", null);
+        Resource resource = getResource();
+        Map<String, String> props = new HashMap<>();
+        props.put("spring.cloud.deployer.kubernetes.containerPorts",
+                "8081, 8082, invalid");
+        AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+                resource, props);
+
+        Container container = defaultContainerFactory.create("app-test",
+                appDeploymentRequest, null, null);
+        assertNotNull(container);
+        List<ContainerPort> containerPorts = container.getPorts();
+        assertNotNull(containerPorts);
+        assertTrue("There should be three ports set", containerPorts.size() == 2);
+        assertTrue(8081 == containerPorts.get(0).getContainerPort());
+        assertTrue(8082 == containerPorts.get(1).getContainerPort());
+    }
 
 	private Resource getResource() {
 		return new DockerResource(
