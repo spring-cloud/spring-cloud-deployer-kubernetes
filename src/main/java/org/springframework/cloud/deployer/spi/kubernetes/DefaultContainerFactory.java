@@ -17,10 +17,9 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -85,6 +84,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 				.withImage(image)
 				.withEnv(envVars)
 				.withArgs(createCommandArgs(request));
+
 		if (port != null) {
 			container.addNewPort()
 					.withContainerPort(port)
@@ -96,6 +96,23 @@ public class DefaultContainerFactory implements ContainerFactory {
 							createProbe(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
 									properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod()));
 		}
+
+		//Add additional specified ports.  Further work is needed to add probe customization for each port.
+		List<Integer> additionalPorts = getContainerPorts(request);
+		if(!additionalPorts.isEmpty()) {
+			for (Integer containerPort : additionalPorts) {
+				container.addNewPort()
+						.withContainerPort(containerPort)
+						.endPort();
+			}
+		}
+
+		//Override the containers default entry point with one specified during the app deployment
+		List<String> containerCommands = getContainerCommands(request);
+		if(!containerCommands.isEmpty()) {
+			container.withCommand(containerCommands);
+		}
+
 		return container.build();
 	}
 
@@ -130,6 +147,52 @@ public class DefaultContainerFactory implements ContainerFactory {
 		cmdArgs.addAll(request.getCommandlineArguments());
 		logger.debug("Using command args: " + cmdArgs);
 		return cmdArgs;
+	}
+
+	/**
+	 * The list represents a single command with many arguments.
+	 *
+	 * @param request AppDeploymentRequest - used to gather application overridden
+	 * container command
+	 * @return a list of strings that represents the command and any arguments for that command
+	 */
+	private List<String> getContainerCommands(AppDeploymentRequest request) {
+		List<String> containerCommandList = new ArrayList<>();
+		String containerCommands = request.getDeploymentProperties()
+				.get("spring.cloud.deployer.kubernetes.containerCommand");
+		if (containerCommands != null) {
+			String[] containerCommandSplit = containerCommands.split(",");
+			for (String containerCommand : containerCommandSplit) {
+				logger.info("Adding container commands from AppDeploymentRequest: "
+						+ containerCommand);
+				containerCommandList.add(containerCommand.trim());
+			}
+		}
+		return containerCommandList;
+	}
+
+	/**
+	 * @param request AppDeploymentRequest - used to gather additional container ports
+	 * @return a list of Integers to add to the container
+	 */
+	private List<Integer> getContainerPorts(AppDeploymentRequest request) {
+		List<Integer> containerPortList = new ArrayList<>();
+		String containerPorts = request.getDeploymentProperties()
+				.get("spring.cloud.deployer.kubernetes.containerPorts");
+		if (containerPorts != null) {
+			String[] containerPortSplit = containerPorts.split(",");
+			for (String containerPort : containerPortSplit) {
+				logger.info("Adding container ports from AppDeploymentRequest: "
+						+ containerPort);
+				try {
+					Integer port = Integer.parseInt(containerPort.trim());
+					containerPortList.add(port);
+				} catch (NumberFormatException e) {
+					logger.info("Value is not a valid port number.");
+				}
+			}
+		}
+		return containerPortList;
 	}
 
 	/**
