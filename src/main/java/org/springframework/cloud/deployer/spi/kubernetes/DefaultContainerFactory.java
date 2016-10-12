@@ -17,6 +17,11 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,29 +67,32 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 		logger.info("Using Docker image: " + image);
 
-		List<EnvVar> envVars = new ArrayList<>();
+		Map<String, String> envVarsMap = new HashMap<>();
 		for (String envVar : properties.getEnvironmentVariables()) {
 			String[] strings = envVar.split("=", 2);
 			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
-			envVars.add(new EnvVar(strings[0], strings[1], null));
+			envVarsMap.put(strings[0], strings[1]);
+		}
+		//Create EnvVar entries for additional variables set at the app level
+		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
+		//image supports it.
+		envVarsMap.putAll(getAppEnvironmentVariables(request));
+
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+
+		List<EnvVar> envVars = new ArrayList<>();
+		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
+			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
 		if (instanceIndex != null) {
 			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
-
-		//Create EnvVar entries for additional variables set at the app level
-		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
-		//image supports it.
-		envVars.addAll(getAppEnvironmentVariables(request));
-
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 
 		ContainerBuilder container = new ContainerBuilder();
 		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
 				.withArgs(createCommandArgs(request));
-
 		if (port != null) {
 			container.addNewPort()
 					.withContainerPort(port)
@@ -149,60 +157,60 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return cmdArgs;
 	}
 
-	/**
-	 * The list represents a single command with many arguments.
-	 *
-	 * @param request AppDeploymentRequest - used to gather application overridden
-	 * container command
-	 * @return a list of strings that represents the command and any arguments for that command
-	 */
-	private List<String> getContainerCommands(AppDeploymentRequest request) {
-		List<String> containerCommandList = new ArrayList<>();
-		String containerCommands = request.getDeploymentProperties()
-				.get("spring.cloud.deployer.kubernetes.containerCommand");
-		if (containerCommands != null) {
-			String[] containerCommandSplit = containerCommands.split(",");
-			for (String containerCommand : containerCommandSplit) {
-				logger.info("Adding container commands from AppDeploymentRequest: "
-						+ containerCommand);
-				containerCommandList.add(containerCommand.trim());
-			}
-		}
-		return containerCommandList;
-	}
+    /**
+     * The list represents a single command with many arguments.
+     *
+     * @param request AppDeploymentRequest - used to gather application overridden
+     * container command
+     * @return a list of strings that represents the command and any arguments for that command
+     */
+    private List<String> getContainerCommands(AppDeploymentRequest request) {
+        List<String> containerCommandList = new ArrayList<>();
+        String containerCommands = request.getDeploymentProperties()
+                .get("spring.cloud.deployer.kubernetes.containerCommand");
+        if (containerCommands != null) {
+            String[] containerCommandSplit = containerCommands.split(",");
+            for (String containerCommand : containerCommandSplit) {
+                logger.info("Adding container commands from AppDeploymentRequest: "
+                        + containerCommand);
+                containerCommandList.add(containerCommand.trim());
+            }
+        }
+        return containerCommandList;
+    }
 
-	/**
-	 * @param request AppDeploymentRequest - used to gather additional container ports
-	 * @return a list of Integers to add to the container
-	 */
-	private List<Integer> getContainerPorts(AppDeploymentRequest request) {
-		List<Integer> containerPortList = new ArrayList<>();
-		String containerPorts = request.getDeploymentProperties()
-				.get("spring.cloud.deployer.kubernetes.containerPorts");
-		if (containerPorts != null) {
-			String[] containerPortSplit = containerPorts.split(",");
-			for (String containerPort : containerPortSplit) {
-				logger.info("Adding container ports from AppDeploymentRequest: "
-						+ containerPort);
-				try {
-					Integer port = Integer.parseInt(containerPort.trim());
-					containerPortList.add(port);
-				} catch (NumberFormatException e) {
-					logger.info("Value is not a valid port number.");
-				}
-			}
-		}
-		return containerPortList;
-	}
+    /**
+     * @param request AppDeploymentRequest - used to gather additional container ports
+     * @return a list of Integers to add to the container
+     */
+    private List<Integer> getContainerPorts(AppDeploymentRequest request) {
+        List<Integer> containerPortList = new ArrayList<>();
+        String containerPorts = request.getDeploymentProperties()
+                .get("spring.cloud.deployer.kubernetes.containerPorts");
+        if (containerPorts != null) {
+            String[] containerPortSplit = containerPorts.split(",");
+            for (String containerPort : containerPortSplit) {
+                logger.info("Adding container ports from AppDeploymentRequest: "
+                        + containerPort);
+                try {
+                    Integer port = Integer.parseInt(containerPort.trim());
+                    containerPortList.add(port);
+                } catch (NumberFormatException e) {
+                    logger.info("Value is not a valid port number.");
+                }
+            }
+        }
+        return containerPortList;
+    }
 
-	/**
+    /**
 	 *
 	 * @param request AppDeploymentRequest - used to gather application specific
 	 * environment variables
 	 * @return a List of EnvVar objects for app specific environment settings
 	 */
-	private List<EnvVar> getAppEnvironmentVariables(AppDeploymentRequest request) {
-		List<EnvVar> appEnvVarList = new ArrayList<>();
+	private Map<String, String> getAppEnvironmentVariables(AppDeploymentRequest request) {
+		Map<String, String> appEnvVarMap = new HashMap<>();
 		String appEnvVar = request.getDeploymentProperties()
 				.get("spring.cloud.deployer.kubernetes.environmentVariables");
 		if (appEnvVar != null) {
@@ -213,10 +221,10 @@ public class DefaultContainerFactory implements ContainerFactory {
 				String[] strings = envVar.split("=", 2);
 				Assert.isTrue(strings.length == 2,
 						"Invalid environment variable declared: " + envVar);
-				appEnvVarList.add(new EnvVar(strings[0], strings[1], null));
+				appEnvVarMap.put(strings[0], strings[1]);
 			}
 		}
-		return appEnvVarList;
+		return appEnvVarMap;
 	}
 
 }
