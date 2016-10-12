@@ -116,9 +116,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		//Override the containers default entry point with one specified during the app deployment
-		List<String> containerCommands = getContainerCommands(request);
-		if(!containerCommands.isEmpty()) {
-			container.withCommand(containerCommands);
+		List<String> containerCommand = getContainerCommand(request);
+		if(!containerCommand.isEmpty()) {
+			container.withCommand(containerCommand);
 		}
 
 		return container.build();
@@ -164,16 +164,16 @@ public class DefaultContainerFactory implements ContainerFactory {
      * container command
      * @return a list of strings that represents the command and any arguments for that command
      */
-    private List<String> getContainerCommands(AppDeploymentRequest request) {
+    private List<String> getContainerCommand(AppDeploymentRequest request) {
         List<String> containerCommandList = new ArrayList<>();
-        String containerCommands = request.getDeploymentProperties()
+        String containerCommand = request.getDeploymentProperties()
                 .get("spring.cloud.deployer.kubernetes.containerCommand");
-        if (containerCommands != null) {
-            String[] containerCommandSplit = containerCommands.split(",");
-            for (String containerCommand : containerCommandSplit) {
-                logger.info("Adding container commands from AppDeploymentRequest: "
-                        + containerCommand);
-                containerCommandList.add(containerCommand.trim());
+        if (containerCommand != null) {
+			logger.info("Building container command from AppDeploymentRequest: "
+					+ containerCommand);
+            String[] containerCommandSplit = containerCommand.split(",");
+            for (String commandPart : containerCommandSplit) {
+                containerCommandList.add(commandPart.trim());
             }
         }
         return containerCommandList;
