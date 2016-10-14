@@ -40,6 +40,7 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 
 /**
@@ -78,7 +79,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
-		Resource resource = integrationTestProcessor();
+		Resource resource = testApplication();
 		Map<String, String> props = new HashMap<>();
 		// setting to small memory value will cause app to fail to be deployed
 		props.put("spring.cloud.deployer.kubernetes.memory", "8Mi");
@@ -106,7 +107,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
-		Resource resource = integrationTestProcessor();
+		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 
 		log.info("Deploying {}...", request.getDefinition().getName());
@@ -123,42 +124,6 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Override
-	public void testUnknownDeployment() {
-		log.info("Testing {}...", "UnknownDeployment");
-		super.testUnknownDeployment();
-	}
-
-	@Override
-	public void testSimpleDeployment() {
-		log.info("Testing {}...", "SimpleDeployment");
-		super.testSimpleDeployment();
-	}
-
-	@Override
-	public void testRedeploy() {
-		log.info("Testing {}...", "Redeploy");
-		super.testRedeploy();
-	}
-
-	@Override
-	public void testDeployingStateCalculationAndCancel() {
-		log.info("Testing {}...", "DeployingStateCalculationAndCancel");
-		super.testDeployingStateCalculationAndCancel();
-	}
-
-	@Override
-	public void testFailedDeployment() {
-		log.info("Testing {}...", "FailedDeployment");
-		super.testFailedDeployment();
-	}
-
-	@Override
-	public void testParameterPassing() {
-		log.info("Testing {}...", "ApplicationPropertiesPassing");
-		super.testParameterPassing();
-	}
-
-	@Override
 	protected String randomName() {
 		// Kubernetest service names must start with a letter and can only be 24 characters long
 		return "app-" + UUID.randomUUID().toString().substring(0, 18);
@@ -170,7 +135,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Override
-	protected Resource integrationTestProcessor() {
+	protected Resource testApplication() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}
 }
