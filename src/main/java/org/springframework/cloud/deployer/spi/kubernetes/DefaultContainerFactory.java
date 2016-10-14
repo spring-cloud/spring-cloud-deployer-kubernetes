@@ -169,7 +169,7 @@ public class DefaultContainerFactory implements ContainerFactory {
         String containerCommand = request.getDeploymentProperties()
                 .get("spring.cloud.deployer.kubernetes.containerCommand");
         if (containerCommand != null) {
-			logger.info("Building container command from AppDeploymentRequest: "
+			logger.trace("Building container command from AppDeploymentRequest: "
 					+ containerCommand);
             String[] containerCommandSplit = containerCommand.split(",");
             for (String commandPart : containerCommandSplit) {
@@ -190,14 +190,10 @@ public class DefaultContainerFactory implements ContainerFactory {
         if (containerPorts != null) {
             String[] containerPortSplit = containerPorts.split(",");
             for (String containerPort : containerPortSplit) {
-                logger.info("Adding container ports from AppDeploymentRequest: "
+                logger.trace("Adding container ports from AppDeploymentRequest: "
                         + containerPort);
-                try {
-                    Integer port = Integer.parseInt(containerPort.trim());
-                    containerPortList.add(port);
-                } catch (NumberFormatException e) {
-                    logger.info("Value is not a valid port number.");
-                }
+				Integer port = Integer.parseInt(containerPort.trim());
+				containerPortList.add(port);
             }
         }
         return containerPortList;
@@ -216,7 +212,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		if (appEnvVar != null) {
 			String[] appEnvVars = appEnvVar.split(",");
 			for (String envVar : appEnvVars) {
-				logger.info("Adding environment variable from AppDeploymentRequest: "
+				logger.trace("Adding environment variable from AppDeploymentRequest: "
 						+ envVar);
 				String[] strings = envVar.split("=", 2);
 				Assert.isTrue(strings.length == 2,

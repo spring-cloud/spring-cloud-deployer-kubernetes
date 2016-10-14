@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -122,7 +123,7 @@ public class DefaultContainerFactoryTest {
 		assertTrue(65535 == containerPorts.get(2).getContainerPort());
 	}
 
-    @Test
+    @Test(expected = NumberFormatException.class)
     public void createWithInvalidPort() {
         KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
         DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
@@ -132,18 +133,12 @@ public class DefaultContainerFactoryTest {
         Resource resource = getResource();
         Map<String, String> props = new HashMap<>();
         props.put("spring.cloud.deployer.kubernetes.containerPorts",
-                "8081, 8082, invalid");
+                "8081, 8082, invalid, 9212");
         AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
                 resource, props);
 
-        Container container = defaultContainerFactory.create("app-test",
-                appDeploymentRequest, null, null);
-        assertNotNull(container);
-        List<ContainerPort> containerPorts = container.getPorts();
-        assertNotNull(containerPorts);
-        assertTrue("There should be three ports set", containerPorts.size() == 2);
-        assertTrue(8081 == containerPorts.get(0).getContainerPort());
-        assertTrue(8082 == containerPorts.get(1).getContainerPort());
+		//Attempting to create with an invalid integer set for a port should cause an exception to bubble up.
+        defaultContainerFactory.create("app-test", appDeploymentRequest, null, null);
     }
 
 	private Resource getResource() {
