@@ -22,6 +22,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,6 +104,23 @@ public class DefaultContainerFactory implements ContainerFactory {
 							createProbe(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
 									properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod()));
 		}
+
+		//Add additional specified ports.  Further work is needed to add probe customization for each port.
+		List<Integer> additionalPorts = getContainerPorts(request);
+		if(!additionalPorts.isEmpty()) {
+			for (Integer containerPort : additionalPorts) {
+				container.addNewPort()
+						.withContainerPort(containerPort)
+						.endPort();
+			}
+		}
+
+		//Override the containers default entry point with one specified during the app deployment
+		List<String> containerCommand = getContainerCommand(request);
+		if(!containerCommand.isEmpty()) {
+			container.withCommand(containerCommand);
+		}
+
 		return container.build();
 	}
 
@@ -137,7 +157,49 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return cmdArgs;
 	}
 
-	/**
+    /**
+     * The list represents a single command with many arguments.
+     *
+     * @param request AppDeploymentRequest - used to gather application overridden
+     * container command
+     * @return a list of strings that represents the command and any arguments for that command
+     */
+    private List<String> getContainerCommand(AppDeploymentRequest request) {
+        List<String> containerCommandList = new ArrayList<>();
+        String containerCommand = request.getDeploymentProperties()
+                .get("spring.cloud.deployer.kubernetes.containerCommand");
+        if (containerCommand != null) {
+			logger.trace("Building container command from AppDeploymentRequest: "
+					+ containerCommand);
+            String[] containerCommandSplit = containerCommand.split(",");
+            for (String commandPart : containerCommandSplit) {
+                containerCommandList.add(commandPart.trim());
+            }
+        }
+        return containerCommandList;
+    }
+
+    /**
+     * @param request AppDeploymentRequest - used to gather additional container ports
+     * @return a list of Integers to add to the container
+     */
+    private List<Integer> getContainerPorts(AppDeploymentRequest request) {
+        List<Integer> containerPortList = new ArrayList<>();
+        String containerPorts = request.getDeploymentProperties()
+                .get("spring.cloud.deployer.kubernetes.containerPorts");
+        if (containerPorts != null) {
+            String[] containerPortSplit = containerPorts.split(",");
+            for (String containerPort : containerPortSplit) {
+                logger.trace("Adding container ports from AppDeploymentRequest: "
+                        + containerPort);
+				Integer port = Integer.parseInt(containerPort.trim());
+				containerPortList.add(port);
+            }
+        }
+        return containerPortList;
+    }
+
+    /**
 	 *
 	 * @param request AppDeploymentRequest - used to gather application specific
 	 * environment variables
@@ -150,7 +212,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		if (appEnvVar != null) {
 			String[] appEnvVars = appEnvVar.split(",");
 			for (String envVar : appEnvVars) {
-				logger.info("Adding environment variable from AppDeploymentRequest: "
+				logger.trace("Adding environment variable from AppDeploymentRequest: "
 						+ envVar);
 				String[] strings = envVar.split("=", 2);
 				Assert.isTrue(strings.length == 2,
