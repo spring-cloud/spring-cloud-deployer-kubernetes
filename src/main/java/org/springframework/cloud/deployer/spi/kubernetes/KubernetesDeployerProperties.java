@@ -28,6 +28,8 @@ public class KubernetesDeployerProperties {
 	private static String KUBERNETES_NAMESPACE =
 			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";
 
+	public static enum DockerEntryPointStyle { EXEC, SHELL, BOOT }
+
 	/**
 	 * Namespace to use.
 	 */
@@ -104,6 +106,14 @@ public class KubernetesDeployerProperties {
 	 * Environment variables to set for any deployed app container. To be used for service binding.
 	 */
 	private String[] environmentVariables = new String[]{};
+
+	/**
+	 * Entry point style used for the Docker image. Affects how app properties are passed in.
+	 * For EXEC app properties will be passed in as command line args, for SHELL they will
+	 * be passed in as environment variables and for BOOT they will be passed in using a
+	 * SPRING_APPLICATION_JSON environment variable.
+	 */
+	private DockerEntryPointStyle entryPointStyle = DockerEntryPointStyle.EXEC;
 
 	/**
 	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
@@ -228,6 +238,14 @@ public class KubernetesDeployerProperties {
 
 	public void setEnvironmentVariables(String[] environmentVariables) {
 		this.environmentVariables = environmentVariables;
+	}
+
+	public DockerEntryPointStyle getEntryPointStyle() {
+		return entryPointStyle;
+	}
+
+	public void setEntryPointStyle(DockerEntryPointStyle entryPointStyle) {
+		this.entryPointStyle = entryPointStyle;
 	}
 
 	public boolean isCreateLoadBalancer() {

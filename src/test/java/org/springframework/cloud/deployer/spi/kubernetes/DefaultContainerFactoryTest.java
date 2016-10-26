@@ -27,26 +27,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.Resource;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit4.SpringRunner;
 
 /**
  * Unit tests for {@link DefaultContainerFactory}.
  *
  * @author Will Kennedy
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = { KubernetesAutoConfiguration.class })
+@RunWith(SpringRunner.class)
+@SpringBootTest(classes = { KubernetesAutoConfiguration.class })
 public class DefaultContainerFactoryTest {
 
 	@Test
@@ -138,6 +140,47 @@ public class DefaultContainerFactoryTest {
 		//Attempting to create with an invalid integer set for a port should cause an exception to bubble up.
         defaultContainerFactory.create("app-test", appDeploymentRequest, null, null);
     }
+
+	@Test
+	public void createWithEntryPointStyle() throws JsonProcessingException {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String, String> appProps = new HashMap<>();
+		appProps.put("foo.bar.baz", "test");
+		AppDefinition definition = new AppDefinition("app-test", appProps);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+
+		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "shell");
+		AppDeploymentRequest appDeploymentRequestShell = new AppDeploymentRequest(definition,
+				resource, props);
+		Container containerShell = defaultContainerFactory.create("app-test",
+				appDeploymentRequestShell, null, null);
+		assertNotNull(containerShell);
+		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
+		assertTrue(containerShell.getArgs().size() == 0);
+
+		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
+		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
+				resource, props);
+		Container containerExec = defaultContainerFactory.create("app-test",
+				appDeploymentRequestExec, null, null);
+		assertNotNull(containerExec);
+		assertTrue(containerExec.getEnv().size() == 0);
+		assertTrue(containerExec.getArgs().get(0).equals("--foo.bar.baz=test"));
+
+		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "boot");
+		AppDeploymentRequest appDeploymentRequestBoot = new AppDeploymentRequest(definition,
+				resource, props);
+		Container containerBoot = defaultContainerFactory.create("app-test",
+				appDeploymentRequestBoot, null, null);
+		assertNotNull(containerBoot);
+		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
+		assertTrue(containerBoot.getEnv().get(0).getValue().equals(new ObjectMapper().writeValueAsString(appProps)));
+		assertTrue(containerBoot.getArgs().size() == 0);
+	}
 
 	private Resource getResource() {
 		return new DockerResource(
