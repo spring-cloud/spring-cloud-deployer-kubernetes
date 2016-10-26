@@ -77,14 +77,52 @@ public class AbstractKubernetesDeployer {
 		return statusBuilder.build();
 	}
 
+	/**
+	 * Get the resource limits for the deployment request. A Pod can define its maximum needed resources by setting the
+	 * limits and Kubernetes can provide more resources if any are free.
+	 * <p>
+	 * Falls back to the server properties if not present in the deployment request.
+	 * <p>
+	 * Also supports the deprecated properties {@code spring.cloud.deployer.kubernetes.memory/cpu}.
+	 *
+	 * @param properties The server properties.
+	 * @param request    The deployment properties.
+	 */
 	protected Map<String, Quantity> deduceResourceLimits(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.memory");
-		if (memOverride == null)
-			memOverride = properties.getMemory();
+		String memLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
+		if (memLimitsOverride != null) {
+			// Non-deprecated value has priority
+			memOverride = memLimitsOverride;
+		}
+
+		// Use server property if there is no request setting
+		if (memOverride == null) {
+			if (properties.getLimits().getMemory() != null) {
+				// Non-deprecated value has priority
+				memOverride = properties.getLimits().getMemory();
+			} else {
+				memOverride = properties.getMemory();
+			}
+		}
+
 
 		String cpuOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.cpu");
-		if (cpuOverride == null)
-			cpuOverride = properties.getCpu();
+		String cpuLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.cpu");
+		if (cpuLimitsOverride != null) {
+			// Non-deprecated value has priority
+			cpuOverride = cpuLimitsOverride;
+		}
+
+		// Use server property if there is no request setting
+		if (cpuOverride == null) {
+			if (properties.getLimits().getCpu() != null) {
+				// Non-deprecated value has priority
+				cpuOverride = properties.getLimits().getCpu();
+			} else {
+				cpuOverride = properties.getCpu();
+			}
+		}
 
 		logger.debug("Using limits - cpu: " + cpuOverride + " mem: " + memOverride);
 
@@ -92,6 +130,33 @@ public class AbstractKubernetesDeployer {
 		limits.put("memory", new Quantity(memOverride));
 		limits.put("cpu", new Quantity(cpuOverride));
 		return limits;
+	}
+
+	/**
+	 * Get the resource requests for the deployment request. Resource requests are guaranteed by the Kubernetes
+	 * runtime.
+	 * Falls back to the server properties if not present in the deployment request.
+	 *
+	 * @param properties The server properties.
+	 * @param request    The deployment properties.
+	 */
+	Map<String, Quantity> deduceResourceRequests(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");
+		if (memOverride == null) {
+			memOverride = properties.getRequests().getMemory();
+		}
+
+		String cpuOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.cpu");
+		if (cpuOverride == null) {
+			cpuOverride = properties.getRequests().getCpu();
+		}
+
+		logger.debug("Using requests - cpu: " + cpuOverride + " mem: " + memOverride);
+
+		Map<String,Quantity> requests = new HashMap<String, Quantity>();
+		requests.put("memory", new Quantity(memOverride));
+		requests.put("cpu", new Quantity(cpuOverride));
+		return requests;
 	}
 
 }
