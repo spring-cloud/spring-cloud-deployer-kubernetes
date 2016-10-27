@@ -68,8 +68,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 		logger.info("Using Docker image: " + image);
 
-		KubernetesDeployerProperties.DockerEntryPointStyle entryPointStyle =
-				determineEntryPointStyle(properties, request);
+		EntryPointStyle entryPointStyle = determineEntryPointStyle(properties, request);
 		logger.info("Using Docker entry point style: " + entryPointStyle);
 
 		Map<String, String> envVarsMap = new HashMap<>();
@@ -86,13 +85,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 		List<String> appArgs = new ArrayList<>();
 
 		switch (entryPointStyle) {
-			case EXEC:
+			case exec:
 				appArgs = createCommandArgs(request);
 				break;
-			case BOOT:
+			case boot:
 				if(envVarsMap.containsKey("SPRING_APPLICATION_JSON")) {
 					throw new IllegalStateException(
-							"You can't use BOOT entry point style and also set SPRING_APPLICATION_JSON for the app");
+							"You can't use boot entry point style and also set SPRING_APPLICATION_JSON for the app");
 				}
 				try {
 					envVarsMap.put("SPRING_APPLICATION_JSON",
@@ -102,7 +101,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 					throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
 				}
 				break;
-			case SHELL:
+			case shell:
 				for (String key : request.getDefinition().getProperties().keySet()) {
 					String envVar = key.replace('.', '_').toUpperCase();
 					envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
@@ -247,15 +246,15 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return appEnvVarMap;
 	}
 
-	private KubernetesDeployerProperties.DockerEntryPointStyle determineEntryPointStyle(
+	private EntryPointStyle determineEntryPointStyle(
 			KubernetesDeployerProperties properties, AppDeploymentRequest request) {
-		KubernetesDeployerProperties.DockerEntryPointStyle entryPointStyle = null;
+		EntryPointStyle entryPointStyle = null;
 		String deployProperty =
 				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.entryPointStyle");
 		if (deployProperty != null) {
 			try {
-				entryPointStyle = KubernetesDeployerProperties.DockerEntryPointStyle.valueOf(
-						deployProperty.toUpperCase());
+				entryPointStyle = EntryPointStyle.valueOf(
+						deployProperty.toLowerCase());
 			}
 			catch (IllegalArgumentException ignore) {}
 		}
