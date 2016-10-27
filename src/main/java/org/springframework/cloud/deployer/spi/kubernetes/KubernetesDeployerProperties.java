@@ -106,6 +106,11 @@ public class KubernetesDeployerProperties {
 	private String[] environmentVariables = new String[]{};
 
 	/**
+	 * Entry point style used for the Docker image. To be used to determine how to pass in properties.
+	 */
+	private EntryPointStyle entryPointStyle = EntryPointStyle.exec;
+
+	/**
 	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
 	 */
 	private boolean createLoadBalancer = false;
@@ -228,6 +233,14 @@ public class KubernetesDeployerProperties {
 
 	public void setEnvironmentVariables(String[] environmentVariables) {
 		this.environmentVariables = environmentVariables;
+	}
+
+	public EntryPointStyle getEntryPointStyle() {
+		return entryPointStyle;
+	}
+
+	public void setEntryPointStyle(EntryPointStyle entryPointStyle) {
+		this.entryPointStyle = entryPointStyle;
 	}
 
 	public boolean isCreateLoadBalancer() {

@@ -23,6 +23,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -57,6 +59,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	@Override
 	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
+
 		String image = null;
 		try {
 			image = request.getResource().getURI().getSchemeSpecificPart();
@@ -64,6 +67,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 		logger.info("Using Docker image: " + image);
+
+		EntryPointStyle entryPointStyle = determineEntryPointStyle(properties, request);
+		logger.info("Using Docker entry point style: " + entryPointStyle);
 
 		Map<String, String> envVarsMap = new HashMap<>();
 		for (String envVar : properties.getEnvironmentVariables()) {
@@ -76,7 +82,32 @@ public class DefaultContainerFactory implements ContainerFactory {
 		//image supports it.
 		envVarsMap.putAll(getAppEnvironmentVariables(request));
 
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+		List<String> appArgs = new ArrayList<>();
+
+		switch (entryPointStyle) {
+			case exec:
+				appArgs = createCommandArgs(request);
+				break;
+			case boot:
+				if(envVarsMap.containsKey("SPRING_APPLICATION_JSON")) {
+					throw new IllegalStateException(
+							"You can't use boot entry point style and also set SPRING_APPLICATION_JSON for the app");
+				}
+				try {
+					envVarsMap.put("SPRING_APPLICATION_JSON",
+							new ObjectMapper().writeValueAsString(request.getDefinition().getProperties()));
+				}
+				catch(JsonProcessingException e) {
+					throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
+				}
+				break;
+			case shell:
+				for (String key : request.getDefinition().getProperties().keySet()) {
+					String envVar = key.replace('.', '_').toUpperCase();
+					envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
+				}
+				break;
+		}
 
 		List<EnvVar> envVars = new ArrayList<>();
 		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
@@ -86,11 +117,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
 
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+
 		ContainerBuilder container = new ContainerBuilder();
 		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(createCommandArgs(request));
+				.withArgs(appArgs);
 
 		if (port != null) {
 			container.addNewPort()
@@ -211,6 +244,24 @@ public class DefaultContainerFactory implements ContainerFactory {
 			}
 		}
 		return appEnvVarMap;
+	}
+
+	private EntryPointStyle determineEntryPointStyle(
+			KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+		EntryPointStyle entryPointStyle = null;
+		String deployProperty =
+				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.entryPointStyle");
+		if (deployProperty != null) {
+			try {
+				entryPointStyle = EntryPointStyle.valueOf(
+						deployProperty.toLowerCase());
+			}
+			catch (IllegalArgumentException ignore) {}
+		}
+		if (entryPointStyle == null) {
+			entryPointStyle = properties.getEntryPointStyle();
+		}
+		return entryPointStyle;
 	}
 
 }

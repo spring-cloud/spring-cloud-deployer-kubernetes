@@ -16,52 +16,29 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.hamcrest.core.Is;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.spi.core.AppDefinition;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
-import org.springframework.cloud.deployer.spi.task.TaskStatus;
 import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationTests;
 import org.springframework.core.io.Resource;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
-import static org.springframework.cloud.deployer.spi.task.LaunchState.complete;
-import static org.springframework.cloud.deployer.spi.task.LaunchState.failed;
-import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
 /**
  * Integration tests for {@link KubernetesTaskLauncher}.
  *
  * @author Thomas Risberg
  */
-@SpringApplicationConfiguration(classes = {KubernetesAutoConfiguration.class})
-@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
 	private static final Log logger = LogFactory.getLog(KubernetesTaskLauncherIntegrationTests.class);

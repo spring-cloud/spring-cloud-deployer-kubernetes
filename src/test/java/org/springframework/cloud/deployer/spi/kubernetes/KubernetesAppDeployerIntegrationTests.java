@@ -33,7 +33,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
@@ -48,7 +48,7 @@ import org.springframework.core.io.Resource;
  *
  * @author Thomas Risberg
  */
-@SpringApplicationConfiguration(classes = {KubernetesAutoConfiguration.class})
+@SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
 	@ClassRule
