@@ -83,9 +83,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 		//image supports it.
 		envVarsMap.putAll(getAppEnvironmentVariables(request));
 
-		if (!(entryPointStyle == KubernetesDeployerProperties.DockerEntryPointStyle.EXEC)) {
-			//We can't use BOOT entry point style and also set SPRING_APPLICATION_JSON for the app
-			if (entryPointStyle == KubernetesDeployerProperties.DockerEntryPointStyle.BOOT) {
+		List<String> appArgs = new ArrayList<>();
+
+		switch (entryPointStyle) {
+			case EXEC:
+				appArgs = createCommandArgs(request);
+				break;
+			case BOOT:
 				if(envVarsMap.containsKey("SPRING_APPLICATION_JSON")) {
 					throw new IllegalStateException(
 							"You can't use BOOT entry point style and also set SPRING_APPLICATION_JSON for the app");
@@ -97,15 +101,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 				catch(JsonProcessingException e) {
 					throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
 				}
-			}
-			else {
+				break;
+			case SHELL:
 				for (String key : request.getDefinition().getProperties().keySet()) {
 					String envVar = key.replace('.', '_').toUpperCase();
 					envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
 				}
-			}
+				break;
 		}
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 
 		List<EnvVar> envVars = new ArrayList<>();
 		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
@@ -115,10 +118,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
 		}
 
-		List<String> appArgs = new ArrayList<>();
-		if (entryPointStyle == KubernetesDeployerProperties.DockerEntryPointStyle.EXEC) {
-			appArgs = createCommandArgs(request);
-		}
+		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
+
 		ContainerBuilder container = new ContainerBuilder();
 		container.withName(appInstanceId)
 				.withImage(image)
@@ -249,11 +250,15 @@ public class DefaultContainerFactory implements ContainerFactory {
 	private KubernetesDeployerProperties.DockerEntryPointStyle determineEntryPointStyle(
 			KubernetesDeployerProperties properties, AppDeploymentRequest request) {
 		KubernetesDeployerProperties.DockerEntryPointStyle entryPointStyle = null;
-		try {
-			entryPointStyle = KubernetesDeployerProperties.DockerEntryPointStyle.valueOf(
-					request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.entryPointStyle")
-							.toUpperCase());
-		} catch (IllegalArgumentException ignore) {}
+		String deployProperty =
+				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.entryPointStyle");
+		if (deployProperty != null) {
+			try {
+				entryPointStyle = KubernetesDeployerProperties.DockerEntryPointStyle.valueOf(
+						deployProperty.toUpperCase());
+			}
+			catch (IllegalArgumentException ignore) {}
+		}
 		if (entryPointStyle == null) {
 			entryPointStyle = properties.getEntryPointStyle();
 		}
