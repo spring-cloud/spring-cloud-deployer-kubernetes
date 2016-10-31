@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hashids.Hashids;
 
+import org.springframework.boot.bind.RelaxedNames;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -95,7 +97,8 @@ public class AbstractKubernetesDeployer {
 	}
 
 	/**
-	 * Get the image pull policy for the deployment request. If it is not present use the server default.
+	 * Get the image pull policy for the deployment request. If it is not present use the server default. If an override
+	 * for the deployment is present but not parseable, fall back to a default value.
 	 *
 	 * @param properties The server properties.
 	 * @param request The deployment request.
@@ -109,7 +112,11 @@ public class AbstractKubernetesDeployer {
 		if (pullPolicyOverride == null) {
 			pullPolicy = properties.getImagePullPolicy();
 		} else {
-			pullPolicy = ImagePullPolicy.valueOf(pullPolicyOverride);
+			pullPolicy = ImagePullPolicy.relaxedValueOf(pullPolicyOverride);
+			if (pullPolicy == null) {
+				logger.warn("Parsing of pull policy " + pullPolicyOverride + " failed, using default \"Always\".");
+				pullPolicy = ImagePullPolicy.Always;
+			}
 		}
 		logger.debug("Using imagePullPolicy " + pullPolicy);
 		return pullPolicy;
