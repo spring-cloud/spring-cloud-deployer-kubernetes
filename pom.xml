@@ -18,8 +18,8 @@
 
 	<properties>
 		<java.version>1.8</java.version>
-		<kubernetes-client.version>1.4.14</kubernetes-client.version>
-		<kubernetes-assertions.version>2.2.165</kubernetes-assertions.version>
+		<kubernetes-client.version>1.4.17</kubernetes-client.version>
+		<kubernetes-assertions.version>2.2.174</kubernetes-assertions.version>
 		<spring-cloud-deployer-spi.version>1.1.0.M1</spring-cloud-deployer-spi.version>
 	</properties>
 
