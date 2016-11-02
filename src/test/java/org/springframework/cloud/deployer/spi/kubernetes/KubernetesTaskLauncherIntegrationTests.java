@@ -18,10 +18,9 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.UUID;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -48,13 +47,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
 
 	@Autowired
-	TaskLauncher taskLauncher;
-
-	@Autowired
-	KubernetesClient kubernetesClient;
-
-	@Autowired
-	ContainerFactory containerFactory;
+	private TaskLauncher taskLauncher;
 
 	@Override
 	protected TaskLauncher taskLauncher() {
@@ -66,6 +59,13 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	@Ignore("Currently reported as failed instead of cancelled")
 	public void testSimpleCancel() throws InterruptedException {
 		super.testSimpleCancel();
+	}
+
+	@After
+	public void cleanUp() {
+		for (String id : deployments) {
+			((KubernetesTaskLauncher)taskLauncher).cleanup(id);
+		}
 	}
 
 	@Override
