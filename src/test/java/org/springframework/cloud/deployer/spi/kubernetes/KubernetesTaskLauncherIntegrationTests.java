@@ -41,8 +41,6 @@ import org.springframework.core.io.Resource;
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
-	private static final Log logger = LogFactory.getLog(KubernetesTaskLauncherIntegrationTests.class);
-
 	@ClassRule
 	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
 
