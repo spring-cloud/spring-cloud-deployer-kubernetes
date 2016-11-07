@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
@@ -27,6 +28,7 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
@@ -37,6 +39,8 @@ import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
@@ -248,6 +252,21 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		container.setResources(req);
 		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
 		container.setImagePullPolicy(pullPolicy.name());
+		// Add volumes and mounts
+		if (properties.getHostVolumeMounts() != null) {
+			container.setVolumeMounts(properties.getHostVolumeMounts().stream()
+					.map(hvm -> new VolumeMount(hvm.getContainerPath(), hvm.getName(), hvm.isReadOnly(), null))
+					.collect(Collectors.toList()));
+			podSpec.withVolumes(properties.getHostVolumeMounts().stream()
+					.map(mv -> {
+						Volume volume = new Volume();
+						HostPathVolumeSource hostPath = new HostPathVolumeSource();
+						hostPath.setPath(mv.getHostPath());
+						volume.setHostPath(hostPath);
+						volume.setName(mv.getName());
+						return volume;
+					}).collect(Collectors.toList()));
+		}
 
 		podSpec.addToContainers(container);
 		return podSpec.build();

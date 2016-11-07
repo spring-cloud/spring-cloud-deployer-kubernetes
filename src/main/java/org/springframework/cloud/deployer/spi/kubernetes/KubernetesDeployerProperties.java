@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.Collection;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -24,6 +26,60 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
+
+	/**
+	 * Encapsulates volumes to be mounted.
+	 */
+	public static class HostVolumeMount {
+
+		private String name;
+
+		private String hostPath;
+
+		private String containerPath;
+
+		private boolean readOnly;
+
+		public HostVolumeMount(String name, String hostPath, String containerPath, boolean readOnly) {
+			this.name = name;
+			this.hostPath = hostPath;
+			this.containerPath = containerPath;
+			this.readOnly = readOnly;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String mountName) {
+			this.name = mountName;
+		}
+
+		public String getHostPath() {
+			return hostPath;
+		}
+
+		public void setHostPath(String hostPath) {
+			this.hostPath = hostPath;
+		}
+
+		public String getContainerPath() {
+			return containerPath;
+		}
+
+		public void setContainerPath(String containerPath) {
+			this.containerPath = containerPath;
+		}
+
+		public boolean isReadOnly() {
+			return readOnly;
+		}
+
+		public void setReadOnly(boolean readOnly) {
+			this.readOnly = readOnly;
+		}
+
+	}
 
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
@@ -184,6 +240,8 @@ public class KubernetesDeployerProperties {
 	 * The image pull policy to use for Pod deployments in Kubernetes.
 	 */
 	private ImagePullPolicy imagePullPolicy = ImagePullPolicy.IfNotPresent;
+
+	private Collection<HostVolumeMount> hostVolumeMounts;
 
 	public String getNamespace() {
 		return namespace;
@@ -368,4 +426,13 @@ public class KubernetesDeployerProperties {
 	public void setRequests(Resources requests) {
 		this.requests = requests;
 	}
+
+	public Collection<HostVolumeMount> getHostVolumeMounts() {
+		return hostVolumeMounts;
+	}
+
+	public void setHostVolumeMounts(Collection<HostVolumeMount> hostVolumeMounts) {
+		this.hostVolumeMounts = hostVolumeMounts;
+	}
+
 }

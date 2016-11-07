@@ -17,16 +17,21 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
+import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
@@ -39,6 +44,7 @@ import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.HostVolumeMount;
 import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
 import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
@@ -115,6 +121,43 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Timeout timeout = deploymentTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.<AppStatus>hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		lbAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDeploymentWithMountedVolume() throws IOException {
+		log.info("Testing {}...", "DeploymentWithMountedVolume");
+		String hostPath = "/tmp/" + randomName() + '/';
+		String containerPath = "/tmp/";
+		String subPath = randomName();
+		String mountName = "mount";
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		deployProperties.setHostVolumeMounts(Collections.singleton(new HostVolumeMount(mountName, hostPath, containerPath, false)));
+		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("logging.file", containerPath + subPath));
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = lbAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.<AppStatus>hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		PodSpec spec = kubernetesClient.pods().list().getItems().get(0).getSpec();
+		assertThat(spec.getVolumes(), is(notNullValue()));
+		Volume volume = spec.getVolumes().stream()
+				.filter(v -> mountName.equals(v.getName()))
+				.findAny()
+				.orElseThrow(() -> new AssertionError("Volume not mounted"));
+		assertThat(volume.getHostPath(), is(notNullValue()));
+		assertThat(hostPath, is(volume.getHostPath().getPath()));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
