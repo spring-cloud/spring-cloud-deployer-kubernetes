@@ -94,8 +94,8 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		cleanup(id);
 	}
 
-//	@Override //TODO: should be part of interface
-	public void cleanup(String... id) {
+	@Override
+	public void cleanup(String id) {
 		Set<String> ids = new HashSet(Arrays.asList(id));
 		for (String taskId : ids) {
 			logger.debug(String.format("Deleting pod for task: %s", id));

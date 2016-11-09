@@ -62,7 +62,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	@After
 	public void cleanUp() {
 		for (String id : deployments) {
-			((KubernetesTaskLauncher)taskLauncher).cleanup(id);
+			taskLauncher.cleanup(id);
 		}
 	}
 
