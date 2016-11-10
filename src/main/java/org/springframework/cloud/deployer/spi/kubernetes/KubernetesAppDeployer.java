@@ -19,7 +19,6 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
@@ -28,19 +27,15 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
-import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
-import io.fabric8.kubernetes.api.model.Volume;
-import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
@@ -236,39 +231,18 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private PodSpec createPodSpec(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
-		PodSpecBuilder podSpec = new PodSpecBuilder();
 
-		// Add image secrets if set
-		if (properties.getImagePullSecret() != null) {
-			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
-		}
+		PodSpecBuilder podSpec = createPodSpecBuilder(properties);
 
 		Container container = containerFactory.create(appId, request, port, instanceIndex);
-
-		// add memory and cpu resource limits
-		ResourceRequirements req = new ResourceRequirements();
-		req.setLimits(deduceResourceLimits(properties, request));
-		req.setRequests(deduceResourceRequests(properties, request));
-		container.setResources(req);
-		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
-		container.setImagePullPolicy(pullPolicy.name());
-		// Add volumes and mounts
+		addMemoryCpu(request, container, properties);
 		if (properties.getHostVolumeMounts() != null) {
-			container.setVolumeMounts(properties.getHostVolumeMounts().stream()
-					.map(hvm -> new VolumeMount(hvm.getContainerPath(), hvm.getName(), hvm.isReadOnly(), null))
-					.collect(Collectors.toList()));
-			podSpec.withVolumes(properties.getHostVolumeMounts().stream()
-					.map(mv -> {
-						Volume volume = new Volume();
-						HostPathVolumeSource hostPath = new HostPathVolumeSource();
-						hostPath.setPath(mv.getHostPath());
-						volume.setHostPath(hostPath);
-						volume.setName(mv.getName());
-						return volume;
-					}).collect(Collectors.toList()));
+			addVolumes(podSpec, properties);
+			addVolumeMounts(container, properties);
 		}
 
 		podSpec.addToContainers(container);
+
 		return podSpec.build();
 	}
 
