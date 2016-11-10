@@ -16,22 +16,26 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hashids.Hashids;
 
-import org.springframework.boot.bind.RelaxedNames;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 
 /**
  * Abstract base class for a deployer that targets Kubernetes.
@@ -65,6 +69,49 @@ public class AbstractKubernetesDeployer {
 		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 		map.put(SPRING_DEPLOYMENT_KEY, appInstanceId);
 		return map;
+	}
+
+	protected PodSpecBuilder createPodSpecBuilder(KubernetesDeployerProperties properties) {
+		PodSpecBuilder podSpecBuilder = new PodSpecBuilder();
+
+		// Add image secrets if set
+		if (properties.getImagePullSecret() != null) {
+			podSpecBuilder.addNewImagePullSecret(properties.getImagePullSecret());
+		}
+
+		return podSpecBuilder;
+	}
+
+	protected Container addMemoryCpu(AppDeploymentRequest request, Container container,
+	                                 KubernetesDeployerProperties properties) {
+		// add memory and cpu resource limits
+		ResourceRequirements resourceRequirements = new ResourceRequirements();
+		resourceRequirements.setLimits(deduceResourceLimits(properties, request));
+		resourceRequirements.setRequests(deduceResourceRequests(properties, request));
+		container.setResources(resourceRequirements);
+		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
+		container.setImagePullPolicy(pullPolicy.name());
+		return container;
+	}
+
+	protected void addVolumes(PodSpecBuilder podSpecBuilder, KubernetesDeployerProperties properties) {
+		// Add volumes
+		podSpecBuilder.withVolumes(properties.getHostVolumeMounts().stream()
+				.map(mv -> {
+					Volume volume = new Volume();
+					HostPathVolumeSource hostPath = new HostPathVolumeSource();
+					hostPath.setPath(mv.getHostPath());
+					volume.setHostPath(hostPath);
+					volume.setName(mv.getName());
+					return volume;
+				}).collect(Collectors.toList()));
+	}
+
+	protected void addVolumeMounts(Container container, KubernetesDeployerProperties properties) {
+		// Add volume mounts
+		container.setVolumeMounts(properties.getHostVolumeMounts().stream()
+				.map(hvm -> new VolumeMount(hvm.getContainerPath(), hvm.getName(), hvm.isReadOnly(), null))
+				.collect(Collectors.toList()));
 	}
 
 	protected AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
