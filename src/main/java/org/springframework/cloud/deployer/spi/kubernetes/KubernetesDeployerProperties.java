@@ -16,70 +16,20 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author Donovan Muller
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
-
-	/**
-	 * Encapsulates volumes to be mounted.
-	 */
-	public static class HostVolumeMount {
-
-		private String name;
-
-		private String hostPath;
-
-		private String containerPath;
-
-		private boolean readOnly;
-
-		public HostVolumeMount(String name, String hostPath, String containerPath, boolean readOnly) {
-			this.name = name;
-			this.hostPath = hostPath;
-			this.containerPath = containerPath;
-			this.readOnly = readOnly;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public void setName(String mountName) {
-			this.name = mountName;
-		}
-
-		public String getHostPath() {
-			return hostPath;
-		}
-
-		public void setHostPath(String hostPath) {
-			this.hostPath = hostPath;
-		}
-
-		public String getContainerPath() {
-			return containerPath;
-		}
-
-		public void setContainerPath(String containerPath) {
-			this.containerPath = containerPath;
-		}
-
-		public boolean isReadOnly() {
-			return readOnly;
-		}
-
-		public void setReadOnly(boolean readOnly) {
-			this.readOnly = readOnly;
-		}
-
-	}
 
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
@@ -241,7 +191,18 @@ public class KubernetesDeployerProperties {
 	 */
 	private ImagePullPolicy imagePullPolicy = ImagePullPolicy.IfNotPresent;
 
-	private Collection<HostVolumeMount> hostVolumeMounts;
+	/**
+	 * Volume mounts that a container is requesting.
+	 * This can be specified as a deployer property or as an app deployment property.
+	 * Deployment properties will override depoyer properties.
+	 */
+	private List<VolumeMount> volumeMounts = new ArrayList<>();
+
+	/**
+	 * The volumes that a Kubernetes instance supports.
+	 * See http://kubernetes.io/docs/user-guide/volumes/#types-of-volumes
+	 */
+	private List<Volume> volumes = new ArrayList<>();
 
 	public String getNamespace() {
 		return namespace;
@@ -410,7 +371,7 @@ public class KubernetesDeployerProperties {
 	public void setImagePullPolicy(ImagePullPolicy imagePullPolicy) {
 		this.imagePullPolicy = imagePullPolicy;
 	}
-		
+
 	public Resources getLimits() {
 		return limits;
 	}
@@ -427,12 +388,19 @@ public class KubernetesDeployerProperties {
 		this.requests = requests;
 	}
 
-	public Collection<HostVolumeMount> getHostVolumeMounts() {
-		return hostVolumeMounts;
+	public List<VolumeMount> getVolumeMounts() {
+		return volumeMounts;
 	}
 
-	public void setHostVolumeMounts(Collection<HostVolumeMount> hostVolumeMounts) {
-		this.hostVolumeMounts = hostVolumeMounts;
+	public void setVolumeMounts(List<VolumeMount> volumeMounts) {
+		this.volumeMounts = volumeMounts;
 	}
 
+	public List<Volume> getVolumes() {
+		return volumes;
+	}
+
+	public void setVolumes(List<Volume> volumes) {
+		this.volumes = volumes;
+	}
 }

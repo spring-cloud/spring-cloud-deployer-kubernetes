@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.hashids.Hashids;
 
@@ -51,8 +50,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	private final KubernetesClient client;
 
 	private final ContainerFactory containerFactory;
-
-	private final Map<String, Object> running = new ConcurrentHashMap<>();
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,

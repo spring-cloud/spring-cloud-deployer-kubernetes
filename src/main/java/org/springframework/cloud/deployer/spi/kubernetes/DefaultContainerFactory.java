@@ -16,17 +16,27 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -34,11 +44,7 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
-
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
-import org.springframework.util.Assert;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
@@ -46,6 +52,7 @@ import org.springframework.util.Assert;
  *
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author Donovan Muller
  */
 public class DefaultContainerFactory implements ContainerFactory {
 
@@ -123,7 +130,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(appArgs);
+				.withArgs(appArgs)
+				.withVolumeMounts(getVolumeMounts(request));
 
 		if (port != null) {
 			container.addNewPort()
@@ -187,6 +195,41 @@ public class DefaultContainerFactory implements ContainerFactory {
 		cmdArgs.addAll(request.getCommandlineArguments());
 		logger.debug("Using command args: " + cmdArgs);
 		return cmdArgs;
+	}
+
+	/**
+	 * Volume mount deployment properties are specified in the following comma separated format:
+	 *
+	 * <code>
+	 *     spring.cloud.deployer.kubernetes.volumeMounts=name:path[:true],name:path[:true]
+	 * </code>
+	 *
+	 * Where <code>name</code> is the name of the volume mount and should match a configured Volume,
+	 * <code>path</code> is the mount path (E.g. <code>/tmp/inside/container</code>) and optionally the
+	 * readonly flag (default is <code>false</code> if not specified).
+	 *
+	 * Volume mounts can be specified as deployer properties as well as app deployment properties.
+	 * Deployment properties override deployer properties.
+	 *
+	 * @param request
+	 * @return the configured volume mounts
+	 */
+	protected List<VolumeMount> getVolumeMounts(AppDeploymentRequest request) {
+		Set<VolumeMount> volumeMounts = new HashSet<>();
+
+		String volumeMountDeploymentProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.volumeMounts", "");
+		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
+			String[] volumePairs = volumeMountDeploymentProperty.split(",");
+			for (String volumePair : volumePairs) {
+				String[] volume = volumePair.split(":");
+				Assert.isTrue(volume.length <= 3, format("Invalid volume mount: '{}'", volumePair));
+				volumeMounts.add(new VolumeMount(volume[1], volume[0],
+						volume.length == 3 ? Boolean.valueOf(volume[2]) : Boolean.FALSE, null));
+			}
+		}
+		properties.getVolumeMounts();
+		return new ArrayList<>(volumeMounts);
 	}
 
     /**
