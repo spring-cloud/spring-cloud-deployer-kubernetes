@@ -37,7 +37,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
  *
  * @author Moritz Schulze
  */
-public class AbstractKubernetesDeployerTests {
+public class RunAbstractKubernetesDeployerTests {
 
 	private AbstractKubernetesDeployer kubernetesDeployer;
 	private AppDeploymentRequest deploymentRequest;

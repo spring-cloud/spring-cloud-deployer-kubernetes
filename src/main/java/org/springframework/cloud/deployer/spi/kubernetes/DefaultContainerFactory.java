@@ -228,7 +228,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 						volume.length == 3 ? Boolean.valueOf(volume[2]) : Boolean.FALSE, null));
 			}
 		}
-		properties.getVolumeMounts();
+		volumeMounts.addAll(properties.getVolumeMounts());
 		return new ArrayList<>(volumeMounts);
 	}
 

@@ -250,7 +250,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
 		container.setImagePullPolicy(pullPolicy.name());
 		// Add volumes and mounts
-		if (properties.getVolumeMounts() != null) {
+		if (properties.getVolumes() != null) {
 			podSpec.withVolumes(properties.getVolumes());
 		}
 

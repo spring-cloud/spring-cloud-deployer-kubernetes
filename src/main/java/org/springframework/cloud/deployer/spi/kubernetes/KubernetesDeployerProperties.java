@@ -194,7 +194,7 @@ public class KubernetesDeployerProperties {
 	/**
 	 * Volume mounts that a container is requesting.
 	 * This can be specified as a deployer property or as an app deployment property.
-	 * Deployment properties will override depoyer properties.
+	 * Deployment properties will override deployer properties.
 	 */
 	private List<VolumeMount> volumeMounts = new ArrayList<>();
 

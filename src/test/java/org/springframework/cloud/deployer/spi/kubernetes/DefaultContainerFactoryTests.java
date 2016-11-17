@@ -185,7 +185,7 @@ public class DefaultContainerFactoryTests {
 
 	@Test
 	public void createWithVolumeMounts() {
-		// test volume defined as deployer properties
+		// test volume mounts defined as deployer properties
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
@@ -203,7 +203,7 @@ public class DefaultContainerFactoryTests {
 		assertThat(container.getVolumeMounts()).first()
 				.isEqualTo(new VolumeMount("/test", "test", false, null));
 
-		// test volume defined as app deployment property, overriding the deployer property
+		// test volume mounts defined as app deployment property, overriding the deployer property
 		kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setVolumeMounts(
 				Collections.singletonList(new VolumeMount("/test", "test", false, null)));
