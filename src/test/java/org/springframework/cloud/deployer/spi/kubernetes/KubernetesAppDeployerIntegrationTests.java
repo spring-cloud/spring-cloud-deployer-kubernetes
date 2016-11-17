@@ -68,9 +68,6 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Autowired
 	KubernetesClient kubernetesClient;
 
-	@Autowired
-	ContainerFactory containerFactory;
-
 	@Override
 	protected AppDeployer appDeployer() {
 		return appDeployer;
@@ -84,6 +81,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		lbProperties.setLivenessProbePeriod(10);
 		lbProperties.setMaxTerminatedErrorRestarts(1);
 		lbProperties.setMaxCrashLoopBackOffRestarts(1);
+		ContainerFactory containerFactory = new DefaultContainerFactory(lbProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
@@ -112,6 +110,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		KubernetesDeployerProperties lbProperties = new KubernetesDeployerProperties();
 		lbProperties.setCreateLoadBalancer(true);
 		lbProperties.setMinutesToWaitForLoadBalancer(1);
+		ContainerFactory containerFactory = new DefaultContainerFactory(lbProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(lbProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
@@ -144,6 +143,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				.withName(mountName)
 				.build()));
 		deployProperties.setVolumeMounts(Collections.singletonList(new VolumeMount(hostPath, mountName, false, null)));
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("logging.file", containerPath + subPath));

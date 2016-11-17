@@ -127,7 +127,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(appArgs);
+				.withArgs(appArgs)
+				.withVolumeMounts(getVolumeMounts(request));
 
 		if (port != null) {
 			container.addNewPort()

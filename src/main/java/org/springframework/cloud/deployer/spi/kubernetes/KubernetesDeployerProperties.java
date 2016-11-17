@@ -201,6 +201,8 @@ public class KubernetesDeployerProperties {
 	/**
 	 * The volumes that a Kubernetes instance supports.
 	 * See http://kubernetes.io/docs/user-guide/volumes/#types-of-volumes
+	 * This can be specified as a deployer property or as an app deployment property.
+	 * Deployment properties will override deployer properties.
 	 */
 	private List<Volume> volumes = new ArrayList<>();
 
