@@ -3,6 +3,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Test;
 import org.springframework.boot.bind.YamlConfigurationFactory;
@@ -25,7 +26,7 @@ public class KubernetesAppDeployerTest {
 	private KubernetesAppDeployer deployer;
 
 	@Test
-	public void deployWithHostPathVolume() throws Exception {
+	public void deployWithVolumesOnly() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
 				new HashMap<>());
@@ -33,10 +34,24 @@ public class KubernetesAppDeployerTest {
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
 
+		assertThat(podSpec.getVolumes()).isEmpty();
+	}
+
+	@Test
+	public void deployWithVolumesAndVolumeMounts() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
+				"testhostpath:/test/hostPath, testpvc:/test/pvc, testnfs:/test/nfs");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
+
 		assertThat(podSpec.getVolumes()).containsOnly(
-				new VolumeBuilder().withName("testhostpath").withNewHostPath("/test").build(),
+				new VolumeBuilder().withName("testhostpath").withNewHostPath("/test/hostPath").build(),
 				new VolumeBuilder().withName("testpvc").withNewPersistentVolumeClaim("testClaim", true).build(),
-				new VolumeBuilder().withName("testnfs").withNewNfs("/test", null, "10.0.0.1:111").build());
+				new VolumeBuilder().withName("testnfs").withNewNfs("/test/nfs", null, "10.0.0.1:111").build());
 	}
 
 	private Resource getResource() {

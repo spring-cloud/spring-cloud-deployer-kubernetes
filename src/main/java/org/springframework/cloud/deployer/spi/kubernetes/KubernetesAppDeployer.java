@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
@@ -249,10 +250,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		container.setResources(req);
 		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
 		container.setImagePullPolicy(pullPolicy.name());
-		// Add volumes and mounts
-		if (properties.getVolumes() != null) {
-			podSpec.withVolumes(properties.getVolumes());
-		}
+
+		// add volumes that have a corresponding
+		podSpec.withVolumes(properties.getVolumes().stream()
+				.filter(volume -> container.getVolumeMounts().stream()
+					.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName())))
+				.collect(Collectors.toList()));
 
 		podSpec.addToContainers(container);
 		return podSpec.build();

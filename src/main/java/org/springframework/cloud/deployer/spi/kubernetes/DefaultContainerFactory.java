@@ -222,7 +222,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
 			String[] volumePairs = volumeMountDeploymentProperty.split(",");
 			for (String volumePair : volumePairs) {
-				String[] volume = volumePair.split(":");
+				String[] volume = volumePair.trim().split(":");
 				Assert.isTrue(volume.length <= 3, format("Invalid volume mount: '{}'", volumePair));
 				volumeMounts.add(new VolumeMount(volume[1], volume[0],
 						volume.length == 3 ? Boolean.valueOf(volume[2]) : Boolean.FALSE, null));
