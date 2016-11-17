@@ -37,7 +37,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
  *
  * @author Moritz Schulze
  */
-public class KubernetesDeployerTests {
+public class RunAbstractKubernetesDeployerTests {
 
 	private AbstractKubernetesDeployer kubernetesDeployer;
 	private AppDeploymentRequest deploymentRequest;
@@ -47,7 +47,7 @@ public class KubernetesDeployerTests {
 	@Before
 	public void setUp() throws Exception {
 		kubernetesDeployer = new AbstractKubernetesDeployer();
-		deploymentProperties = new HashMap<String, String>();
+		deploymentProperties = new HashMap<>();
 		deploymentRequest = new AppDeploymentRequest(new AppDefinition("foo", Collections.emptyMap()), new FileSystemResource(""), deploymentProperties);
 		serverProperties = new KubernetesDeployerProperties();
 	}

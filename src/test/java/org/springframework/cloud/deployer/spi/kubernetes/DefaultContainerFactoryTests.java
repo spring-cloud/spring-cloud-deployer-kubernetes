@@ -16,22 +16,23 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -46,6 +47,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  * Unit tests for {@link DefaultContainerFactory}.
  *
  * @author Will Kennedy
+ * @author Donovan Muller
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
@@ -95,7 +97,7 @@ public class DefaultContainerFactoryTests {
 		Container container = defaultContainerFactory.create("app-test",
 				appDeploymentRequest, null, null);
 		assertNotNull(container);
-		assertThat(container.getCommand(), is(Arrays.asList("echo", "arg1", "arg2")));
+		assertThat(container.getCommand()).containsExactly("echo", "arg1", "arg2");
 	}
 
 	@Test
@@ -180,6 +182,56 @@ public class DefaultContainerFactoryTests {
 		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
 		assertTrue(containerBoot.getEnv().get(0).getValue().equals(new ObjectMapper().writeValueAsString(appProps)));
 		assertTrue(containerBoot.getArgs().size() == 0);
+	}
+
+	@Test
+	public void createWithVolumeMounts() {
+		// test volume mounts defined as deployer properties
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
+				"{ volumeMounts: ["
+						+ "{name: 'testhostpath', mountPath: '/test/hostPath'}, "
+						+ "{name: 'testpvc', mountPath: '/test/pvc', readOnly: 'true'}, "
+						+ "{name: 'testnfs', mountPath: '/test/nfs'}"
+					+ "]"
+				+ "}");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, props);
+
+		Container container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, null);
+
+		assertThat(container.getVolumeMounts()).containsOnly(
+				new VolumeMount("/test/hostPath", "testhostpath", null, null),
+				new VolumeMount("/test/pvc", "testpvc", true, null),
+				new VolumeMount("/test/nfs", "testnfs", null, null));
+
+		// test volume mounts defined as app deployment property, overriding the deployer property
+		kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties
+				.setVolumeMounts(Stream.of(
+						new VolumeMount("/test/hostPath", "testhostpath", false, null),
+						new VolumeMount("/test/pvc", "testpvc", true, null),
+						new VolumeMount("/test/nfs", "testnfs", false, null))
+				.collect(Collectors.toList()));
+		defaultContainerFactory = new DefaultContainerFactory(kubernetesDeployerProperties);
+
+		props.clear();
+		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
+				"{ volumeMounts: ["
+						+ "{name: 'testpvc', mountPath: '/test/pvc/overridden'}, "
+						+ "{name: 'testnfs', mountPath: '/test/nfs/overridden', readOnly: 'true'}"
+					+ "]"
+				+ "}");
+		container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, null);
+
+		assertThat(container.getVolumeMounts()).containsOnly(
+				new VolumeMount("/test/hostPath", "testhostpath", false, null),
+				new VolumeMount("/test/pvc/overridden", "testpvc", null, null),
+				new VolumeMount("/test/nfs/overridden", "testnfs", true, null));
 	}
 
 	private Resource getResource() {
