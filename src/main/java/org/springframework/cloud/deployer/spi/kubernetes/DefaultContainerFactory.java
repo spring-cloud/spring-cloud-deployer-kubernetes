@@ -16,27 +16,18 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static java.lang.String.format;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -45,6 +36,13 @@ import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+
+import org.springframework.boot.bind.YamlConfigurationFactory;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
@@ -66,8 +64,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	@Override
 	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
-
-		String image = null;
+		String image;
 		try {
 			image = request.getResource().getURI().getSchemeSpecificPart();
 		} catch (IOException e) {
@@ -130,8 +127,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		container.withName(appInstanceId)
 				.withImage(image)
 				.withEnv(envVars)
-				.withArgs(appArgs)
-				.withVolumeMounts(getVolumeMounts(request));
+				.withArgs(appArgs);
 
 		if (port != null) {
 			container.addNewPort()
@@ -185,7 +181,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * Create command arguments
 	 */
 	protected List<String> createCommandArgs(AppDeploymentRequest request) {
-		List<String> cmdArgs = new LinkedList<String>();
+		List<String> cmdArgs = new LinkedList<>();
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
 		for (Map.Entry<String, String> entry : args.entrySet()) {
@@ -198,15 +194,12 @@ public class DefaultContainerFactory implements ContainerFactory {
 	}
 
 	/**
-	 * Volume mount deployment properties are specified in the following comma separated format:
+	 * Volume mount deployment properties are specified in YAML format:
 	 *
 	 * <code>
-	 *     spring.cloud.deployer.kubernetes.volumeMounts=name:path[:true],name:path[:true]
+	 *     spring.cloud.deployer.kubernetes.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'},
+	 *     	{name: 'testpvc', mountPath: '/test/pvc'}, {name: 'testnfs', mountPath: '/test/nfs'}]"
 	 * </code>
-	 *
-	 * Where <code>name</code> is the name of the volume mount and should match a configured Volume,
-	 * <code>path</code> is the mount path (E.g. <code>/tmp/inside/container</code>) and optionally the
-	 * readonly flag (default is <code>false</code> if not specified).
 	 *
 	 * Volume mounts can be specified as deployer properties as well as app deployment properties.
 	 * Deployment properties override deployer properties.
@@ -215,33 +208,44 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * @return the configured volume mounts
 	 */
 	protected List<VolumeMount> getVolumeMounts(AppDeploymentRequest request) {
-		Set<VolumeMount> volumeMounts = new HashSet<>();
+		List<VolumeMount> volumeMounts = new ArrayList<>();
 
 		String volumeMountDeploymentProperty = request.getDeploymentProperties()
 				.getOrDefault("spring.cloud.deployer.kubernetes.volumeMounts", "");
 		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
-			String[] volumePairs = volumeMountDeploymentProperty.split(",");
-			for (String volumePair : volumePairs) {
-				String[] volume = volumePair.trim().split(":");
-				Assert.isTrue(volume.length <= 3, format("Invalid volume mount: '{}'", volumePair));
-				volumeMounts.add(new VolumeMount(volume[1], volume[0],
-						volume.length == 3 ? Boolean.valueOf(volume[2]) : Boolean.FALSE, null));
+			YamlConfigurationFactory<KubernetesDeployerProperties> volumeMountYamlConfigurationFactory =
+					new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
+			volumeMountYamlConfigurationFactory.setYaml(volumeMountDeploymentProperty);
+			try {
+				volumeMountYamlConfigurationFactory.afterPropertiesSet();
+				volumeMounts.addAll(volumeMountYamlConfigurationFactory.getObject().getVolumeMounts());
+			}
+			catch (Exception e) {
+				throw new IllegalArgumentException(
+						String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
 			}
 		}
-		volumeMounts.addAll(properties.getVolumeMounts());
-		return new ArrayList<>(volumeMounts);
+		// only add volume mounts that have not already been added, based on the volume mount's name
+		// i.e. allow provided deployment volume mounts to override deployer defined volume mounts
+		volumeMounts.addAll(properties.getVolumeMounts().stream()
+				.filter(volumeMount -> volumeMounts.stream()
+						.noneMatch(existingVolumeMount ->
+								existingVolumeMount.getName().equals(volumeMount.getName())))
+				.collect(Collectors.toList()));
+
+		return volumeMounts;
 	}
 
-    /**
-     * The list represents a single command with many arguments.
-     *
-     * @param request AppDeploymentRequest - used to gather application overridden
-     * container command
-     * @return a list of strings that represents the command and any arguments for that command
-     */
-    private List<String> getContainerCommand(AppDeploymentRequest request) {
-        String containerCommand = request.getDeploymentProperties()
-                .getOrDefault("spring.cloud.deployer.kubernetes.containerCommand", "");
+	/**
+	 * The list represents a single command with many arguments.
+	 *
+	 * @param request AppDeploymentRequest - used to gather application overridden
+	 * container command
+	 * @return a list of strings that represents the command and any arguments for that command
+	 */
+	private List<String> getContainerCommand(AppDeploymentRequest request) {
+		String containerCommand = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.containerCommand", "");
 		return new CommandLineTokenizer(containerCommand).getArgs();
     }
 

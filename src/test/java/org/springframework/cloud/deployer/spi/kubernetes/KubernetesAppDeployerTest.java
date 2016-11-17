@@ -42,16 +42,42 @@ public class KubernetesAppDeployerTest {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
-				"testhostpath:/test/hostPath, testpvc:/test/pvc, testnfs:/test/nfs");
+				"{ volumeMounts: ["
+					+ "{name: 'testpvc', mountPath: '/test/pvc'}, "
+					+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}"
+				+ "]}");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
 
 		assertThat(podSpec.getVolumes()).containsOnly(
-				new VolumeBuilder().withName("testhostpath").withNewHostPath("/test/hostPath").build(),
+				// volume 'testhostpath' defined in dataflow-server.yml should not be added
+				// as there is no corresponding volume mount
 				new VolumeBuilder().withName("testpvc").withNewPersistentVolumeClaim("testClaim", true).build(),
 				new VolumeBuilder().withName("testnfs").withNewNfs("/test/nfs", null, "10.0.0.1:111").build());
+
+		props.clear();
+		props.put("spring.cloud.deployer.kubernetes.volumes",
+				"{ volumes: ["
+					+ "{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},"
+					+ "{name: 'testnfs', nfs: { server: '192.168.1.1:111', path: '/test/override/nfs' }} "
+				+ "]}");
+		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
+				"{ volumeMounts: ["
+					+ "{name: 'testhostpath', mountPath: '/test/hostPath'}, "
+					+ "{name: 'testpvc', mountPath: '/test/pvc'}, "
+					+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}"
+				+ "]}");
+		appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
+
+		assertThat(podSpec.getVolumes()).containsOnly(
+				new VolumeBuilder().withName("testhostpath").withNewHostPath("/test/override/hostPath").build(),
+				new VolumeBuilder().withName("testpvc").withNewPersistentVolumeClaim("testClaim", true).build(),
+				new VolumeBuilder().withName("testnfs").withNewNfs("/test/override/nfs", null, "192.168.1.1:111").build());
 	}
 
 	private Resource getResource() {
