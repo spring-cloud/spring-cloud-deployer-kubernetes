@@ -16,34 +16,24 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import io.fabric8.kubernetes.api.model.Volume;
-import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
-import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.springframework.util.StringUtils;
 
 /**
  * A deployer that targets Kubernetes.
@@ -60,8 +50,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	private KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
 
 	private final KubernetesClient client;
-
-	private final ContainerFactory containerFactory;
 
 	@Autowired
 	public KubernetesAppDeployer(KubernetesDeployerProperties properties,
@@ -230,84 +218,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 							.withLabels(idMap)
 								.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 						.endMetadata()
-						.withSpec(createPodSpec(appId, request, Integer.valueOf(externalPort), instanceIndex))
+						.withSpec(createPodSpec(appId, request, properties, Integer.valueOf(externalPort), instanceIndex, false))
 					.endTemplate()
 				.endSpec()
 				.build();
 
 		return client.replicationControllers().create(rc);
-	}
-
-	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
-		PodSpecBuilder podSpec = new PodSpecBuilder();
-
-		// Add image secrets if set
-		if (properties.getImagePullSecret() != null) {
-			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
-		}
-
-		Container container = containerFactory.create(appId, request, port, instanceIndex);
-
-		// add memory and cpu resource limits
-		ResourceRequirements req = new ResourceRequirements();
-		req.setLimits(deduceResourceLimits(properties, request));
-		req.setRequests(deduceResourceRequests(properties, request));
-		container.setResources(req);
-		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
-		container.setImagePullPolicy(pullPolicy.name());
-
-		// only add volumes with corresponding volume mounts
-		podSpec.withVolumes(getVolumes(properties, request).stream()
-				.filter(volume -> container.getVolumeMounts().stream()
-						.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName())))
-				.collect(Collectors.toList()));
-
-		podSpec.addToContainers(container);
-		return podSpec.build();
-	}
-
-	/**
-	 * Volume deployment properties are specified in YAML format:
-	 *
-	 * <code>
-	 *     spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
-	 *     	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
-	 *     	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
-	 * </code>
-	 *
-	 * Volumes can be specified as deployer properties as well as app deployment properties.
-	 * Deployment properties override deployer properties.
-	 *
-	 * @param request
-	 * @return the configured volumes
-	 */
-	private List<Volume> getVolumes(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
-		List<Volume> volumes = new ArrayList<>();
-
-		String volumeDeploymentProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
-		if (!StringUtils.isEmpty(volumeDeploymentProperty)) {
-			YamlConfigurationFactory<KubernetesDeployerProperties> volumeYamlConfigurationFactory =
-					new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
-			volumeYamlConfigurationFactory.setYaml("{ volumes: " + volumeDeploymentProperty + " }");
-			try {
-				volumeYamlConfigurationFactory.afterPropertiesSet();
-				volumes.addAll(
-						volumeYamlConfigurationFactory.getObject().getVolumes());
-			}
-			catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
-			}
-		}
-		// only add volumes that have not already been added, based on the volume's name
-		// i.e. allow provided deployment volumes to override deployer defined volumes
-		volumes.addAll(properties.getVolumes().stream()
-				.filter(volume -> volumes.stream()
-						.noneMatch(existingVolume -> existingVolume.getName().equals(volume.getName())))
-				.collect(Collectors.toList()));
-
-		return volumes;
 	}
 
 	private void createService(String appId, AppDeploymentRequest request, Map<String, String> idMap, int externalPort) {

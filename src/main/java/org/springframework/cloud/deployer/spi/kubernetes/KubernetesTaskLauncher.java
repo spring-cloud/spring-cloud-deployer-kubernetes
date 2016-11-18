@@ -30,12 +30,9 @@ import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.PodStatus;
-import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
@@ -48,8 +45,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	private KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
 
 	private final KubernetesClient client;
-
-	private final ContainerFactory containerFactory;
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
@@ -117,37 +112,11 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		return deploymentId.replace('.', '-').toLowerCase();
 	}
 
-	private Container createContainer(String appId, AppDeploymentRequest request) {
-		Container container = containerFactory.create(appId, request, null, null);
-		// add memory and cpu resource limits
-		ResourceRequirements req = new ResourceRequirements();
-		req.setLimits(deduceResourceLimits(properties, request));
-		req.setRequests(deduceResourceRequests(properties, request));
-		container.setResources(req);
-		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
-		container.setImagePullPolicy(pullPolicy.name());
-		return container;
-	}
-
-	private PodSpec createPodSpec(String appId, AppDeploymentRequest request) {
-		PodSpecBuilder podSpec = new PodSpecBuilder();
-
-		// Add image secrets if set
-		if (properties.getImagePullSecret() != null) {
-			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
-		}
-
-		podSpec.addToContainers(createContainer(appId, request));
-		podSpec.withRestartPolicy("Never");
-
-		return podSpec.build();
-	}
-
 	private void createPod(String appId, AppDeploymentRequest request, Map<String, String> idMap) {
 		Map<String, String> podLabelMap = new HashMap<>();
 		podLabelMap.put("task-name", request.getDefinition().getName());
 		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-		PodSpec spec = createPodSpec(appId, request);
+		PodSpec spec = createPodSpec(appId, request, properties, null, null, true);
 		client.pods()
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()

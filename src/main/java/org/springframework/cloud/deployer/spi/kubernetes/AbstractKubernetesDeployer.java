@@ -16,21 +16,29 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.boot.bind.RelaxedNames;
+import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.util.StringUtils;
 
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
 
 /**
  * Abstract base class for a deployer that targets Kubernetes.
@@ -38,6 +46,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Mark Fisher
+ * @author Donovan Muller
  */
 public class AbstractKubernetesDeployer {
 
@@ -48,6 +57,8 @@ public class AbstractKubernetesDeployer {
 	protected static final String SPRING_MARKER_VALUE = "spring-app";
 
 	protected static final Log logger = LogFactory.getLog(AbstractKubernetesDeployer.class);
+
+	protected ContainerFactory containerFactory;
 
 	/**
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
@@ -76,6 +87,95 @@ public class AbstractKubernetesDeployer {
 			}
 		}
 		return statusBuilder.build();
+	}
+
+	/**
+	 * Create a PodSpec to be used for app and task deployments
+	 *
+	 * @param appId the app ID
+	 * @param request app deployment request
+	 * @param properties deployer properties
+	 * @param port port to use for app or null if none
+	 * @param instanceIndex instance index for app or null if no index
+	 * @param neverRestart use restart policy of Never
+	 * @return the PodSpec
+	 */
+	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request, KubernetesDeployerProperties properties,
+	                                Integer port, Integer instanceIndex, boolean neverRestart) {
+		PodSpecBuilder podSpec = new PodSpecBuilder();
+
+		// Add image secrets if set
+		if (properties.getImagePullSecret() != null) {
+			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
+		}
+
+		Container container = containerFactory.create(appId, request, port, instanceIndex);
+
+		// add memory and cpu resource limits
+		ResourceRequirements req = new ResourceRequirements();
+		req.setLimits(deduceResourceLimits(properties, request));
+		req.setRequests(deduceResourceRequests(properties, request));
+		container.setResources(req);
+		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
+		container.setImagePullPolicy(pullPolicy.name());
+
+		// only add volumes with corresponding volume mounts
+		podSpec.withVolumes(getVolumes(properties, request).stream()
+				.filter(volume -> container.getVolumeMounts().stream()
+						.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName())))
+				.collect(Collectors.toList()));
+
+		podSpec.addToContainers(container);
+
+		if (neverRestart){
+			podSpec.withRestartPolicy("Never");
+		}
+
+		return podSpec.build();
+	}
+
+	/**
+	 * Volume deployment properties are specified in YAML format:
+	 *
+	 * <code>
+	 *     spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 *     	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
+	 *     	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+	 * </code>
+	 *
+	 * Volumes can be specified as deployer properties as well as app deployment properties.
+	 * Deployment properties override deployer properties.
+	 *
+	 * @param request
+	 * @return the configured volumes
+	 */
+	protected List<Volume> getVolumes(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+		List<Volume> volumes = new ArrayList<>();
+
+		String volumeDeploymentProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
+		if (!StringUtils.isEmpty(volumeDeploymentProperty)) {
+			YamlConfigurationFactory<KubernetesDeployerProperties> volumeYamlConfigurationFactory =
+					new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
+			volumeYamlConfigurationFactory.setYaml("{ volumes: " + volumeDeploymentProperty + " }");
+			try {
+				volumeYamlConfigurationFactory.afterPropertiesSet();
+				volumes.addAll(
+						volumeYamlConfigurationFactory.getObject().getVolumes());
+			}
+			catch (Exception e) {
+				throw new IllegalArgumentException(
+						String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
+			}
+		}
+		// only add volumes that have not already been added, based on the volume's name
+		// i.e. allow provided deployment volumes to override deployer defined volumes
+		volumes.addAll(properties.getVolumes().stream()
+				.filter(volume -> volumes.stream()
+						.noneMatch(existingVolume -> existingVolume.getName().equals(volume.getName())))
+				.collect(Collectors.toList()));
+
+		return volumes;
 	}
 
 	/**

@@ -31,8 +31,9 @@ public class KubernetesAppDeployerTest {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
 				new HashMap<>());
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
+		KubernetesDeployerProperties properties = bindDeployerProperties();
+		deployer = new KubernetesAppDeployer(properties, null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, properties, 8080, 1, false);
 
 		assertThat(podSpec.getVolumes()).isEmpty();
 	}
@@ -48,8 +49,9 @@ public class KubernetesAppDeployerTest {
 				+ "]");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
+		KubernetesDeployerProperties properties = bindDeployerProperties();
+		deployer = new KubernetesAppDeployer(properties, null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, properties, 8080, 1, false);
 
 		assertThat(podSpec.getVolumes()).containsOnly(
 				// volume 'testhostpath' defined in dataflow-server.yml should not be added
@@ -72,7 +74,7 @@ public class KubernetesAppDeployerTest {
 		appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1);
+		podSpec = deployer.createPodSpec("1", appDeploymentRequest, properties, 8080, 1, false);
 
 		assertThat(podSpec.getVolumes()).containsOnly(
 				new VolumeBuilder().withName("testhostpath").withNewHostPath("/test/override/hostPath").build(),
