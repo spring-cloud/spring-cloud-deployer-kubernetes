@@ -47,8 +47,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	private static final String SERVER_PORT_KEY = "server.port";
 
-	private KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
-
 	private final KubernetesClient client;
 
 	@Autowired
@@ -172,7 +170,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				logger.debug(String.format("Pod: %s", pod.getMetadata().getName()));
 			}
 		}
-		AppStatus status = buildAppStatus(properties, appId, list);
+		AppStatus status = buildAppStatus(appId, list);
 		logger.debug(String.format("Status for app: %s is %s", appId, status));
 
 		return status;
@@ -218,7 +216,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 							.withLabels(idMap)
 								.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 						.endMetadata()
-						.withSpec(createPodSpec(appId, request, properties, Integer.valueOf(externalPort), instanceIndex, false))
+						.withSpec(createPodSpec(appId, request, Integer.valueOf(externalPort), instanceIndex, false))
 					.endTemplate()
 				.endSpec()
 				.build();

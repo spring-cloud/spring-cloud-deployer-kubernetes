@@ -60,6 +60,8 @@ public class AbstractKubernetesDeployer {
 
 	protected ContainerFactory containerFactory;
 
+	protected KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
+
 	/**
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
 	 * to "select" the right ReplicationControllers.
@@ -77,7 +79,7 @@ public class AbstractKubernetesDeployer {
 		return map;
 	}
 
-	protected AppStatus buildAppStatus(KubernetesDeployerProperties properties, String id, PodList list) {
+	protected AppStatus buildAppStatus(String id, PodList list) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
 		if (list == null) {
 			statusBuilder.with(new KubernetesAppInstanceStatus(id, null, properties));
@@ -94,13 +96,12 @@ public class AbstractKubernetesDeployer {
 	 *
 	 * @param appId the app ID
 	 * @param request app deployment request
-	 * @param properties deployer properties
 	 * @param port port to use for app or null if none
 	 * @param instanceIndex instance index for app or null if no index
 	 * @param neverRestart use restart policy of Never
 	 * @return the PodSpec
 	 */
-	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request, KubernetesDeployerProperties properties,
+	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request,
 	                                Integer port, Integer instanceIndex, boolean neverRestart) {
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
@@ -113,14 +114,14 @@ public class AbstractKubernetesDeployer {
 
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
-		req.setLimits(deduceResourceLimits(properties, request));
-		req.setRequests(deduceResourceRequests(properties, request));
+		req.setLimits(deduceResourceLimits(request));
+		req.setRequests(deduceResourceRequests(request));
 		container.setResources(req);
-		ImagePullPolicy pullPolicy = deduceImagePullPolicy(properties, request);
+		ImagePullPolicy pullPolicy = deduceImagePullPolicy(request);
 		container.setImagePullPolicy(pullPolicy.name());
 
 		// only add volumes with corresponding volume mounts
-		podSpec.withVolumes(getVolumes(properties, request).stream()
+		podSpec.withVolumes(getVolumes(request).stream()
 				.filter(volume -> container.getVolumeMounts().stream()
 						.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName())))
 				.collect(Collectors.toList()));
@@ -149,7 +150,7 @@ public class AbstractKubernetesDeployer {
 	 * @param request
 	 * @return the configured volumes
 	 */
-	protected List<Volume> getVolumes(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+	protected List<Volume> getVolumes(AppDeploymentRequest request) {
 		List<Volume> volumes = new ArrayList<>();
 
 		String volumeDeploymentProperty = request.getDeploymentProperties()
@@ -186,10 +187,9 @@ public class AbstractKubernetesDeployer {
 	 * <p>
 	 * Also supports the deprecated properties {@code spring.cloud.deployer.kubernetes.memory/cpu}.
 	 *
-	 * @param properties The server properties.
 	 * @param request    The deployment properties.
 	 */
-	protected Map<String, Quantity> deduceResourceLimits(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+	protected Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.memory");
 		String memLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
 		if (memLimitsOverride != null) {
@@ -237,11 +237,10 @@ public class AbstractKubernetesDeployer {
 	 * Get the image pull policy for the deployment request. If it is not present use the server default. If an override
 	 * for the deployment is present but not parseable, fall back to a default value.
 	 *
-	 * @param properties The server properties.
 	 * @param request The deployment request.
 	 * @return The image pull policy to use for the container in the request.
 	 */
-	ImagePullPolicy deduceImagePullPolicy(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+	ImagePullPolicy deduceImagePullPolicy(AppDeploymentRequest request) {
 		String pullPolicyOverride =
 				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.imagePullPolicy");
 
@@ -264,10 +263,9 @@ public class AbstractKubernetesDeployer {
 	 * runtime.
 	 * Falls back to the server properties if not present in the deployment request.
 	 *
-	 * @param properties The server properties.
 	 * @param request    The deployment properties.
 	 */
-	Map<String, Quantity> deduceResourceRequests(KubernetesDeployerProperties properties, AppDeploymentRequest request) {
+	Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");
 		if (memOverride == null) {
 			memOverride = properties.getRequests().getMemory();

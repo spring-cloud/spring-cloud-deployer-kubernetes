@@ -42,8 +42,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 
-	private KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
-
 	private final KubernetesClient client;
 
 	@Autowired
@@ -116,7 +114,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		Map<String, String> podLabelMap = new HashMap<>();
 		podLabelMap.put("task-name", request.getDefinition().getName());
 		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-		PodSpec spec = createPodSpec(appId, request, properties, null, null, true);
+		PodSpec spec = createPodSpec(appId, request, null, null, true);
 		client.pods()
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
