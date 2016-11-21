@@ -94,6 +94,10 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	@Override
+	public void destroy(String appName) {
+	}
+
+	@Override
 	public TaskStatus status(String id) {
 		TaskStatus status = buildTaskStatus(id);
 		logger.debug(String.format("Status for task: %s is %s", id, status));
