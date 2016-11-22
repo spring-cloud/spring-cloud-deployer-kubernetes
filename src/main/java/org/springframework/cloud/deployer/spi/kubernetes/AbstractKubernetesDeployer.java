@@ -240,7 +240,7 @@ public class AbstractKubernetesDeployer {
 	 * @param request The deployment request.
 	 * @return The image pull policy to use for the container in the request.
 	 */
-	ImagePullPolicy deduceImagePullPolicy(AppDeploymentRequest request) {
+	protected ImagePullPolicy deduceImagePullPolicy(AppDeploymentRequest request) {
 		String pullPolicyOverride =
 				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.imagePullPolicy");
 
@@ -265,7 +265,7 @@ public class AbstractKubernetesDeployer {
 	 *
 	 * @param request    The deployment properties.
 	 */
-	Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
+	protected Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");
 		if (memOverride == null) {
 			memOverride = properties.getRequests().getMemory();
