@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,11 @@ import io.fabric8.kubernetes.api.model.Container;
  * Defines how a Kubernetes {@link Container} is created.
  *
  * @author Florian Rosenberg
+ * @author Thomas Risberg
  */
 public interface ContainerFactory {
 
-	Container create(String appId, AppDeploymentRequest request, Integer externalPort, Integer instanceIndex);
+	Container create(String appId, AppDeploymentRequest request, Integer externalPort, Integer instanceIndex,
+	                 boolean hostNetwork);
 
 }

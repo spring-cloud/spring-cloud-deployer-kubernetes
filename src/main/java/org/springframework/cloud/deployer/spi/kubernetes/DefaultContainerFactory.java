@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	}
 
 	@Override
-	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex) {
+	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
+	                        boolean hostNetwork) {
 		String image;
 		try {
 			image = request.getResource().getURI().getSchemeSpecificPart();
@@ -136,10 +137,18 @@ public class DefaultContainerFactory implements ContainerFactory {
 				.withVolumeMounts(getVolumeMounts(request));
 
 		if (port != null) {
-			container.addNewPort()
-					.withContainerPort(port)
-					.endPort()
-					.withReadinessProbe(
+			if (hostNetwork) {
+				container.addNewPort()
+						.withContainerPort(port)
+						.withHostPort(port)
+						.endPort();
+			}
+			else {
+				container.addNewPort()
+						.withContainerPort(port)
+						.endPort();
+			}
+			container.withReadinessProbe(
 							createProbe(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
 									properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod()))
 					.withLivenessProbe(
@@ -151,9 +160,17 @@ public class DefaultContainerFactory implements ContainerFactory {
 		List<Integer> additionalPorts = getContainerPorts(request);
 		if(!additionalPorts.isEmpty()) {
 			for (Integer containerPort : additionalPorts) {
-				container.addNewPort()
-						.withContainerPort(containerPort)
-						.endPort();
+				if (hostNetwork) {
+					container.addNewPort()
+							.withContainerPort(containerPort)
+							.withHostPort(containerPort)
+							.endPort();
+				}
+				else {
+					container.addNewPort()
+							.withContainerPort(containerPort)
+							.endPort();
+				}
 			}
 		}
 
