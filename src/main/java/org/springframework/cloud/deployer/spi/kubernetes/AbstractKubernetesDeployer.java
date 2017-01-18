@@ -319,9 +319,17 @@ public class AbstractKubernetesDeployer {
 	 * @return Whether host networking is requested
 	 */
 	protected boolean getHostNetwork(AppDeploymentRequest request) {
-		String hostNetwork =
+		String hostNetworkOverride =
 				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.hostNetwork");
-		return Boolean.valueOf(hostNetwork);
+		boolean hostNetwork;
+		if (StringUtils.isEmpty(hostNetworkOverride)) {
+			hostNetwork = properties.isHostNetwork();
+		}
+		else {
+			hostNetwork = Boolean.valueOf(hostNetworkOverride);
+		}
+		logger.debug("Using hostNetwork " + hostNetwork);
+		return hostNetwork;
 	}
 
 	private String getCommonDeployerMemory(AppDeploymentRequest request) {

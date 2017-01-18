@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,6 +206,15 @@ public class KubernetesDeployerProperties {
 	 */
 	private List<Volume> volumes = new ArrayList<>();
 
+	/**
+	 * The hostNetwork setting for the deployments.
+	 * See https://kubernetes.io/docs/api-reference/v1/definitions/#_v1_podspec
+	 * This can be specified as a deployer property or as an app deployment property.
+	 * Deployment properties will override deployer properties.
+	 */
+	private boolean hostNetwork = false;
+
+
 	public String getNamespace() {
 		return namespace;
 	}
@@ -404,5 +413,13 @@ public class KubernetesDeployerProperties {
 
 	public void setVolumes(List<Volume> volumes) {
 		this.volumes = volumes;
+	}
+
+	public boolean isHostNetwork() {
+		return hostNetwork;
+	}
+
+	public void setHostNetwork(boolean hostNetwork) {
+		this.hostNetwork = hostNetwork;
 	}
 }
