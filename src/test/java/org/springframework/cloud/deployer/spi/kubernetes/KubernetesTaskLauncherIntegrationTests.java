@@ -48,7 +48,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	private TaskLauncher taskLauncher;
 
 	@Override
-	protected TaskLauncher taskLauncher() {
+	protected TaskLauncher provideTaskLauncher() {
 		return taskLauncher;
 	}
 
@@ -57,13 +57,6 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	@Ignore("Currently reported as failed instead of cancelled")
 	public void testSimpleCancel() throws InterruptedException {
 		super.testSimpleCancel();
-	}
-
-	@After
-	public void cleanUp() {
-		for (String id : deployments) {
-			taskLauncher.cleanup(id);
-		}
 	}
 
 	@Override

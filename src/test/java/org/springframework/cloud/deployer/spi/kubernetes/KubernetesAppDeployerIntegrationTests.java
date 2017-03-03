@@ -71,7 +71,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	KubernetesClient kubernetesClient;
 
 	@Override
-	protected AppDeployer appDeployer() {
+	protected AppDeployer provideAppDeployer() {
 		return appDeployer;
 	}
 
