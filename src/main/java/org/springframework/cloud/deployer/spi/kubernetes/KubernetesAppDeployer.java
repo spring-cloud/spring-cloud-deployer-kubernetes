@@ -23,8 +23,10 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
+import org.springframework.cloud.deployer.spi.app.DeployerEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.util.DeployerVersionUtils;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -190,6 +192,18 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		logger.debug(String.format("Status for app: %s is %s", appId, status));
 
 		return status;
+	}
+
+	@Override
+	public DeployerEnvironmentInfo environmentInfo() {
+		return new DeployerEnvironmentInfo.Builder()
+				.deployerImplementationVersion(DeployerVersionUtils.getVersion(this.getClass()))
+				.platformType("Kubernetes")
+				.platformClientVersion(DeployerVersionUtils.getVersion(client.getClass()))
+				.platformHostVersion(client.getApiVersion())
+				.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
+				.addPlatformSpecificInfo("namespace", client.getNamespace())
+				.build();
 	}
 
 	protected int configureExternalPort(final AppDeploymentRequest request) {
