@@ -197,10 +197,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	@Override
 	public DeployerEnvironmentInfo environmentInfo() {
 		return new DeployerEnvironmentInfo.Builder()
+				.deployerName(this.getClass().getSimpleName())
 				.deployerImplementationVersion(DeployerVersionUtils.getVersion(this.getClass()))
 				.platformType("Kubernetes")
+				.platformApiVersion(client.getApiVersion())
 				.platformClientVersion(DeployerVersionUtils.getVersion(client.getClass()))
-				.platformHostVersion(client.getApiVersion())
+				.platformHostVersion("unknown")
 				.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
 				.addPlatformSpecificInfo("namespace", client.getNamespace())
 				.build();
