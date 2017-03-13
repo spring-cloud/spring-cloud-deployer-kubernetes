@@ -23,10 +23,9 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
-import org.springframework.cloud.deployer.spi.app.DeployerEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.util.DeployerVersionUtils;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -51,8 +50,6 @@ import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
 	private static final String SERVER_PORT_KEY = "server.port";
-
-	private final KubernetesClient client;
 
 	@Autowired
 	public KubernetesAppDeployer(KubernetesDeployerProperties properties,
@@ -195,17 +192,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	@Override
-	public DeployerEnvironmentInfo environmentInfo() {
-		return new DeployerEnvironmentInfo.Builder()
-				.deployerName(this.getClass().getSimpleName())
-				.deployerImplementationVersion(DeployerVersionUtils.getVersion(this.getClass()))
-				.platformType("Kubernetes")
-				.platformApiVersion(client.getApiVersion())
-				.platformClientVersion(DeployerVersionUtils.getVersion(client.getClass()))
-				.platformHostVersion("unknown")
-				.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
-				.addPlatformSpecificInfo("namespace", client.getNamespace())
-				.build();
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return super.createRuntimeEnvironmentInfo(AppDeployer.class, this.getClass());
 	}
 
 	protected int configureExternalPort(final AppDeploymentRequest request) {

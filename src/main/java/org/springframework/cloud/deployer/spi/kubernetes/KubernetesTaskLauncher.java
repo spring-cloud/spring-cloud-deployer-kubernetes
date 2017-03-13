@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 the original author or authors.
+ * Copyright 2016-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.hashids.Hashids;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
@@ -41,8 +42,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
  * @author Thomas Risberg
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
-
-	private final KubernetesClient client;
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
@@ -95,6 +94,11 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Override
 	public void destroy(String appName) {
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return super.createRuntimeEnvironmentInfo(TaskLauncher.class, this.getClass());
 	}
 
 	@Override

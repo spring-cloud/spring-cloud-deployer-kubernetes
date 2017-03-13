@@ -29,7 +29,9 @@ import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
+import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.util.StringUtils;
 
 import io.fabric8.kubernetes.api.model.Container;
@@ -40,6 +42,7 @@ import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
  * Abstract base class for a deployer that targets Kubernetes.
@@ -61,7 +64,28 @@ public class AbstractKubernetesDeployer {
 
 	protected ContainerFactory containerFactory;
 
+	protected KubernetesClient client;
+
 	protected KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
+
+	/**
+	 * Create the RuntimeEnvironmentInfo.
+	 *
+	 * @return the Kubernetes runtime environment info
+	 */
+	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
+		return new RuntimeEnvironmentInfo.Builder()
+				.spiClass(spiClass)
+				.implementationName(implementationClass.getSimpleName())
+				.implementationVersion(RuntimeVersionUtils.getVersion(implementationClass))
+				.platformType("Kubernetes")
+				.platformApiVersion(client.getApiVersion())
+				.platformClientVersion(RuntimeVersionUtils.getVersion(client.getClass()))
+				.platformHostVersion("unknown")
+				.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
+				.addPlatformSpecificInfo("namespace", client.getNamespace())
+				.build();
+	}
 
 	/**
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
