@@ -16,11 +16,10 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.hashids.Hashids;
 
@@ -32,6 +31,7 @@ import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -85,15 +85,15 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Override
 	public void cleanup(String id) {
-		Set<String> ids = new HashSet(Arrays.asList(id));
-		for (String taskId : ids) {
-			logger.debug(String.format("Deleting pod for task: %s", id));
-			deletePod(taskId);
-		}
+		logger.debug(String.format("Deleting pod for task: %s", id));
+		deletePod(id);
 	}
 
 	@Override
 	public void destroy(String appName) {
+		for (String id : getPodIdsForTaskName(appName)) {
+			cleanup(id);
+		}
 	}
 
 	@Override
@@ -132,6 +132,15 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 				.endMetadata()
 				.withSpec(spec)
 				.done();
+	}
+
+	private List<String> getPodIdsForTaskName(String taskName) {
+		PodList pods = client.pods().inNamespace(client.getNamespace()).withLabel("task-name", taskName).list();
+		List<String> ids = new ArrayList<>();
+		for (Pod pod : pods.getItems()) {
+			ids.add(pod.getMetadata().getName());
+		}
+		return ids;
 	}
 
 	private void deletePod(String id) {
