@@ -56,7 +56,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
 	@Override
 	public String getId() {
-		return String.format("%s:%s", moduleId, (pod == null ? "N/A" : pod.getMetadata().getName()));
+		return pod == null ? "N/A" : pod.getMetadata().getName();
 	}
 
 	@Override
