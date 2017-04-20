@@ -97,8 +97,10 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 							containerStatus.getLastState() != null &&
 							containerStatus.getState() != null &&
 							containerStatus.getLastState().getTerminated() != null &&
-							containerStatus.getState().getTerminated() != null &&
+							containerStatus.getLastState().getTerminated().getReason() != null &&
 							containerStatus.getLastState().getTerminated().getReason().contains("Error") &&
+							containerStatus.getState().getTerminated() != null &&
+							containerStatus.getState().getTerminated().getReason()!= null &&
 							containerStatus.getState().getTerminated().getReason().contains("Error") &&
 							containerStatus.getLastState().getTerminated().getExitCode().equals(
 									containerStatus.getState().getTerminated().getExitCode())) {
