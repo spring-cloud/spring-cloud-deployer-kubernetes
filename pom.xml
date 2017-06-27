@@ -13,15 +13,15 @@
 	<parent>
 		<groupId>org.springframework.cloud</groupId>
 		<artifactId>spring-cloud-deployer-parent</artifactId>
-		<version>1.2.0.RELEASE</version>
+		<version>1.2.1.RELEASE</version>
 	</parent>
 
 	<properties>
 		<java.version>1.8</java.version>
-		<kubernetes-client.version>2.2.14</kubernetes-client.version>
-		<kubernetes-assertions.version>2.2.210</kubernetes-assertions.version>
-		<spring-cloud-deployer-spi.version>1.2.0.RELEASE</spring-cloud-deployer-spi.version>
-		<okhttp3.version>3.6.0</okhttp3.version>
+		<kubernetes-client.version>2.4.1</kubernetes-client.version>
+		<kubernetes-assertions.version>2.2.215</kubernetes-assertions.version>
+		<spring-cloud-deployer-spi.version>1.2.1.RELEASE</spring-cloud-deployer-spi.version>
+		<okhttp3.version>3.8.0</okhttp3.version>
 	</properties>
 
 	<dependencyManagement>
