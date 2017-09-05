@@ -3,10 +3,8 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import org.junit.Test;
 import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -15,8 +13,8 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Unit tests for {@link KubernetesAppDeployer}
@@ -98,6 +96,21 @@ public class KubernetesAppDeployerTests {
 				entry("os", "linux")
 		);
 
+	}
+
+	@Test
+	public void deployWithSidecars() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.side-cars",
+				"{"
+					+ "sidecar0: {image: 'docker://sidecars/sidecar0:latest'},"
+					+ "sidecar1: {image: 'docker://sidecars/sidecar1:latest'}"
+				+ "}");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
+		assertThat(podSpec.getContainers().size()).isEqualTo(3);
 	}
 
 	private Resource getResource() {

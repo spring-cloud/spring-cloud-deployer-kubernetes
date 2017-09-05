@@ -16,17 +16,21 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.deployer.resource.docker.DockerResource;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author David Turanski
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
@@ -36,6 +40,76 @@ public class KubernetesDeployerProperties {
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
+	/**
+	 * Side car container properties
+	 */
+
+	public static class SideCar {
+		/**
+		 * The docker image to use for the sidecar container.
+		 */
+		private DockerResource image;
+
+		/**
+		 * Volume mounts that the sidecar requires.
+		 */
+		private List<VolumeMount> volumeMounts = new ArrayList<>();
+
+		/**
+		 * The container command.
+		 */
+		private String command;
+
+		/**
+		 * The command args.
+		 */
+		private String args;
+
+		/**
+		 * Environment variables to set for the sidecar.
+		 */
+		private String[] environmentVariables = new String[]{};
+
+		public DockerResource getImage() {
+			return image;
+		}
+
+		public void setImage(DockerResource image) {
+			this.image = image;
+		}
+
+		public List<VolumeMount> getVolumeMounts() {
+			return volumeMounts;
+		}
+
+		public void setVolumeMounts(List<VolumeMount> volumeMounts) {
+			this.volumeMounts = volumeMounts;
+		}
+
+		public String getCommand() {
+			return command;
+		}
+
+		public String[] getEnvironmentVariables() {
+			return environmentVariables;
+		}
+
+		public void setEnvironmentVariables(String[] environmentVariables) {
+			this.environmentVariables = environmentVariables;
+		}
+
+		public void setCommand(String command) {
+			this.command = command;
+		}
+
+		public String getArgs() {
+			return args;
+		}
+
+		public void setArgs(String args) {
+			this.args = args;
+		}
+	}
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
 	 */
@@ -229,6 +303,11 @@ public class KubernetesDeployerProperties {
 	 * See https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
 	 */
 	private boolean createDeployment = false;
+
+	/**
+	 * Side cars
+	 */
+	private Map<String, SideCar> sideCars = new HashMap<>();
 
 
 	public String getNamespace() {
@@ -451,7 +530,17 @@ public class KubernetesDeployerProperties {
 		return createDeployment;
 	}
 
+	public Map<String,SideCar> getSideCars() {
+		return sideCars;
+	}
+
+	public void setSideCars(Map<String, SideCar> sideCars) {
+		this.sideCars = sideCars;
+	}
+
 	public void setCreateDeployment(boolean createDeployment) {
 		this.createDeployment = createDeployment;
 	}
+
+
 }

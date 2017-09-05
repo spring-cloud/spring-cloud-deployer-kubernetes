@@ -16,12 +16,15 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import org.apache.commons.logging.Log;
@@ -47,6 +50,7 @@ import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SideCar;
 import static java.lang.String.format;
 
 /**
@@ -56,6 +60,7 @@ import static java.lang.String.format;
  * @author Thomas Risberg
  * @author Mark Fisher
  * @author Donovan Muller
+ * @author David Turanski
  */
 public class AbstractKubernetesDeployer {
 
@@ -173,12 +178,21 @@ public class AbstractKubernetesDeployer {
 		}
 		podSpec.addToContainers(container);
 
+		Map<String, SideCar> sideCars = getSideCars(request);
+		for (Map.Entry<String,SideCar> sideCarEntry: sideCars.entrySet()) {
+			podSpec.addToContainers(new SideCarContainerFactory().create(sideCarEntry.getKey(),
+				sideCarEntry.getValue()));
+		}
+
+
 		if (neverRestart){
 			podSpec.withRestartPolicy("Never");
 		}
 
 		return podSpec.build();
 	}
+
+
 
 	/**
 	 * Volume deployment properties are specified in YAML format:
@@ -396,6 +410,39 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return nodeSelectors;
+	}
+
+	protected Map<String,SideCar> getSideCars(AppDeploymentRequest request){
+		Map<String, SideCar> sideCars = new HashMap<>();
+
+
+		String sideCarDeploymentProperty = request.getDeploymentProperties()
+			.getOrDefault("spring.cloud.deployer.kubernetes.side-cars", "");
+		if (!StringUtils.isEmpty(sideCarDeploymentProperty)) {
+			YamlConfigurationFactory<KubernetesDeployerProperties> sideCarYamlConfigurationFactory =
+				new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
+			sideCarYamlConfigurationFactory.setYaml("{ sideCars: " + sideCarDeploymentProperty + " }");
+			try {
+				sideCarYamlConfigurationFactory.afterPropertiesSet();
+				sideCars.putAll(
+					sideCarYamlConfigurationFactory.getObject().getSideCars());
+			}
+			catch (Exception e) {
+				throw new IllegalArgumentException(
+					String.format("Invalid sidecar '%s'", sideCarYamlConfigurationFactory), e);
+			}
+		}
+
+		/**
+		 * Do not override any existing definitions
+		 */
+		for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()){
+			if (!properties.getSideCars().containsKey(sideCarEntry.getKey())){
+				properties.getSideCars().put(sideCarEntry.getKey(), sideCarEntry.getValue());
+			}
+		}
+
+		return sideCars;
 	}
 
 	private String getCommonDeployerMemory(AppDeploymentRequest request) {
