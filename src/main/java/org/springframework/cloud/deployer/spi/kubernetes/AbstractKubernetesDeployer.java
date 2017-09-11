@@ -16,29 +16,8 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import io.fabric8.kubernetes.api.model.ContainerBuilder;
-import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.ServiceList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.boot.bind.YamlConfigurationFactory;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.app.AppStatus;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
-import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
-import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
+import static java.lang.String.format;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SideCar;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -47,11 +26,28 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.boot.bind.YamlConfigurationFactory;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppStatus;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
+import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SideCar;
-import static java.lang.String.format;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for a deployer that targets Kubernetes.
@@ -62,7 +58,7 @@ import static java.lang.String.format;
  * @author Donovan Muller
  * @author David Turanski
  */
-public class AbstractKubernetesDeployer {
+public abstract class AbstractKubernetesDeployer {
 
 	protected static final String SPRING_DEPLOYMENT_KEY = "spring-deployment-id";
 	protected static final String SPRING_GROUP_KEY = "spring-group-id";
@@ -84,17 +80,13 @@ public class AbstractKubernetesDeployer {
 	 * @return the Kubernetes runtime environment info
 	 */
 	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
-		return new RuntimeEnvironmentInfo.Builder()
-				.spiClass(spiClass)
-				.implementationName(implementationClass.getSimpleName())
-				.implementationVersion(RuntimeVersionUtils.getVersion(implementationClass))
-				.platformType("Kubernetes")
-				.platformApiVersion(client.getApiVersion())
-				.platformClientVersion(RuntimeVersionUtils.getVersion(client.getClass()))
-				.platformHostVersion("unknown")
-				.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
-				.addPlatformSpecificInfo("namespace", client.getNamespace())
-				.build();
+		return new RuntimeEnvironmentInfo.Builder().spiClass(spiClass)
+			.implementationName(implementationClass.getSimpleName())
+			.implementationVersion(RuntimeVersionUtils.getVersion(implementationClass)).platformType("Kubernetes")
+			.platformApiVersion(client.getApiVersion())
+			.platformClientVersion(RuntimeVersionUtils.getVersion(client.getClass())).platformHostVersion("unknown")
+			.addPlatformSpecificInfo("master-url", String.valueOf(client.getMasterUrl()))
+			.addPlatformSpecificInfo("namespace", client.getNamespace()).build();
 	}
 
 	/**
@@ -120,8 +112,7 @@ public class AbstractKubernetesDeployer {
 		if (podList != null && podList.getItems() != null) {
 			for (Pod pod : podList.getItems()) {
 				for (Service svc : services.getItems()) {
-					if (svc.getMetadata().getName()
-							.equals(pod.getMetadata().getLabels().get(SPRING_DEPLOYMENT_KEY))) {
+					if (svc.getMetadata().getName().equals(pod.getMetadata().getLabels().get(SPRING_DEPLOYMENT_KEY))) {
 						service = svc;
 						break;
 					}
@@ -135,15 +126,15 @@ public class AbstractKubernetesDeployer {
 	/**
 	 * Create a PodSpec to be used for app and task deployments
 	 *
-	 * @param appId the app ID
-	 * @param request app deployment request
-	 * @param port port to use for app or null if none
+	 * @param appId         the app ID
+	 * @param request       app deployment request
+	 * @param port          port to use for app or null if none
 	 * @param instanceIndex instance index for app or null if no index
-	 * @param neverRestart use restart policy of Never
+	 * @param neverRestart  use restart policy of Never
 	 * @return the PodSpec
 	 */
-	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request,
-	                                Integer port, Integer instanceIndex, boolean neverRestart) {
+	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
+		boolean neverRestart) {
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
 		// Add image secrets if set
@@ -168,41 +159,39 @@ public class AbstractKubernetesDeployer {
 			podSpec.withNodeSelector(nodeSelectors);
 		}
 		// only add volumes with corresponding volume mounts
-		podSpec.withVolumes(getVolumes(request).stream()
-				.filter(volume -> container.getVolumeMounts().stream()
-						.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName())))
-				.collect(Collectors.toList()));
+		podSpec.withVolumes(getVolumes(request).stream().filter(volume -> container.getVolumeMounts().stream()
+			.anyMatch(volumeMount -> volumeMount.getName().equals(volume.getName()))).collect(Collectors.toList()));
 
 		if (hostNetwork) {
 			podSpec.withHostNetwork(true);
 		}
 		podSpec.addToContainers(container);
 
+
 		Map<String, SideCar> sideCars = getSideCars(request);
-		for (Map.Entry<String,SideCar> sideCarEntry: sideCars.entrySet()) {
-			podSpec.addToContainers(new SideCarContainerFactory().create(sideCarEntry.getKey(),
-				sideCarEntry.getValue()));
+		if (!CollectionUtils.isEmpty(sideCars)) {
+			SideCarContainerFactory sideCarContainerFactory = new SideCarContainerFactory();
+			for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()) {
+				podSpec.addToContainers(sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue()));
+			}
 		}
 
-
-		if (neverRestart){
+		if (neverRestart) {
 			podSpec.withRestartPolicy("Never");
 		}
 
 		return podSpec.build();
 	}
 
-
-
 	/**
 	 * Volume deployment properties are specified in YAML format:
-	 *
+	 * <p>
 	 * <code>
-	 *     spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
-	 *     	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
-	 *     	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+	 * spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 * {name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
+	 * {name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>
-	 *
+	 * <p>
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
 	 * Deployment properties override deployer properties.
 	 *
@@ -213,27 +202,24 @@ public class AbstractKubernetesDeployer {
 		List<Volume> volumes = new ArrayList<>();
 
 		String volumeDeploymentProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
+			.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
 		if (!StringUtils.isEmpty(volumeDeploymentProperty)) {
-			YamlConfigurationFactory<KubernetesDeployerProperties> volumeYamlConfigurationFactory =
-					new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
+			YamlConfigurationFactory<KubernetesDeployerProperties> volumeYamlConfigurationFactory = new YamlConfigurationFactory<>(
+				KubernetesDeployerProperties.class);
 			volumeYamlConfigurationFactory.setYaml("{ volumes: " + volumeDeploymentProperty + " }");
 			try {
 				volumeYamlConfigurationFactory.afterPropertiesSet();
-				volumes.addAll(
-						volumeYamlConfigurationFactory.getObject().getVolumes());
+				volumes.addAll(volumeYamlConfigurationFactory.getObject().getVolumes());
 			}
 			catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
+				throw new IllegalArgumentException(String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
 			}
 		}
 		// only add volumes that have not already been added, based on the volume's name
 		// i.e. allow provided deployment volumes to override deployer defined volumes
-		volumes.addAll(properties.getVolumes().stream()
-				.filter(volume -> volumes.stream()
-						.noneMatch(existingVolume -> existingVolume.getName().equals(volume.getName())))
-				.collect(Collectors.toList()));
+		volumes.addAll(properties.getVolumes().stream().filter(
+			volume -> volumes.stream().noneMatch(existingVolume -> existingVolume.getName().equals(volume.getName())))
+			.collect(Collectors.toList()));
 
 		return volumes;
 	}
@@ -246,7 +232,7 @@ public class AbstractKubernetesDeployer {
 	 * <p>
 	 * Also supports the deprecated properties {@code spring.cloud.deployer.kubernetes.memory/cpu}.
 	 *
-	 * @param request    The deployment properties.
+	 * @param request The deployment properties.
 	 */
 	protected Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
 		String memDeployer = getCommonDeployerMemory(request);
@@ -256,12 +242,13 @@ public class AbstractKubernetesDeployer {
 				memOverride = memDeployer;
 			}
 			else {
-				logger.warn(String.format("Both " + AppDeployer.MEMORY_PROPERTY_KEY +
-								"=%s and spring.cloud.deployer.kubernetes.memory=%s specified, the latter will take precedence.",
-						memDeployer, memOverride));
+				logger.warn(String.format("Both " + AppDeployer.MEMORY_PROPERTY_KEY
+						+ "=%s and spring.cloud.deployer.kubernetes.memory=%s specified, the latter will take precedence.",
+					memDeployer, memOverride));
 			}
 		}
-		String memLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
+		String memLimitsOverride = request.getDeploymentProperties()
+			.get("spring.cloud.deployer.kubernetes.limits.memory");
 		if (memLimitsOverride != null) {
 			// Non-deprecated value has priority
 			memOverride = memLimitsOverride;
@@ -272,7 +259,8 @@ public class AbstractKubernetesDeployer {
 			if (properties.getLimits().getMemory() != null) {
 				// Non-deprecated value has priority
 				memOverride = properties.getLimits().getMemory();
-			} else {
+			}
+			else {
 				memOverride = properties.getMemory();
 			}
 		}
@@ -284,9 +272,9 @@ public class AbstractKubernetesDeployer {
 				cpuOverride = cpuDeployer;
 			}
 			else {
-				logger.warn(String.format("Both " + AppDeployer.CPU_PROPERTY_KEY +
-								"=%s and spring.cloud.deployer.kubernetes.cpu=%s specified, the latter will take precedence.",
-						cpuDeployer, cpuOverride));
+				logger.warn(String.format("Both " + AppDeployer.CPU_PROPERTY_KEY
+						+ "=%s and spring.cloud.deployer.kubernetes.cpu=%s specified, the latter will take precedence.",
+					cpuDeployer, cpuOverride));
 			}
 		}
 		String cpuLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.cpu");
@@ -300,14 +288,15 @@ public class AbstractKubernetesDeployer {
 			if (properties.getLimits().getCpu() != null) {
 				// Non-deprecated value has priority
 				cpuOverride = properties.getLimits().getCpu();
-			} else {
+			}
+			else {
 				cpuOverride = properties.getCpu();
 			}
 		}
 
 		logger.debug("Using limits - cpu: " + cpuOverride + " mem: " + memOverride);
 
-		Map<String,Quantity> limits = new HashMap<String,Quantity>();
+		Map<String, Quantity> limits = new HashMap<String, Quantity>();
 		limits.put("memory", new Quantity(memOverride));
 		limits.put("cpu", new Quantity(cpuOverride));
 		return limits;
@@ -321,13 +310,14 @@ public class AbstractKubernetesDeployer {
 	 * @return The image pull policy to use for the container in the request.
 	 */
 	protected ImagePullPolicy deduceImagePullPolicy(AppDeploymentRequest request) {
-		String pullPolicyOverride =
-				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.imagePullPolicy");
+		String pullPolicyOverride = request.getDeploymentProperties()
+			.get("spring.cloud.deployer.kubernetes.imagePullPolicy");
 
 		ImagePullPolicy pullPolicy;
 		if (pullPolicyOverride == null) {
 			pullPolicy = properties.getImagePullPolicy();
-		} else {
+		}
+		else {
 			pullPolicy = ImagePullPolicy.relaxedValueOf(pullPolicyOverride);
 			if (pullPolicy == null) {
 				logger.warn("Parsing of pull policy " + pullPolicyOverride + " failed, using default \"Always\".");
@@ -343,7 +333,7 @@ public class AbstractKubernetesDeployer {
 	 * runtime.
 	 * Falls back to the server properties if not present in the deployment request.
 	 *
-	 * @param request    The deployment properties.
+	 * @param request The deployment properties.
 	 */
 	protected Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");
@@ -358,7 +348,7 @@ public class AbstractKubernetesDeployer {
 
 		logger.debug("Using requests - cpu: " + cpuOverride + " mem: " + memOverride);
 
-		Map<String,Quantity> requests = new HashMap<String, Quantity>();
+		Map<String, Quantity> requests = new HashMap<String, Quantity>();
 		if (memOverride != null) {
 			requests.put("memory", new Quantity(memOverride));
 		}
@@ -375,8 +365,8 @@ public class AbstractKubernetesDeployer {
 	 * @return Whether host networking is requested
 	 */
 	protected boolean getHostNetwork(AppDeploymentRequest request) {
-		String hostNetworkOverride =
-				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.hostNetwork");
+		String hostNetworkOverride = request.getDeploymentProperties()
+			.get("spring.cloud.deployer.kubernetes.hostNetwork");
 		boolean hostNetwork;
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
 			hostNetwork = properties.isHostNetwork();
@@ -398,7 +388,7 @@ public class AbstractKubernetesDeployer {
 		Map<String, String> nodeSelectors = new HashMap<>();
 
 		String nodeSelectorsProperty = properties
-				.getOrDefault(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
+			.getOrDefault(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
 
 		if (StringUtils.hasText(nodeSelectorsProperty)) {
 			String[] nodeSelectorPairs = nodeSelectorsProperty.split(",");
@@ -412,20 +402,18 @@ public class AbstractKubernetesDeployer {
 		return nodeSelectors;
 	}
 
-	protected Map<String,SideCar> getSideCars(AppDeploymentRequest request){
+	protected Map<String, SideCar> getSideCars(AppDeploymentRequest request) {
 		Map<String, SideCar> sideCars = new HashMap<>();
-
 
 		String sideCarDeploymentProperty = request.getDeploymentProperties()
 			.getOrDefault("spring.cloud.deployer.kubernetes.side-cars", "");
 		if (!StringUtils.isEmpty(sideCarDeploymentProperty)) {
-			YamlConfigurationFactory<KubernetesDeployerProperties> sideCarYamlConfigurationFactory =
-				new YamlConfigurationFactory<>(KubernetesDeployerProperties.class);
+			YamlConfigurationFactory<KubernetesDeployerProperties> sideCarYamlConfigurationFactory = new YamlConfigurationFactory<>(
+				KubernetesDeployerProperties.class);
 			sideCarYamlConfigurationFactory.setYaml("{ sideCars: " + sideCarDeploymentProperty + " }");
 			try {
 				sideCarYamlConfigurationFactory.afterPropertiesSet();
-				sideCars.putAll(
-					sideCarYamlConfigurationFactory.getObject().getSideCars());
+				sideCars.putAll(sideCarYamlConfigurationFactory.getObject().getSideCars());
 			}
 			catch (Exception e) {
 				throw new IllegalArgumentException(
@@ -436,8 +424,8 @@ public class AbstractKubernetesDeployer {
 		/**
 		 * Do not override any existing definitions
 		 */
-		for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()){
-			if (!properties.getSideCars().containsKey(sideCarEntry.getKey())){
+		for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()) {
+			if (!properties.getSideCars().containsKey(sideCarEntry.getKey())) {
 				properties.getSideCars().put(sideCarEntry.getKey(), sideCarEntry.getValue());
 			}
 		}

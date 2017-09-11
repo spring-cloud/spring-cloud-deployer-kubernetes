@@ -27,7 +27,6 @@ import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -39,12 +38,13 @@ public class SideCarContainerFactory {
 	public Container create(String name, SideCar sideCar) {
 		String image;
 		try {
+			Assert.notNull(sideCar.getImage(), "No image provided for sidecar container");
 			image = sideCar.getImage().getURI().getSchemeSpecificPart();
 		}
 		catch (IOException e) {
 			throw new IllegalArgumentException("Unable to get URI for " + sideCar.getImage(), e);
 		}
-		logger.debug(String.format("Creating sideCar container %s from image %s", name, image));
+		logger.debug(String.format("Creating sidecar container %s from image %s", name, image));
 
 		List<EnvVar> envVars = new ArrayList<>();
 		for (String envVar : sideCar.getEnvironmentVariables()) {
@@ -53,10 +53,25 @@ public class SideCarContainerFactory {
 			envVars.add(new EnvVar(strings[0], strings[1], null));
 		}
 
-		List<String> appArgs = new LinkedList<>();
+		ContainerBuilder containerBuilder = new ContainerBuilder();
 
-		return new ContainerBuilder().withName(name).withImage(image).withEnv(envVars).withArgs(appArgs)
-			.withVolumeMounts(sideCar.getVolumeMounts()).build();
+		if (sideCar.getPorts() != null && sideCar.getPorts().length > 0) {
+
+			for (int port : sideCar.getPorts()) {
+				Assert.isTrue(port > 0, "'port must be greater than 0");
+				containerBuilder.addNewPort().withContainerPort(port).withHostPort(port).endPort();
+			}
+		}
+
+		containerBuilder
+			.withName(name)
+			.withImage(image)
+			.withEnv(envVars)
+			.withCommand(sideCar.getCommand())
+			.withArgs(sideCar.getArgs())
+			.withVolumeMounts(sideCar.getVolumeMounts());
+
+		return containerBuilder.build();
 	}
 
 }
