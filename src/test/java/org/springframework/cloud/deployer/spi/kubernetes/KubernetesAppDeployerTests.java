@@ -3,6 +3,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import org.junit.Test;
@@ -104,13 +105,33 @@ public class KubernetesAppDeployerTests {
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.side-cars",
 				"{"
-					+ "sidecar0: {image: 'docker://sidecars/sidecar0:latest'},"
-					+ "sidecar1: {image: 'docker://sidecars/sidecar1:latest'}"
+					+ "sidecar0: {image: 'sidecars/sidecar0:latest'," +
+					"volumeMounts: ["
+					+ "{name: 'testpvc', mountPath: '/test/pvc'}, "
+					+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}"
+					+ "]"
+					+ "},"
+					+ "sidecar1: {image: 'sidecars/sidecar1:latest', command: ['/bin/bash','-c','activate scst-env &&"
+					+ " python /app/sentiment-service.py --port=9999 --monitor-port=9998 --debug'], ports:[9998,9999]}"
 				+ "}");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
 		assertThat(podSpec.getContainers().size()).isEqualTo(3);
+
+		Container sidecar0 = podSpec.getContainers().get(1);
+		assertThat(sidecar0 .getName()).isEqualTo("sidecar0");
+		assertThat(sidecar0.getImage()).isEqualTo("sidecars/sidecar0:latest");
+		assertThat(sidecar0.getVolumeMounts().size()).isEqualTo(2);
+		assertThat(sidecar0.getVolumeMounts().get(0).getName()).isEqualTo("testpvc");
+		assertThat(sidecar0.getVolumeMounts().get(1).getName()).isEqualTo("testnfs");
+
+		Container sidecar1 = podSpec.getContainers().get(2);
+		assertThat(sidecar1 .getName()).isEqualTo("sidecar1");
+		assertThat(sidecar1.getImage()).isEqualTo("sidecars/sidecar1:latest");
+		assertThat(sidecar1.getCommand()).contains("/bin/bash", "-c",
+			"activate scst-env && python /app/sentiment-service.py --port=9999 --monitor-port=9998 --debug");
+		assertThat(sidecar1.getPorts().size()).isEqualTo(2);
 	}
 
 	private Resource getResource() {

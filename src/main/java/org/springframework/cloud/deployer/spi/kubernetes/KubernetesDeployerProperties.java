@@ -56,19 +56,24 @@ public class KubernetesDeployerProperties {
 		private List<VolumeMount> volumeMounts = new ArrayList<>();
 
 		/**
-		 * The container command.
+		 * The sidecar container command.
 		 */
-		private String command;
+		private String[] command;
 
 		/**
 		 * The command args.
 		 */
-		private String args;
+		private String[] args = new String[]{};
 
 		/**
 		 * Environment variables to set for the sidecar.
 		 */
 		private String[] environmentVariables = new String[]{};
+
+		/**
+		 * The ports to expose for the sidecar.
+		 */
+		private Integer[] ports = new Integer[]{};
 
 		public DockerResource getImage() {
 			return image;
@@ -86,9 +91,14 @@ public class KubernetesDeployerProperties {
 			this.volumeMounts = volumeMounts;
 		}
 
-		public String getCommand() {
+		public String[] getCommand() {
 			return command;
 		}
+
+		public void setCommand(String[] command) {
+			this.command = command;
+		}
+
 
 		public String[] getEnvironmentVariables() {
 			return environmentVariables;
@@ -98,17 +108,24 @@ public class KubernetesDeployerProperties {
 			this.environmentVariables = environmentVariables;
 		}
 
-		public void setCommand(String command) {
-			this.command = command;
-		}
-
-		public String getArgs() {
+		public String[] getArgs() {
 			return args;
 		}
-
-		public void setArgs(String args) {
+		public void setArgs(String[] args) {
 			this.args = args;
 		}
+
+		public Integer[] getPorts() {
+			return ports;
+		}
+
+		public void setPorts(Integer[] ports) {
+			this.ports = ports;
+		}
+
+
+
+
 	}
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
@@ -308,7 +325,6 @@ public class KubernetesDeployerProperties {
 	 * Side cars
 	 */
 	private Map<String, SideCar> sideCars = new HashMap<>();
-
 
 	public String getNamespace() {
 		return namespace;
