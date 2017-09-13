@@ -61,7 +61,7 @@ public class SidecarContainerFactory extends AbstractContainerFactory {
 
 		if (sidecar.getLivenessProbe().getPort() != null) {
 			for (int port: sidecar.getPorts()){
-				if (port == probePort) {
+				if (port == sidecar.getLivenessProbe().getPort()) {
 					probePort = port;
 				}
 			}
