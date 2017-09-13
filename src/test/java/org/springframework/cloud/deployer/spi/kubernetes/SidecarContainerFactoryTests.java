@@ -37,70 +37,90 @@ public class SidecarContainerFactoryTests {
 
 	@Test
 	public void simpleSideCar() {
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
-		Container container = sidecarContainerFactory.create("foo", sideCar);
+		Sidecar sidecar = new Sidecar();
+		sidecar.setImage(new DockerResource("sidecars/sidecar:latest"));
+		sidecar.setPorts(new Integer[]{8888});
+		Container container = sidecarContainerFactory.create("foo", sidecar);
 		assertThat(container.getName()).isEqualTo("foo");
 		assertThat(container.getImage()).isEqualTo("sidecars/sidecar:latest");
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void immageMissing() {
-		Sidecar sideCar = new Sidecar();
-		sidecarContainerFactory.create("foo", sideCar);
+		Sidecar sidecar = new Sidecar();
+		sidecar.setPorts(new Integer[]{8888});
+		sidecarContainerFactory.create("foo", sidecar);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void portMissing() {
+		Sidecar sidecar = new Sidecar();
+		sidecarContainerFactory.create("foo", sidecar);
 	}
 
 	@Test
 	public void withVolumeMounts() {
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
+		Sidecar sidecar = validSidecar();
 		List<VolumeMount> volumeMounts = new LinkedList<>();
 		VolumeMount v0 = new VolumeMount();
 		volumeMounts.add(new VolumeMount("/mountpath0", "v0", false, null));
-		sideCar.setVolumeMounts(volumeMounts);
-		Container container = sidecarContainerFactory.create("foo", sideCar);
+		sidecar.setVolumeMounts(volumeMounts);
+		Container container = sidecarContainerFactory.create("foo", sidecar);
 		assertThat(container.getVolumeMounts().size()).isEqualTo(1);
 	}
 
 	@Test
 	public void withEnv() {
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
-		sideCar.setEnvironmentVariables(new String[] { "FOO=bar", "PORT=9999" });
-		Container container = sidecarContainerFactory.create("foo", sideCar);
+		Sidecar sidecar = validSidecar();
+		sidecar.setEnvironmentVariables(new String[] { "FOO=bar", "NUM=9999" });
+		Container container = sidecarContainerFactory.create("foo", sidecar);
 		List<EnvVar> envVars = container.getEnv();
 		assertThat(envVars.size()).isEqualTo(2);
 		assertThat(envVars.get(0).getName()).isEqualTo("FOO");
 		assertThat(envVars.get(0).getValue()).isEqualTo("bar");
-		assertThat(envVars.get(1).getName()).isEqualTo("PORT");
+		assertThat(envVars.get(1).getName()).isEqualTo("NUM");
 		assertThat(envVars.get(1).getValue()).isEqualTo("9999");
 	}
 
 	@Test
 	public void withPorts() {
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
-		sideCar.setPorts(new Integer[]{9998, 9999});
-		Container container = sidecarContainerFactory.create("foo", sideCar);
-		assertThat(container.getPorts()).containsOnly(new ContainerPort(9998,null,9998,null, null),
-			new ContainerPort(9999,null,9999,null, null));
+		Sidecar sidecar = validSidecar();
+		sidecar.setPorts(new Integer[] { 9998, 9999 });
+		Container container = sidecarContainerFactory.create("foo", sidecar);
+		assertThat(container.getPorts()).containsOnly(new ContainerPort(9998, null, 9998, null, null),
+			new ContainerPort(9999, null, 9999, null, null));
 	}
 
 	@Test
-	public void withCommand(){
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
-		sideCar.setCommand(new String[]{"/bin/bash","-c","ls -lah & ping localhost"});
-		Container container = sidecarContainerFactory.create("foo", sideCar);
-		assertThat(container.getCommand()).containsOnly("/bin/bash","-c","ls -lah & ping localhost");
+	public void withCommand() {
+		Sidecar sidecar = validSidecar();
+		sidecar.setCommand(new String[] { "/bin/bash", "-c", "ls -lah & ping localhost" });
+		Container container = sidecarContainerFactory.create("foo", sidecar);
+		assertThat(container.getCommand()).containsOnly("/bin/bash", "-c", "ls -lah & ping localhost");
 	}
 
 	@Test
-	public void withArgs(){
-		Sidecar sideCar = new Sidecar();
-		sideCar.setImage(new DockerResource("sidecars/sidecar:latest"));
-		sideCar.setArgs(new String[]{"-c","ls -lah & ping localhost"});
-		Container container = sidecarContainerFactory.create("foo", sideCar);
-		assertThat(container.getArgs()).containsOnly("-c","ls -lah & ping localhost");
+	public void withArgs() {
+		Sidecar sidecar = validSidecar();
+		sidecar.setArgs(new String[] { "-c", "ls -lah & ping localhost" });
+		Container container = sidecarContainerFactory.create("foo", sidecar);
+		assertThat(container.getArgs()).containsOnly("-c", "ls -lah & ping localhost");
+	}
+
+	@Test
+	public void withTcpProbeOnFirstExposedPortByDefault() {
+		Sidecar sidecar = validSidecar();
+		sidecar.setPorts(new Integer[] { 1111, 2222 });
+		KubernetesDeployerProperties.Probe liveness = new KubernetesDeployerProperties.Probe();
+
+		Container container = sidecarContainerFactory.create("foo", sidecar);
+		assertThat(container.getLivenessProbe().getTcpSocket().getPort().getIntVal()).isEqualTo(1111);
+	}
+
+	private Sidecar validSidecar(){
+		Sidecar sidecar = new Sidecar();
+		sidecar.setImage(new DockerResource("sidecars/sidecar:latest"));
+		sidecar.setPorts(new Integer[]{8888});
+		return sidecar;
 	}
 }

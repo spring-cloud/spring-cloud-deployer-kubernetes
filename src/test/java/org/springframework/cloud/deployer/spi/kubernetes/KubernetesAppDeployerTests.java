@@ -21,6 +21,7 @@ import java.util.Map;
  * Unit tests for {@link KubernetesAppDeployer}
  *
  * @author Donovan Muller
+ * @author David Turanski
  */
 public class KubernetesAppDeployerTests {
 
@@ -105,14 +106,13 @@ public class KubernetesAppDeployerTests {
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.sidecars",
 				"{"
-					+ "sidecar0: {image: 'sidecars/sidecar0:latest'," +
-					"volumeMounts: ["
+					+ "sidecar0: {image: 'sidecars/sidecar0:latest', ports:[1111], volumeMounts: ["
 					+ "{name: 'testpvc', mountPath: '/test/pvc'}, "
 					+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}"
 					+ "]"
 					+ "},"
 					+ "sidecar1: {image: 'sidecars/sidecar1:latest', command: ['/bin/bash','-c','activate scst-env &&"
-					+ " python /app/sentiment-service.py --port=9999 --monitor-port=9998 --debug'], ports:[9998,9999]}"
+					+ " python /app/my-service.py --port=9999 --monitor-port=9998 --debug'], ports:[9998,9999]}"
 				+ "}");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
@@ -130,8 +130,42 @@ public class KubernetesAppDeployerTests {
 		assertThat(sidecar1 .getName()).isEqualTo("sidecar1");
 		assertThat(sidecar1.getImage()).isEqualTo("sidecars/sidecar1:latest");
 		assertThat(sidecar1.getCommand()).contains("/bin/bash", "-c",
-			"activate scst-env && python /app/sentiment-service.py --port=9999 --monitor-port=9998 --debug");
+			"activate scst-env && python /app/my-service.py --port=9999 --monitor-port=9998 --debug");
 		assertThat(sidecar1.getPorts().size()).isEqualTo(2);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void failOnSidecarPortConflict() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
+				"sidecar0 :{image: 'sidecars/sidecar1:latest', ports:[8080]}" + "}");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void failOnMultiSidecarPortConflict() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
+			"{" + "sidecar0: {image: 'sidecars/sidecar0:latest', ports: [8888,3333]},"
+				+ "sidecar1: {image: 'sidecars/sidecar1:latest', ports:[1111,2222,3333]}"
+				+ "}");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void failOnSidecarPortMissing() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars", "{sidecar0: {image: 'sidecars/sidecar0:latest'}");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
 	}
 
 	private Resource getResource() {
