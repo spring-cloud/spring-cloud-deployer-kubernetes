@@ -44,7 +44,7 @@ public class KubernetesDeployerProperties {
 	 * Side car container properties
 	 */
 
-	public static class SideCar {
+	public static class Sidecar {
 		/**
 		 * The docker image to use for the sidecar container.
 		 */
@@ -324,7 +324,7 @@ public class KubernetesDeployerProperties {
 	/**
 	 * Side cars
 	 */
-	private Map<String, SideCar> sideCars = new HashMap<>();
+	private Map<String, Sidecar> sidecars = new HashMap<>();
 
 	public String getNamespace() {
 		return namespace;
@@ -546,12 +546,12 @@ public class KubernetesDeployerProperties {
 		return createDeployment;
 	}
 
-	public Map<String,SideCar> getSideCars() {
-		return sideCars;
+	public Map<String,Sidecar> getSidecars() {
+		return sidecars;
 	}
 
-	public void setSideCars(Map<String, SideCar> sideCars) {
-		this.sideCars = sideCars;
+	public void setSidecars(Map<String, Sidecar> sidecars) {
+		this.sidecars = sidecars;
 	}
 
 	public void setCreateDeployment(boolean createDeployment) {

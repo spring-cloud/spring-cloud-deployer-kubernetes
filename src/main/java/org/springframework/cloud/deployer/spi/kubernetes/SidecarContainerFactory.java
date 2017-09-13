@@ -16,7 +16,7 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SideCar;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.Sidecar;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -32,10 +32,10 @@ import java.util.List;
 /**
  * @author David Turanski
  **/
-public class SideCarContainerFactory {
-	private static Log logger = LogFactory.getLog(SideCarContainerFactory.class);
+public class SidecarContainerFactory extends AbstractContainerFactory {
+	private static Log logger = LogFactory.getLog(SidecarContainerFactory.class);
 
-	public Container create(String name, SideCar sideCar) {
+	public Container create(String name, Sidecar sideCar) {
 		String image;
 		try {
 			Assert.notNull(sideCar.getImage(), "No image provided for sidecar container");

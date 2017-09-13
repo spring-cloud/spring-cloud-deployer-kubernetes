@@ -44,19 +44,20 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 /**
- * Unit tests for {@link DefaultContainerFactory}.
+ * Unit tests for {@link MainContainerFactory}.
  *
  * @author Will Kennedy
  * @author Donovan Muller
+ * @author David Turanski
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
-public class DefaultContainerFactoryTests {
+public class MainContainerFactoryTests {
 
 	@Test
 	public void create() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -68,7 +69,7 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
+		Container container = mainContainerFactory.create("app-test",
 				appDeploymentRequest, null, null, false);
 		assertNotNull(container);
 		assertEquals(3, container.getEnv().size());
@@ -83,7 +84,7 @@ public class DefaultContainerFactoryTests {
 	@Test
 	public void createWithContainerCommand() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -94,7 +95,7 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
+		Container container = mainContainerFactory.create("app-test",
 				appDeploymentRequest, null, null, false);
 		assertNotNull(container);
 		assertThat(container.getCommand()).containsExactly("echo", "arg1", "arg2");
@@ -103,7 +104,7 @@ public class DefaultContainerFactoryTests {
 	@Test
 	public void createWithPorts() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -114,7 +115,7 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
+		Container container = mainContainerFactory.create("app-test",
 				appDeploymentRequest, null, null, false);
 		assertNotNull(container);
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -128,7 +129,7 @@ public class DefaultContainerFactoryTests {
 	@Test(expected = NumberFormatException.class)
 	public void createWithInvalidPort() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -140,13 +141,13 @@ public class DefaultContainerFactoryTests {
 				resource, props);
 
 		//Attempting to create with an invalid integer set for a port should cause an exception to bubble up.
-		defaultContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
+		mainContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
 	}
 
 	@Test
 	public void createWithPortAndHostNetwork() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -157,7 +158,7 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
+		Container container = mainContainerFactory.create("app-test",
 				appDeploymentRequest, null, null, true);
 		assertNotNull(container);
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -174,7 +175,7 @@ public class DefaultContainerFactoryTests {
 	@Test
 	public void createWithEntryPointStyle() throws JsonProcessingException {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(
 				kubernetesDeployerProperties);
 
 		Map<String, String> appProps = new HashMap<>();
@@ -186,7 +187,7 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "shell");
 		AppDeploymentRequest appDeploymentRequestShell = new AppDeploymentRequest(definition,
 				resource, props);
-		Container containerShell = defaultContainerFactory.create("app-test",
+		Container containerShell = mainContainerFactory.create("app-test",
 				appDeploymentRequestShell, null, null, false);
 		assertNotNull(containerShell);
 		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
@@ -195,7 +196,7 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
 				resource, props);
-		Container containerExec = defaultContainerFactory.create("app-test",
+		Container containerExec = mainContainerFactory.create("app-test",
 				appDeploymentRequestExec, null, null, false);
 		assertNotNull(containerExec);
 		assertTrue(containerExec.getEnv().size() == 1);
@@ -204,7 +205,7 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "boot");
 		AppDeploymentRequest appDeploymentRequestBoot = new AppDeploymentRequest(definition,
 				resource, props);
-		Container containerBoot = defaultContainerFactory.create("app-test",
+		Container containerBoot = mainContainerFactory.create("app-test",
 				appDeploymentRequestBoot, null, null, false);
 		assertNotNull(containerBoot);
 		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
@@ -216,7 +217,7 @@ public class DefaultContainerFactoryTests {
 	public void createWithVolumeMounts() {
 		// test volume mounts defined as deployer properties
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(kubernetesDeployerProperties);
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -229,7 +230,7 @@ public class DefaultContainerFactoryTests {
 					+ "]");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, props);
 
-		Container container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
+		Container container = mainContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
 				new VolumeMount("/test/hostPath", "testhostpath", null, null),
@@ -244,7 +245,7 @@ public class DefaultContainerFactoryTests {
 						new VolumeMount("/test/pvc", "testpvc", true, null),
 						new VolumeMount("/test/nfs", "testnfs", false, null))
 				.collect(Collectors.toList()));
-		defaultContainerFactory = new DefaultContainerFactory(kubernetesDeployerProperties);
+		mainContainerFactory = new MainContainerFactory(kubernetesDeployerProperties);
 
 		props.clear();
 		props.put("spring.cloud.deployer.kubernetes.volumeMounts",
@@ -252,7 +253,7 @@ public class DefaultContainerFactoryTests {
 						+ "{name: 'testpvc', mountPath: '/test/pvc/overridden'}, "
 						+ "{name: 'testnfs', mountPath: '/test/nfs/overridden', readOnly: 'true'}"
 					+ "]");
-		container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
+		container = mainContainerFactory.create("app-test", appDeploymentRequest, null, null, false);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
 				new VolumeMount("/test/hostPath", "testhostpath", false, null),

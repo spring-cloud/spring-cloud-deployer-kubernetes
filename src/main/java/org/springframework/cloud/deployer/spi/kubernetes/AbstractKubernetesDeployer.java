@@ -17,7 +17,7 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static java.lang.String.format;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SideCar;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.Sidecar;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -68,7 +68,9 @@ public abstract class AbstractKubernetesDeployer {
 
 	protected static final Log logger = LogFactory.getLog(AbstractKubernetesDeployer.class);
 
-	protected ContainerFactory containerFactory;
+	protected MainContainerFactory mainContainerFactory;
+
+	protected SidecarContainerFactory sideCarContainerFactory;
 
 	protected KubernetesClient client;
 
@@ -143,7 +145,7 @@ public abstract class AbstractKubernetesDeployer {
 		}
 
 		boolean hostNetwork = getHostNetwork(request);
-		Container container = containerFactory.create(appId, request, port, instanceIndex, hostNetwork);
+		Container container = mainContainerFactory.create(appId, request, port, instanceIndex, hostNetwork);
 
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
@@ -168,10 +170,9 @@ public abstract class AbstractKubernetesDeployer {
 		podSpec.addToContainers(container);
 
 
-		Map<String, SideCar> sideCars = getSideCars(request);
+		Map<String, Sidecar> sideCars = getSidecars(request);
 		if (!CollectionUtils.isEmpty(sideCars)) {
-			SideCarContainerFactory sideCarContainerFactory = new SideCarContainerFactory();
-			for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()) {
+			for (Map.Entry<String, Sidecar> sideCarEntry : sideCars.entrySet()) {
 				podSpec.addToContainers(sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue()));
 			}
 		}
@@ -402,18 +403,18 @@ public abstract class AbstractKubernetesDeployer {
 		return nodeSelectors;
 	}
 
-	protected Map<String, SideCar> getSideCars(AppDeploymentRequest request) {
-		Map<String, SideCar> sideCars = new HashMap<>();
+	protected Map<String, Sidecar> getSidecars(AppDeploymentRequest request) {
+		Map<String, Sidecar> sideCars = new HashMap<>();
 
 		String sideCarDeploymentProperty = request.getDeploymentProperties()
-			.getOrDefault("spring.cloud.deployer.kubernetes.side-cars", "");
+			.getOrDefault("spring.cloud.deployer.kubernetes.sidecars", "");
 		if (!StringUtils.isEmpty(sideCarDeploymentProperty)) {
 			YamlConfigurationFactory<KubernetesDeployerProperties> sideCarYamlConfigurationFactory = new YamlConfigurationFactory<>(
 				KubernetesDeployerProperties.class);
-			sideCarYamlConfigurationFactory.setYaml("{ sideCars: " + sideCarDeploymentProperty + " }");
+			sideCarYamlConfigurationFactory.setYaml("{ sidecars: " + sideCarDeploymentProperty + " }");
 			try {
 				sideCarYamlConfigurationFactory.afterPropertiesSet();
-				sideCars.putAll(sideCarYamlConfigurationFactory.getObject().getSideCars());
+				sideCars.putAll(sideCarYamlConfigurationFactory.getObject().getSidecars());
 			}
 			catch (Exception e) {
 				throw new IllegalArgumentException(
@@ -424,9 +425,9 @@ public abstract class AbstractKubernetesDeployer {
 		/**
 		 * Do not override any existing definitions
 		 */
-		for (Map.Entry<String, SideCar> sideCarEntry : sideCars.entrySet()) {
-			if (!properties.getSideCars().containsKey(sideCarEntry.getKey())) {
-				properties.getSideCars().put(sideCarEntry.getKey(), sideCarEntry.getValue());
+		for (Map.Entry<String, Sidecar> sideCarEntry : sideCars.entrySet()) {
+			if (!properties.getSidecars().containsKey(sideCarEntry.getKey())) {
+				properties.getSidecars().put(sideCarEntry.getKey(), sideCarEntry.getValue());
 			}
 		}
 
