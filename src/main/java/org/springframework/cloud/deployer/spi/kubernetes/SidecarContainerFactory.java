@@ -21,58 +21,64 @@ import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeploy
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.util.Assert;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author David Turanski
  **/
 public class SidecarContainerFactory extends AbstractContainerFactory {
-	private static Log logger = LogFactory.getLog(SidecarContainerFactory.class);
 
-	public Container create(String name, Sidecar sideCar) {
-		String image;
-		try {
-			Assert.notNull(sideCar.getImage(), "No image provided for sidecar container");
-			image = sideCar.getImage().getURI().getSchemeSpecificPart();
-		}
-		catch (IOException e) {
-			throw new IllegalArgumentException("Unable to get URI for " + sideCar.getImage(), e);
-		}
+	public Container create(String name, Sidecar sidecar) {
+		Assert.isTrue(sidecar.getPorts() != null && sidecar.getPorts().length > 0,
+			"Sidecar must expose at least one port");
+
+		String image = resolveImageName(sidecar.getImage());
 		logger.debug(String.format("Creating sidecar container %s from image %s", name, image));
 
-		List<EnvVar> envVars = new ArrayList<>();
-		for (String envVar : sideCar.getEnvironmentVariables()) {
-			String[] strings = envVar.split("=", 2);
-			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
-			envVars.add(new EnvVar(strings[0], strings[1], null));
-		}
+		List<EnvVar> envVars = buildEnVars(sidecar.getEnvironmentVariables());
 
 		ContainerBuilder containerBuilder = new ContainerBuilder();
 
-		if (sideCar.getPorts() != null && sideCar.getPorts().length > 0) {
-
-			for (int port : sideCar.getPorts()) {
+		if (sidecar.getPorts() != null && sidecar.getPorts().length > 0) {
+			for (int port : sidecar.getPorts()) {
 				Assert.isTrue(port > 0, "'port must be greater than 0");
 				containerBuilder.addNewPort().withContainerPort(port).withHostPort(port).endPort();
 			}
 		}
 
-		containerBuilder
-			.withName(name)
-			.withImage(image)
-			.withEnv(envVars)
-			.withCommand(sideCar.getCommand())
-			.withArgs(sideCar.getArgs())
-			.withVolumeMounts(sideCar.getVolumeMounts());
+		createLivenessProbeOnFirstOrDesignatedPort(containerBuilder, sidecar);
+
+		containerBuilder.withName(name).withImage(image).withEnv(envVars).withCommand(sidecar.getCommand())
+			.withArgs(sidecar.getArgs()).withVolumeMounts(sidecar.getVolumeMounts());
 
 		return containerBuilder.build();
 	}
 
+	private void createLivenessProbeOnFirstOrDesignatedPort(ContainerBuilder containerBuilder, Sidecar sidecar) {
+		Integer probePort = null;
+
+		if (sidecar.getLivenessProbe().getPort() != null) {
+			for (int port: sidecar.getPorts()){
+				if (port == probePort) {
+					probePort = port;
+				}
+			}
+
+			if (probePort == null) {
+				logger.warn(String.format("Designated probe port does not match an exposed port. Probe will use %d."
+					+ sidecar.getPorts()[0]));
+			}
+		}
+
+		if (probePort == null) {
+			probePort = sidecar.getPorts()[0];
+		}
+
+		containerBuilder.withLivenessProbe(new KubernetesProbeBuilder(probePort, sidecar.getLivenessProbe()).build());
+
+	}
 }
+
 

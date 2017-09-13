@@ -56,9 +56,8 @@ public class MainContainerFactoryTests {
 
 	@Test
 	public void create() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -83,9 +82,8 @@ public class MainContainerFactoryTests {
 
 	@Test
 	public void createWithContainerCommand() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -103,9 +101,7 @@ public class MainContainerFactoryTests {
 
 	@Test
 	public void createWithPorts() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -128,9 +124,7 @@ public class MainContainerFactoryTests {
 
 	@Test(expected = NumberFormatException.class)
 	public void createWithInvalidPort() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -146,9 +140,7 @@ public class MainContainerFactoryTests {
 
 	@Test
 	public void createWithPortAndHostNetwork() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
@@ -174,9 +166,7 @@ public class MainContainerFactoryTests {
 
 	@Test
 	public void createWithEntryPointStyle() throws JsonProcessingException {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		MainContainerFactory mainContainerFactory = new MainContainerFactory(
-				kubernetesDeployerProperties);
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(new KubernetesDeployerProperties());
 
 		Map<String, String> appProps = new HashMap<>();
 		appProps.put("foo.bar.baz", "test");
@@ -260,6 +250,29 @@ public class MainContainerFactoryTests {
 				new VolumeMount("/test/pvc/overridden", "testpvc", null, null),
 				new VolumeMount("/test/nfs/overridden", "testnfs", true, null));
 	}
+
+	@Test
+	public void createWithProbes() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		MainContainerFactory mainContainerFactory = new MainContainerFactory(kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.livenessProbePath", "/myhealth");
+		props.put("spring.cloud.deployer.kubernetes.readinessProbePath", "/myInfo");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, props);
+
+		Container container = mainContainerFactory.create("app-test", appDeploymentRequest, 1111, null, false);
+
+		assertThat(container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(1111);
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo("/myhealth");
+
+		assertThat(container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(1111);
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/myInfo");
+	}
+
 
 	private Resource getResource() {
 		return new DockerResource(

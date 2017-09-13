@@ -44,7 +44,88 @@ public class KubernetesDeployerProperties {
 	 * Side car container properties
 	 */
 
+	public static class Probe {
+
+		public enum HandlerType {socket, http}
+
+		/**
+		 * the handler type ('socket','http'}.
+		 */
+		private HandlerType type = HandlerType.socket;
+
+		/**
+		 * the endpoint path (if http).
+		 */
+		private String path;
+		/**
+		 * the initial delay is seconds;
+		 */
+		private Integer delay = 10;
+		/**
+		 * the probe timeout in seconds;
+		 */
+		private Integer timeout = 2;
+		/**
+		 * the probe period in seconds;
+		 */
+		private Integer period = 10;
+
+		/**
+		 * the probe port. Must match an exposed port. The first exposed port by default.
+		 */
+		private Integer port;
+
+		public HandlerType getType() {
+			return type;
+		}
+
+		public void setType(HandlerType type) {
+			this.type = type;
+		}
+
+		public String getPath() {
+			return path;
+		}
+
+		public void setPath(String path) {
+			this.path = path;
+		}
+
+		public Integer getDelay() {
+			return delay;
+		}
+
+		public void setDelay(Integer delay) {
+			this.delay = delay;
+		}
+
+		public Integer getTimeout() {
+			return timeout;
+		}
+
+		public void setTimeout(Integer timeout) {
+			this.timeout = timeout;
+		}
+
+		public Integer getPeriod() {
+			return period;
+		}
+
+		public void setPeriod(Integer period) {
+			this.period = period;
+		}
+
+		public Integer getPort() {
+			return port;
+		}
+
+		public void setPort(Integer port) {
+			this.port = port;
+		}
+	}
+
 	public static class Sidecar {
+
 		/**
 		 * The docker image to use for the sidecar container.
 		 */
@@ -74,6 +155,11 @@ public class KubernetesDeployerProperties {
 		 * The ports to expose for the sidecar.
 		 */
 		private Integer[] ports = new Integer[]{};
+
+		/**
+		 * The liveness Probe.
+		 */
+		private Probe livenessProbe = new Probe();
 
 		public DockerResource getImage() {
 			return image;
@@ -123,9 +209,13 @@ public class KubernetesDeployerProperties {
 			this.ports = ports;
 		}
 
+		public Probe getLivenessProbe() {
+			return livenessProbe;
+		}
 
-
-
+		public void setLivenessProbe(Probe livenessProbe) {
+			this.livenessProbe = livenessProbe;
+		}
 	}
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits

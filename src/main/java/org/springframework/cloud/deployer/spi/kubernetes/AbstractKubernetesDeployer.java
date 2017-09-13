@@ -44,7 +44,9 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -170,18 +172,51 @@ public abstract class AbstractKubernetesDeployer {
 		podSpec.addToContainers(container);
 
 
-		Map<String, Sidecar> sideCars = getSidecars(request);
-		if (!CollectionUtils.isEmpty(sideCars)) {
-			for (Map.Entry<String, Sidecar> sideCarEntry : sideCars.entrySet()) {
-				podSpec.addToContainers(sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue()));
-			}
-		}
+		createSidecarContainers(request, podSpec, port);
 
 		if (neverRestart) {
 			podSpec.withRestartPolicy("Never");
 		}
 
 		return podSpec.build();
+	}
+
+	private void createSidecarContainers(AppDeploymentRequest request, PodSpecBuilder podSpec, int port) {
+		Map<String, Sidecar> sideCars = getSidecars(request);
+
+		if (!CollectionUtils.isEmpty(sideCars)) {
+			failOnPortConflictOrMissing(port, sideCars.values());
+			for (Map.Entry<String, Sidecar> sideCarEntry : sideCars.entrySet()) {
+				podSpec.addToContainers(sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue
+					()));
+			}
+		}
+	}
+
+	private void failOnPortConflictOrMissing(Integer port, Collection<Sidecar> sidecars){
+		for (Sidecar sidecar : sidecars) {
+			Integer[] ports = sidecar.getPorts();
+			Assert.isTrue(ports != null && ports.length > 0, "Sidecar must expose at least " + "one port");
+			for (int sidecarPort : ports) {
+				if (sidecarPort == port) {
+					throw new IllegalArgumentException(
+						String.format("sidecar port %d is already assigned to another container", port));
+				}
+			}
+		}
+
+		if (sidecars.size() > 1) {
+			List<Sidecar> sidecarList = new ArrayList<>(sidecars);
+			int i = 0;
+			for (Sidecar sidecar: sidecarList) {
+				List<Sidecar> checkList = sidecarList.subList(++i,sidecarList.size());
+				for (int sideCarport: sidecar.getPorts()){
+					failOnPortConflictOrMissing(sideCarport, checkList);
+				}
+
+			}
+		}
+
 	}
 
 	/**
