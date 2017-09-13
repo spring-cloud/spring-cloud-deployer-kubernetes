@@ -44,14 +44,15 @@ public class KubernetesAutoConfiguration {
 
 	@Bean
 	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
-	                               ContainerFactory containerFactory) {
-		return new KubernetesAppDeployer(properties, kubernetesClient, containerFactory);
+	                               MainContainerFactory mainContainerFactory,
+		                           SidecarContainerFactory sidecarContainerFactory) {
+		return new KubernetesAppDeployer(properties, kubernetesClient, mainContainerFactory, sidecarContainerFactory);
 	}
 
 	@Bean
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
-	                                 ContainerFactory containerFactory) {
-		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
+	                                 MainContainerFactory mainContainerFactory){
+		return new KubernetesTaskLauncher(properties, kubernetesClient, mainContainerFactory);
 	}
 
 	@Bean
@@ -60,8 +61,13 @@ public class KubernetesAutoConfiguration {
 	}
 
 	@Bean
-	public ContainerFactory containerFactory() {
-		return new DefaultContainerFactory(properties);
+	public MainContainerFactory containerFactory() {
+		return new MainContainerFactory(properties);
+	}
+
+	@Bean
+	public SidecarContainerFactory sidecarContainerFactory() {
+		return new SidecarContainerFactory();
 	}
 
 }

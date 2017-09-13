@@ -51,18 +51,18 @@ import org.springframework.util.StringUtils;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author David Turanski
  */
-public class DefaultContainerFactory implements ContainerFactory {
+public class MainContainerFactory extends AbstractContainerFactory {
 
-	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
+	private static Log logger = LogFactory.getLog(MainContainerFactory.class);
 
 	private final KubernetesDeployerProperties properties;
 
-	public DefaultContainerFactory(KubernetesDeployerProperties properties) {
+	public MainContainerFactory(KubernetesDeployerProperties properties) {
 		this.properties = properties;
 	}
 
-	@Override
 	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
 	                        boolean hostNetwork) {
 		String image;

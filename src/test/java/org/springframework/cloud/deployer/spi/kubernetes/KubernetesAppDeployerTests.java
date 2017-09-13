@@ -103,7 +103,7 @@ public class KubernetesAppDeployerTests {
 	public void deployWithSidecars() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.side-cars",
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
 				"{"
 					+ "sidecar0: {image: 'sidecars/sidecar0:latest'," +
 					"volumeMounts: ["
