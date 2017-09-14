@@ -162,7 +162,7 @@ public class KubernetesAppDeployerTests {
 	public void failOnSidecarPortMissing() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.sidecars", "{sidecar0: {image: 'sidecars/sidecar0:latest'}");
+		props.put("spring.cloud.deployer.kubernetes.sidecars", "{sidecar0: {image: 'sidecars/sidecar0:latest'}}");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
