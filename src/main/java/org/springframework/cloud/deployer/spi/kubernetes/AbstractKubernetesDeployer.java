@@ -171,7 +171,6 @@ public abstract class AbstractKubernetesDeployer {
 		}
 		podSpec.addToContainers(container);
 
-
 		createSidecarContainers(request, podSpec, port);
 
 		if (neverRestart) {
@@ -181,7 +180,7 @@ public abstract class AbstractKubernetesDeployer {
 		return podSpec.build();
 	}
 
-	private void createSidecarContainers(AppDeploymentRequest request, PodSpecBuilder podSpec, int port) {
+	private void createSidecarContainers(AppDeploymentRequest request, PodSpecBuilder podSpec, Integer port) {
 		Map<String, Sidecar> sideCars = getSidecars(request);
 
 		if (!CollectionUtils.isEmpty(sideCars)) {
@@ -194,9 +193,11 @@ public abstract class AbstractKubernetesDeployer {
 	}
 
 	private void failOnPortConflictOrMissing(Integer port, Collection<Sidecar> sidecars){
+
 		for (Sidecar sidecar : sidecars) {
 			Integer[] ports = sidecar.getPorts();
 			Assert.isTrue(ports != null && ports.length > 0, "Sidecar must expose at least " + "one port");
+
 			for (int sidecarPort : ports) {
 				if (sidecarPort == port) {
 					throw new IllegalArgumentException(

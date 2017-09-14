@@ -48,15 +48,17 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
 	                             KubernetesClient client) {
-		this(properties, client, new MainContainerFactory(properties));
+		this(properties, client, new MainContainerFactory(properties), new SidecarContainerFactory());
 	}
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
-	                             KubernetesClient client, MainContainerFactory containerFactory) {
+	                             KubernetesClient client, MainContainerFactory containerFactory,
+		                         SidecarContainerFactory sidecarContainerFactory) {
 		this.properties = properties;
 		this.client = client;
 		this.mainContainerFactory = containerFactory;
+		this.sideCarContainerFactory = sidecarContainerFactory;
 	}
 
 	@Override
