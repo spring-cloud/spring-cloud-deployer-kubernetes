@@ -35,7 +35,7 @@ public class SidecarContainerFactory extends AbstractContainerFactory {
 			"Sidecar must expose at least one port");
 
 		String image = resolveImageName(sidecar.getImage());
-		logger.debug(String.format("Creating sidecar container %s from image %s", name, image));
+		logger.info(String.format("Creating sidecar container %s from image %s", name, image));
 
 		List<EnvVar> envVars = buildEnVars(sidecar.getEnvironmentVariables());
 
