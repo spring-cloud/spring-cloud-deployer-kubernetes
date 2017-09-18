@@ -196,7 +196,6 @@ public abstract class AbstractKubernetesDeployer {
 
 		for (Sidecar sidecar : sidecars) {
 			Integer[] ports = sidecar.getPorts();
-			Assert.isTrue(ports != null && ports.length > 0, "Sidecar must expose at least " + "one port");
 
 			for (int sidecarPort : ports) {
 				if (sidecarPort == port) {
