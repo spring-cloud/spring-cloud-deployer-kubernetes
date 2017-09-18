@@ -128,17 +128,6 @@ public class SidecarContainerFactoryTests {
 		assertThat(container.getLivenessProbe().getTcpSocket().getPort().getIntVal()).isEqualTo(2222);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void failOnProbePortNotExposed() {
-		Sidecar sidecar = validSidecar();
-		sidecar.setPorts(new Integer[] { 1111, 2222 });
-		KubernetesDeployerProperties.Probe liveness = new KubernetesDeployerProperties.Probe();
-		liveness.setPort(3333);
-		sidecar.setLivenessProbe(liveness);
-
-		sidecarContainerFactory.create("foo", sidecar);
-	}
-
 	private Sidecar validSidecar(){
 		Sidecar sidecar = new Sidecar();
 		sidecar.setImage(new DockerResource("sidecars/sidecar:latest"));

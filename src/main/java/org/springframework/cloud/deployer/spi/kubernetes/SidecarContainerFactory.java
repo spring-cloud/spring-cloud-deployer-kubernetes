@@ -31,8 +31,6 @@ import java.util.List;
 public class SidecarContainerFactory extends AbstractContainerFactory {
 
 	public Container create(String name, Sidecar sidecar) {
-		Assert.isTrue(sidecar.getPorts() != null && sidecar.getPorts().length > 0,
-			"Sidecar must expose at least one port");
 
 		String image = resolveImageName(sidecar.getImage());
 		logger.info(String.format("Creating sidecar container %s from image %s", name, image));
@@ -57,27 +55,16 @@ public class SidecarContainerFactory extends AbstractContainerFactory {
 	}
 
 	private void createLivenessProbeOnFirstOrDesignatedPort(ContainerBuilder containerBuilder, Sidecar sidecar) {
-		Integer probePort = null;
-
-		if (sidecar.getLivenessProbe().getPort() != null) {
-			for (int port: sidecar.getPorts()){
-				if (port == sidecar.getLivenessProbe().getPort()) {
-					probePort = port;
-				}
-			}
-
-			if (probePort == null) {
-				logger.warn(String.format("Designated probe port does not match an exposed port. Probe will use %d."
-					+ sidecar.getPorts()[0]));
-			}
-		}
-
+		Integer probePort = sidecar.getLivenessProbe().getPort();
 		if (probePort == null) {
 			probePort = sidecar.getPorts()[0];
+			logger.info(String.format("Configuring liveness probe on first exposed port %d ", probePort));
+		}
+		else {
+			logger.info(String.format("Configuring liveness probe on port %d ", probePort));
 		}
 
 		containerBuilder.withLivenessProbe(new KubernetesProbeBuilder(probePort, sidecar.getLivenessProbe()).build());
-
 	}
 }
 

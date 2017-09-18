@@ -267,7 +267,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
-	public void testWithSideCar() {
+	public void testWithSidecar() {
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
 		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
@@ -275,7 +275,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
 			containerFactory, sidecarContainerFactory);
 
-		log.info("Testing {}...", "DeploymentWithWithSimpleSideCar");
+		log.info("Testing {}...", "DeploymentWithSideCar");
 		Resource resource = testApplication();
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.sidecars",

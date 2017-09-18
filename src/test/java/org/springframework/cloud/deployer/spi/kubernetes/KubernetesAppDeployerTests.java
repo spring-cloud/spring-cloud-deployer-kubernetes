@@ -158,16 +158,6 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void failOnSidecarPortMissing() throws Exception {
-		AppDefinition definition = new AppDefinition("app-test", null);
-		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.sidecars", "{sidecar0: {image: 'sidecars/sidecar0:latest'}}");
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
-	}
-
 	private Resource getResource() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}
