@@ -18,10 +18,10 @@
 
 	<properties>
 		<java.version>1.8</java.version>
-		<kubernetes-client.version>2.4.1</kubernetes-client.version>
-		<kubernetes-assertions.version>2.2.215</kubernetes-assertions.version>
-		<spring-cloud-deployer-spi.version>1.3.0.BUILD-SNAPSHOT</spring-cloud-deployer-spi.version>
-		<okhttp3.version>3.8.0</okhttp3.version>
+		<kubernetes-client.version>2.6.3</kubernetes-client.version>
+		<kubernetes-assertions.version>2.3.5</kubernetes-assertions.version>
+		<spring-cloud-deployer-spi.version>1.3.0.M1</spring-cloud-deployer-spi.version>
+		<okhttp3.version>3.8.1</okhttp3.version>
 	</properties>
 
 	<dependencyManagement>
