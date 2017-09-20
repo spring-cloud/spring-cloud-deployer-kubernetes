@@ -296,6 +296,36 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
 
+	@Test
+	public void sidecar() {
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		deployProperties.setCreateDeployment(true);
+		deployProperties.setCreateLoadBalancer(true);
+		deployProperties.setMinutesToWaitForLoadBalancer(1);
+		deployProperties.setImagePullPolicy(ImagePullPolicy.Always);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
+		SidecarContainerFactory sidecarContainerFactory = new SidecarContainerFactory();
+		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+			containerFactory, sidecarContainerFactory);
+
+		log.info("Testing {}...", "DeploymentWithSideCar");
+		Resource resource = new DockerResource("dturanski/sentiment-demo:latest");
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
+			"{sentiment-analyzer :{image: 'dturanski/sentiment-analyzer:latest', ports:[9998]}}");
+		AppDefinition definition = new AppDefinition(randomName(), new HashMap<>());
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = testAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+			Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Deployed {}...", deploymentId);
+
+	}
+
 	@Override
 	protected String randomName() {
 		// Kubernetest service names must start with a letter and can only be 24 characters long

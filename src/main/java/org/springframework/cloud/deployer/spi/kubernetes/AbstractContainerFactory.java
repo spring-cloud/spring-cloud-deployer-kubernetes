@@ -96,7 +96,6 @@ public abstract class AbstractContainerFactory {
 			this.probe.setType(probe.getType());
 			this.probe.setPeriod(probe.getPeriod());
 			this.probe.setTimeout(probe.getTimeout());
-			this.probe.setType(probe.getType());
 			this.probe.setPath(probe.getPath());
 			this.probe.setDelay(probe.getDelay());
 		}

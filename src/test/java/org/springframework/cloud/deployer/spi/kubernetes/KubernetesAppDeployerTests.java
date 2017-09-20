@@ -119,14 +119,14 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, 1, false);
 		assertThat(podSpec.getContainers().size()).isEqualTo(3);
 
-		Container sidecar0 = podSpec.getContainers().get(1);
+		Container sidecar0 = podSpec.getContainers().get(0);
 		assertThat(sidecar0 .getName()).isEqualTo("sidecar0");
 		assertThat(sidecar0.getImage()).isEqualTo("sidecars/sidecar0:latest");
 		assertThat(sidecar0.getVolumeMounts().size()).isEqualTo(2);
 		assertThat(sidecar0.getVolumeMounts().get(0).getName()).isEqualTo("testpvc");
 		assertThat(sidecar0.getVolumeMounts().get(1).getName()).isEqualTo("testnfs");
 
-		Container sidecar1 = podSpec.getContainers().get(2);
+		Container sidecar1 = podSpec.getContainers().get(1);
 		assertThat(sidecar1 .getName()).isEqualTo("sidecar1");
 		assertThat(sidecar1.getImage()).isEqualTo("sidecars/sidecar1:latest");
 		assertThat(sidecar1.getCommand()).contains("/bin/bash", "-c",
