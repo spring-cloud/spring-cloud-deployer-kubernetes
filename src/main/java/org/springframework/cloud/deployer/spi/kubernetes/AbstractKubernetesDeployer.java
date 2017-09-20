@@ -141,6 +141,8 @@ public abstract class AbstractKubernetesDeployer {
 		boolean neverRestart) {
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
+		createSidecarContainers(request, podSpec, port);
+
 		// Add image secrets if set
 		if (properties.getImagePullSecret() != null) {
 			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
@@ -171,7 +173,7 @@ public abstract class AbstractKubernetesDeployer {
 		}
 		podSpec.addToContainers(container);
 
-		createSidecarContainers(request, podSpec, port);
+
 
 		if (neverRestart) {
 			podSpec.withRestartPolicy("Never");

@@ -55,16 +55,23 @@ public class SidecarContainerFactory extends AbstractContainerFactory {
 	}
 
 	private void createLivenessProbeOnFirstOrDesignatedPort(ContainerBuilder containerBuilder, Sidecar sidecar) {
+
 		Integer probePort = sidecar.getLivenessProbe().getPort();
 		if (probePort == null) {
-			probePort = sidecar.getPorts()[0];
-			logger.info(String.format("Configuring liveness probe on first exposed port %d ", probePort));
+			if (sidecar.getPorts().length > 0) {
+				probePort = sidecar.getPorts()[0];
+				logger.info(String.format("Configuring sidecar liveness probe on first exposed port %d ", probePort));
+			}
 		}
 		else {
-			logger.info(String.format("Configuring liveness probe on port %d ", probePort));
+			logger.info(String.format("Configuring sidecar liveness probe on port %d ", probePort));
 		}
-
-		containerBuilder.withLivenessProbe(new KubernetesProbeBuilder(probePort, sidecar.getLivenessProbe()).build());
+		if (probePort != null) {
+			containerBuilder.withLivenessProbe(new KubernetesProbeBuilder(probePort, sidecar.getLivenessProbe()).build());
+		}
+		else {
+			logger.warn("No liveness probe configured for sidecar");
+		}
 	}
 }
 
