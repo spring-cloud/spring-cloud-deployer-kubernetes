@@ -41,21 +41,24 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
  * A task launcher that targets Kubernetes.
  *
  * @author Thomas Risberg
+ * @author David Turanski
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
 	                             KubernetesClient client) {
-		this(properties, client, new DefaultContainerFactory(properties));
+		this(properties, client, new MainContainerFactory(properties), new SidecarContainerFactory());
 	}
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
-	                             KubernetesClient client, ContainerFactory containerFactory) {
+	                             KubernetesClient client, MainContainerFactory containerFactory,
+		                         SidecarContainerFactory sidecarContainerFactory) {
 		this.properties = properties;
 		this.client = client;
-		this.containerFactory = containerFactory;
+		this.mainContainerFactory = containerFactory;
+		this.sideCarContainerFactory = sidecarContainerFactory;
 	}
 
 	@Override

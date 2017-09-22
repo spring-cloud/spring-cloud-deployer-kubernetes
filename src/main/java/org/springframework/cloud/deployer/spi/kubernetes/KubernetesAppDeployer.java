@@ -53,6 +53,7 @@ import static java.lang.String.format;
  * @author Thomas Risberg
  * @author Mark Fisher
  * @author Donovan Muller
+ * @author David Turanski
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -61,15 +62,23 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	@Autowired
 	public KubernetesAppDeployer(KubernetesDeployerProperties properties,
 	                             KubernetesClient client) {
-		this(properties, client, new DefaultContainerFactory(properties));
+		this(properties, client, new MainContainerFactory(properties), new SidecarContainerFactory());
 	}
 
 	@Autowired
 	public KubernetesAppDeployer(KubernetesDeployerProperties properties,
-	                             KubernetesClient client, ContainerFactory containerFactory) {
+		KubernetesClient client, MainContainerFactory mainContainerFactory) {
+		this(properties, client, mainContainerFactory, new SidecarContainerFactory());
+	}
+
+	@Autowired
+	public KubernetesAppDeployer(KubernetesDeployerProperties properties,
+	                             KubernetesClient client, MainContainerFactory mainContainerFactory,
+		SidecarContainerFactory sideCarContainerFactory) {
 		this.properties = properties;
 		this.client = client;
-		this.containerFactory = containerFactory;
+		this.mainContainerFactory = mainContainerFactory;
+		this.sideCarContainerFactory = sideCarContainerFactory;
 	}
 
 	@Override

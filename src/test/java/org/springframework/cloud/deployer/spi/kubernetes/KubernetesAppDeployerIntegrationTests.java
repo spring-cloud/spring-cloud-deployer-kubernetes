@@ -61,6 +61,7 @@ import org.springframework.core.io.Resource;
  *
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author David Turanski
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
@@ -91,7 +92,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		deployProperties.setLivenessProbePeriod(10);
 		deployProperties.setMaxTerminatedErrorRestarts(1);
 		deployProperties.setMaxCrashLoopBackOffRestarts(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
@@ -121,8 +122,9 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
 		deployProperties.setCreateLoadBalancer(true);
 		deployProperties.setMinutesToWaitForLoadBalancer(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
+		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+			containerFactory, null);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -148,8 +150,9 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
 		deployProperties.setCreateLoadBalancer(true);
 		deployProperties.setMinutesToWaitForLoadBalancer(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
+		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+			containerFactory, null);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -196,7 +199,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				.withName(mountName)
 				.build()));
 		deployProperties.setVolumeMounts(Collections.singletonList(new VolumeMount(hostPath, mountName, false, null)));
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("logging.file", containerPath + subPath));
@@ -231,7 +234,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Testing {}...", "DeploymentWithWithGroupAndIndex");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
 		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
 
 		AppDefinition definition = new AppDefinition(randomName(), new HashMap<>());
@@ -261,6 +264,66 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		testAppDeployer.undeploy(deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testWithSidecar() {
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
+		SidecarContainerFactory sidecarContainerFactory = new SidecarContainerFactory();
+		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+			containerFactory, sidecarContainerFactory);
+
+		log.info("Testing {}...", "DeploymentWithSideCar");
+		Resource resource = testApplication();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
+			"{sidecar :{image: 'busybox:latest', ports:[9999], command: ['telnetd', '-F', '-p', '9999']}}");
+		AppDefinition definition = new AppDefinition(randomName(), new HashMap<>());
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = testAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+			Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		testAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+			Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void sidecar() {
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		deployProperties.setCreateDeployment(true);
+		deployProperties.setCreateLoadBalancer(true);
+		deployProperties.setMinutesToWaitForLoadBalancer(1);
+		deployProperties.setImagePullPolicy(ImagePullPolicy.Always);
+		MainContainerFactory containerFactory = new MainContainerFactory(deployProperties);
+		SidecarContainerFactory sidecarContainerFactory = new SidecarContainerFactory();
+		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+			containerFactory, sidecarContainerFactory);
+
+		log.info("Testing {}...", "DeploymentWithSideCar");
+		Resource resource = new DockerResource("dturanski/sentiment-demo:latest");
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.sidecars",
+			"{sentiment-analyzer :{image: 'dturanski/sentiment-analyzer:latest', ports:[9998]}}");
+		AppDefinition definition = new AppDefinition(randomName(), new HashMap<>());
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = testAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+			Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Deployed {}...", deploymentId);
+
 	}
 
 	@Override

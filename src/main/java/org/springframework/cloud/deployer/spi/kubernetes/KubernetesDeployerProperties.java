@@ -16,17 +16,21 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.deployer.resource.docker.DockerResource;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author David Turanski
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
@@ -36,6 +40,183 @@ public class KubernetesDeployerProperties {
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
+	/**
+	 * Side car container properties
+	 */
+
+	public static class Probe {
+
+		public enum HandlerType {socket, http}
+
+		/**
+		 * the handler type ('socket','http'}.
+		 */
+		private HandlerType type = HandlerType.socket;
+
+		/**
+		 * the endpoint path (if http).
+		 */
+		private String path;
+		/**
+		 * the initial delay is seconds;
+		 */
+		private Integer delay = 10;
+		/**
+		 * the probe timeout in seconds;
+		 */
+		private Integer timeout = 2;
+		/**
+		 * the probe period in seconds;
+		 */
+		private Integer period = 10;
+
+		/**
+		 * the probe port. Must match an exposed port. The first exposed port by default.
+		 */
+		private Integer port;
+
+		public HandlerType getType() {
+			return type;
+		}
+
+		public void setType(HandlerType type) {
+			this.type = type;
+		}
+
+		public String getPath() {
+			return path;
+		}
+
+		public void setPath(String path) {
+			this.path = path;
+		}
+
+		public Integer getDelay() {
+			return delay;
+		}
+
+		public void setDelay(Integer delay) {
+			this.delay = delay;
+		}
+
+		public Integer getTimeout() {
+			return timeout;
+		}
+
+		public void setTimeout(Integer timeout) {
+			this.timeout = timeout;
+		}
+
+		public Integer getPeriod() {
+			return period;
+		}
+
+		public void setPeriod(Integer period) {
+			this.period = period;
+		}
+
+		public Integer getPort() {
+			return port;
+		}
+
+		public void setPort(Integer port) {
+			this.port = port;
+		}
+	}
+
+	public static class Sidecar {
+
+		/**
+		 * The docker image to use for the sidecar container.
+		 */
+		private DockerResource image;
+
+		/**
+		 * Volume mounts that the sidecar requires.
+		 */
+		private List<VolumeMount> volumeMounts = new ArrayList<>();
+
+		/**
+		 * The sidecar container command.
+		 */
+		private String[] command;
+
+		/**
+		 * The command args.
+		 */
+		private String[] args = new String[]{};
+
+		/**
+		 * Environment variables to set for the sidecar.
+		 */
+		private String[] environmentVariables = new String[]{};
+
+		/**
+		 * The ports to expose for the sidecar.
+		 */
+		private Integer[] ports = new Integer[]{};
+
+		/**
+		 * The liveness Probe.
+		 */
+		private Probe livenessProbe = new Probe();
+
+		public DockerResource getImage() {
+			return image;
+		}
+
+		public void setImage(DockerResource image) {
+			this.image = image;
+		}
+
+		public List<VolumeMount> getVolumeMounts() {
+			return volumeMounts;
+		}
+
+		public void setVolumeMounts(List<VolumeMount> volumeMounts) {
+			this.volumeMounts = volumeMounts;
+		}
+
+		public String[] getCommand() {
+			return command;
+		}
+
+		public void setCommand(String[] command) {
+			this.command = command;
+		}
+
+
+		public String[] getEnvironmentVariables() {
+			return environmentVariables;
+		}
+
+		public void setEnvironmentVariables(String[] environmentVariables) {
+			this.environmentVariables = environmentVariables;
+		}
+
+		public String[] getArgs() {
+			return args;
+		}
+		public void setArgs(String[] args) {
+			this.args = args;
+		}
+
+		public Integer[] getPorts() {
+			return ports;
+		}
+
+		public void setPorts(Integer[] ports) {
+			this.ports = ports;
+		}
+
+		public Probe getLivenessProbe() {
+			return livenessProbe;
+		}
+
+		public void setLivenessProbe(Probe livenessProbe) {
+			this.livenessProbe = livenessProbe;
+		}
+	}
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
 	 */
@@ -230,6 +411,10 @@ public class KubernetesDeployerProperties {
 	 */
 	private boolean createDeployment = false;
 
+	/**
+	 * Side cars
+	 */
+	private Map<String, Sidecar> sidecars = new HashMap<>();
 
 	public String getNamespace() {
 		return namespace;
@@ -451,7 +636,17 @@ public class KubernetesDeployerProperties {
 		return createDeployment;
 	}
 
+	public Map<String,Sidecar> getSidecars() {
+		return sidecars;
+	}
+
+	public void setSidecars(Map<String, Sidecar> sidecars) {
+		this.sidecars = sidecars;
+	}
+
 	public void setCreateDeployment(boolean createDeployment) {
 		this.createDeployment = createDeployment;
 	}
+
+
 }

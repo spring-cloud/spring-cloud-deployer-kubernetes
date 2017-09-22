@@ -33,6 +33,7 @@ import org.springframework.core.Ordered;
  *
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author David Turanski
  */
 @Configuration
 @EnableConfigurationProperties(KubernetesDeployerProperties.class)
@@ -44,14 +45,16 @@ public class KubernetesAutoConfiguration {
 
 	@Bean
 	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
-	                               ContainerFactory containerFactory) {
-		return new KubernetesAppDeployer(properties, kubernetesClient, containerFactory);
+	                               MainContainerFactory mainContainerFactory,
+		                           SidecarContainerFactory sidecarContainerFactory) {
+		return new KubernetesAppDeployer(properties, kubernetesClient, mainContainerFactory, sidecarContainerFactory);
 	}
 
 	@Bean
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
-	                                 ContainerFactory containerFactory) {
-		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
+	                                 MainContainerFactory mainContainerFactory,
+		                             SidecarContainerFactory sidecarContainerFactory){
+		return new KubernetesTaskLauncher(properties, kubernetesClient, mainContainerFactory, sidecarContainerFactory);
 	}
 
 	@Bean
@@ -60,8 +63,13 @@ public class KubernetesAutoConfiguration {
 	}
 
 	@Bean
-	public ContainerFactory containerFactory() {
-		return new DefaultContainerFactory(properties);
+	public MainContainerFactory containerFactory() {
+		return new MainContainerFactory(properties);
+	}
+
+	@Bean
+	public SidecarContainerFactory sidecarContainerFactory() {
+		return new SidecarContainerFactory();
 	}
 
 }
