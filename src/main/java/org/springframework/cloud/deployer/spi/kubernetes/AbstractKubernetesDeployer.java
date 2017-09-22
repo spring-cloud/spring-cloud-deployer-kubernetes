@@ -46,7 +46,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -173,8 +172,6 @@ public abstract class AbstractKubernetesDeployer {
 		}
 		podSpec.addToContainers(container);
 
-
-
 		if (neverRestart) {
 			podSpec.withRestartPolicy("Never");
 		}
@@ -188,13 +185,15 @@ public abstract class AbstractKubernetesDeployer {
 		if (!CollectionUtils.isEmpty(sideCars)) {
 			failOnPortConflictOrMissing(port, sideCars.values());
 			for (Map.Entry<String, Sidecar> sideCarEntry : sideCars.entrySet()) {
-				podSpec.addToContainers(sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue
-					()));
+				ImagePullPolicy pullPolicy = deduceImagePullPolicy(request);
+				Container sidecar = sideCarContainerFactory.create(sideCarEntry.getKey(), sideCarEntry.getValue());
+				sidecar.setImagePullPolicy(pullPolicy.name());
+				podSpec.addToContainers(sidecar);
 			}
 		}
 	}
 
-	private void failOnPortConflictOrMissing(Integer port, Collection<Sidecar> sidecars){
+	private void failOnPortConflictOrMissing(Integer port, Collection<Sidecar> sidecars) {
 
 		for (Sidecar sidecar : sidecars) {
 			Integer[] ports = sidecar.getPorts();
@@ -210,9 +209,9 @@ public abstract class AbstractKubernetesDeployer {
 		if (sidecars.size() > 1) {
 			List<Sidecar> sidecarList = new ArrayList<>(sidecars);
 			int i = 0;
-			for (Sidecar sidecar: sidecarList) {
-				List<Sidecar> checkList = sidecarList.subList(++i,sidecarList.size());
-				for (int sideCarport: sidecar.getPorts()){
+			for (Sidecar sidecar : sidecarList) {
+				List<Sidecar> checkList = sidecarList.subList(++i, sidecarList.size());
+				for (int sideCarport : sidecar.getPorts()) {
 					failOnPortConflictOrMissing(sideCarport, checkList);
 				}
 
