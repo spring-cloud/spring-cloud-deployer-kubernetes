@@ -19,6 +19,8 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
@@ -36,6 +38,7 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
  *
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author David Turanski
  */
 public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
@@ -44,6 +47,8 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	private Service service;
 	private KubernetesDeployerProperties properties;
 	private ContainerStatus containerStatus;
+	private RunningPhaseDeploymentStateResolver runningPhaseDeploymentStateResolver =
+		new DefaultRunningPhaseDeploymentStateResolver();
 
 	public KubernetesAppInstanceStatus(Pod pod, Service service, KubernetesDeployerProperties properties) {
 		this.pod = pod;
@@ -84,51 +89,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 			// Spring module is still starting up
 			case "Running":
 				// we assume we only have one container
-				if (containerStatus.getReady()) {
-					return DeploymentState.deployed;
-				}
-				// if we are being killed repeatedly due to OOM or using too much CPU
-				else if (containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts() &&
-							containerStatus.getLastState() != null &&
-							containerStatus.getLastState().getTerminated() != null &&
-							(containerStatus.getLastState().getTerminated().getExitCode() == 137 ||
-							 containerStatus.getLastState().getTerminated().getExitCode() == 143)) {
-						return DeploymentState.failed;
-				}
-				// if we are being restarted repeatedly due to the same error, consider the app crashed
-				else if (containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts() &&
-							containerStatus.getLastState() != null &&
-							containerStatus.getState() != null &&
-							containerStatus.getLastState().getTerminated() != null &&
-							containerStatus.getLastState().getTerminated().getReason() != null &&
-							containerStatus.getLastState().getTerminated().getReason().contains("Error") &&
-							containerStatus.getState().getTerminated() != null &&
-							containerStatus.getState().getTerminated().getReason()!= null &&
-							containerStatus.getState().getTerminated().getReason().contains("Error") &&
-							containerStatus.getLastState().getTerminated().getExitCode().equals(
-									containerStatus.getState().getTerminated().getExitCode())) {
-						return DeploymentState.failed;
-				}
-				// if we are being restarted repeatedly and we're in a CrashLoopBackOff, consider the app crashed
-				else if (containerStatus.getRestartCount() > properties.getMaxCrashLoopBackOffRestarts() &&
-							containerStatus.getLastState() != null &&
-							containerStatus.getState() != null &&
-							containerStatus.getLastState().getTerminated() != null &&
-							containerStatus.getState().getWaiting() != null &&
-							containerStatus.getState().getWaiting().getReason() != null &&
-							containerStatus.getState().getWaiting().getReason().contains("CrashLoopBackOff")) {
-						return DeploymentState.failed;
-				}
-				// if we were terminated and not restarted, we consider this undeployed
-				else if (containerStatus.getRestartCount() == 0 &&
-						containerStatus.getState() != null &&
-						containerStatus.getState().getTerminated() != null) {
-					return DeploymentState.undeployed;
-				}
-				else {
-					return DeploymentState.deploying;
-				}
-
+				return runningPhaseDeploymentStateResolver.resolve(containerStatus);
 			case "Failed":
 				return DeploymentState.failed;
 
@@ -188,5 +149,204 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 			}
 		}
 		return result;
+	}
+
+	static interface RunningPhaseDeploymentStateResolver {
+		DeploymentState resolve(ContainerStatus containerStatus);
+	}
+
+	abstract class ContainerStatusCondition implements Predicate<ContainerStatus> {
+		private final String description;
+
+		ContainerStatusCondition(String description) {
+			this.description = description;
+		}
+		public String toString() {
+			String className = this.getClass().getName();
+
+			return className.substring(className.lastIndexOf(".") + 1) + ":" + description;
+		}
+	}
+
+	/**
+	 *
+	 */
+	class PredicateRunningPhaseDeploymentStateResolver implements RunningPhaseDeploymentStateResolver {
+		private final ContainerStatusCondition[] conditions;
+		private final DeploymentState resolvedState;
+
+		PredicateRunningPhaseDeploymentStateResolver(DeploymentState
+			resolvedState, ContainerStatusCondition... conditions) {
+			this.conditions = conditions;
+			this.resolvedState = resolvedState;
+		}
+
+		public DeploymentState resolve(ContainerStatus containerStatus) {
+
+			Stream<Predicate<ContainerStatus>> conditionsStream = Stream.of(conditions);
+			Boolean allConditionsMet = conditionsStream.reduce((x, y) -> x.and(y)).get().test(containerStatus);
+
+			if (allConditionsMet) {
+				logger.debug("deployment state is " + resolvedState.name());
+				return this.resolvedState;
+			}
+			else {
+				Stream<ContainerStatusCondition> report = Stream.of(conditions);
+				report.filter(c -> {
+					boolean result= false;
+					try {
+						result = c.test(containerStatus);
+					}
+					catch (NullPointerException e) {
+
+					}
+					return !result;
+
+				}).forEach(c -> logger.debug(c + " is not satisfied"));
+
+			}
+			return null;
+		}
+	}
+
+	/**
+	 *
+	 */
+	class CompositeContainerDeploymentStateResolver implements RunningPhaseDeploymentStateResolver {
+		private final RunningPhaseDeploymentStateResolver[] delegates;
+
+		CompositeContainerDeploymentStateResolver(RunningPhaseDeploymentStateResolver... delegates) {
+			this.delegates = delegates;
+		}
+
+		@Override
+		public DeploymentState resolve(ContainerStatus containerStatus) {
+			for (RunningPhaseDeploymentStateResolver resolver: delegates) {
+				DeploymentState deploymentState = resolver.resolve(containerStatus);
+				if (deploymentState != null) {
+					return deploymentState;
+				}
+			}
+			return null;
+		}
+	}
+
+	class DefaultRunningPhaseDeploymentStateResolver extends CompositeContainerDeploymentStateResolver {
+
+		DefaultRunningPhaseDeploymentStateResolver() {
+			super(
+				new ContainerReady(),
+				new ContainerCrashed(),
+				new RestartsDueToTheSameError(),
+				new CrashLoopBackOffRestarts(),
+				new ContainerTerminated(),
+				//default
+				containerStatus -> DeploymentState.deploying);
+		}
+	}
+
+	class ContainerReady extends PredicateRunningPhaseDeploymentStateResolver {
+		ContainerReady() {
+			super(DeploymentState.deployed, new ContainerStatusCondition("container ready") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getReady();
+				}
+			});
+		}
+	}
+
+	class ContainerCrashed extends PredicateRunningPhaseDeploymentStateResolver {
+		ContainerCrashed() {
+			super(DeploymentState.failed,
+				new ContainerStatusCondition("restart count > maxTerminatedErrorRestarts") {
+					@Override
+					public boolean test(ContainerStatus containerStatus) {
+						return containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts();
+					}
+			}, new ContainerStatusCondition("exit code in (1, 137, 143)") {
+					@Override
+					public boolean test(ContainerStatus containerStatus) {
+					// if we are being killed repeatedly due to OOM or using too much CPU, or abnormal termination.
+						return
+							containerStatus.getLastState() != null &&
+							containerStatus.getLastState().getTerminated() != null &&
+							(containerStatus.getLastState().getTerminated().getExitCode() == 137 ||
+							containerStatus.getLastState().getTerminated().getExitCode() == 143 ||
+							containerStatus.getLastState().getTerminated().getExitCode() == 1);
+					}
+				});
+		}
+	}
+
+	// if we are being restarted repeatedly due to the same error, consider the app crashed
+	class RestartsDueToTheSameError extends PredicateRunningPhaseDeploymentStateResolver {
+
+		RestartsDueToTheSameError() {
+			super(DeploymentState.failed, new ContainerStatusCondition("restart count > maxTerminatedErrorRestarts") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getRestartCount() > properties.getMaxTerminatedErrorRestarts();
+				}
+			}, new ContainerStatusCondition("last state termination reason == 'Error' and termination reason == "
+				+ "'Error'") {
+				public boolean test(ContainerStatus containerStatus) {
+					return
+						containerStatus.getLastState() != null && containerStatus.getState() != null &&
+						containerStatus.getLastState().getTerminated() != null &&
+						containerStatus.getLastState().getTerminated().getReason() != null &&
+						containerStatus.getLastState().getTerminated().getReason().contains("Error") &&
+						containerStatus.getState().getTerminated() != null &&
+						containerStatus.getState().getTerminated().getReason() != null &&
+						containerStatus.getState().getTerminated().getReason().contains("Error");
+				}
+			}, new ContainerStatusCondition("last state exit code == exit code") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getLastState().getTerminated().getExitCode().equals(
+						containerStatus.getState().getTerminated().getExitCode());
+				}
+			});
+		}
+	}
+
+	class CrashLoopBackOffRestarts extends PredicateRunningPhaseDeploymentStateResolver {
+		CrashLoopBackOffRestarts() {
+			super(DeploymentState.failed, new ContainerStatusCondition("restart count > CrashLoopBackOffRestarts") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getRestartCount() > properties.getMaxCrashLoopBackOffRestarts();
+				}
+			}, new ContainerStatusCondition("waiting in CrashLoopBackOff") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return
+						containerStatus.getLastState() != null &&
+						containerStatus.getState() != null &&
+						containerStatus.getLastState().getTerminated() != null &&
+						containerStatus.getState().getWaiting() != null &&
+						containerStatus.getState().getWaiting().getReason() != null &&
+						containerStatus.getState().getWaiting().getReason().contains("CrashLoopBackOff");
+				}
+			});
+		}
+	}
+
+	class ContainerTerminated extends PredicateRunningPhaseDeploymentStateResolver {
+
+		ContainerTerminated() {
+			super(DeploymentState.undeployed, new ContainerStatusCondition("restart count == 0") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getRestartCount() == 0;
+				}
+			}, new ContainerStatusCondition("state is terminated") {
+				@Override
+				public boolean test(ContainerStatus containerStatus) {
+					return containerStatus.getState() != null &&
+						containerStatus.getState().getTerminated() != null;
+				}
+			});
+		}
 	}
 }

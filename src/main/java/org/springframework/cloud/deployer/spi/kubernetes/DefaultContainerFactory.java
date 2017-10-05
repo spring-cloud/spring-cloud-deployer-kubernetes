@@ -51,6 +51,7 @@ import org.springframework.util.StringUtils;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author David Turanski
  */
 public class DefaultContainerFactory implements ContainerFactory {
 
@@ -64,7 +65,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	@Override
 	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
-	                        boolean hostNetwork) {
+		boolean hostNetwork) {
+		return this.create(appId, request, port, hostNetwork);
+	}
+
+	@Override
+	public Container create(String appId, AppDeploymentRequest request, Integer port, boolean hostNetwork) {
+
 		String image;
 		try {
 			image = request.getResource().getURI().getSchemeSpecificPart();
@@ -119,19 +126,15 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
 		envVars.add(new EnvVar("SPRING_CLOUD_APPLICATION_GUID", "${HOSTNAME}", null));
-		if (instanceIndex != null) {
-			envVars.add(new EnvVar(AppDeployer.INSTANCE_INDEX_PROPERTY_KEY, instanceIndex.toString(), null));
-			envVars.add(new EnvVar("SPRING_APPLICATION_INDEX", instanceIndex.toString(), null));
-		}
+
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
 			envVars.add(new EnvVar("SPRING_CLOUD_APPLICATION_GROUP",
 					request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY), null));
 		}
 
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
 
 		ContainerBuilder container = new ContainerBuilder();
-		container.withName(appInstanceId)
+		container.withName(appId)
 				.withImage(image)
 				.withEnv(envVars)
 				.withArgs(appArgs)

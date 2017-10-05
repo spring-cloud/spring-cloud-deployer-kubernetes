@@ -41,6 +41,7 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
  * A task launcher that targets Kubernetes.
  *
  * @author Thomas Risberg
+ * @author David Turanski
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 
@@ -65,7 +66,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		if (!status.getState().equals(LaunchState.unknown)) {
 			throw new IllegalStateException("Task " + appId + " already exists with a state of " + status);
 		}
-		Map<String, String> idMap = createIdMap(appId, request, null);
+		Map<String, String> idMap = createIdMap(appId, request);
 
 		logger.debug(String.format("Launching pod for task: %s", appId));
 		try {
@@ -123,7 +124,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		Map<String, String> podLabelMap = new HashMap<>();
 		podLabelMap.put("task-name", request.getDefinition().getName());
 		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-		PodSpec spec = createPodSpec(appId, request, null, null, true);
+		PodSpec spec = createPodSpec(appId, request, null, true);
 		client.pods()
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()

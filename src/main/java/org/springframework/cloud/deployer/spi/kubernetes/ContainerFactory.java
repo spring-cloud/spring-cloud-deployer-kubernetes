@@ -25,10 +25,25 @@ import io.fabric8.kubernetes.api.model.Container;
  *
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author David Turanski
  */
 public interface ContainerFactory {
 
+	/**
+	 * @deprecated use create(String appId, AppDeploymentRequest request, Integer externalPort,boolean hostNetwork).
+	 */
+	@Deprecated
 	Container create(String appId, AppDeploymentRequest request, Integer externalPort, Integer instanceIndex,
 	                 boolean hostNetwork);
+
+	/**
+	 *
+	 * @param appId the application Id
+	 * @param request the {@link AppDeploymentRequest}
+	 * @param externalPort the external port
+	 * @param hostNetwork true if the application should use the host network
+	 * @return a {@link Container}
+	 */
+	Container create(String appId, AppDeploymentRequest request, Integer externalPort, boolean hostNetwork);
 
 }
