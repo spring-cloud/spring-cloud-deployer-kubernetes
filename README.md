@@ -34,3 +34,14 @@ Now run the tests:
 ```
 $ ./mvnw test
 ```
+
+NOTE: if you get authentication errors, try setting basic auth credentials:
+
+Navigate to your project and cluster on https://console.cloud.google.com/  and click on `show credentials`
+
+```bash
+$export KUBERNETES_AUTH_BASIC_PASSWORD=
+$export KUBERNETES_AUTH_BASIC_USERNAME=
+```
+
+

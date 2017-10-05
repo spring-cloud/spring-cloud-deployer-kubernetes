@@ -18,22 +18,19 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
 import static org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer.SPRING_APP_KEY;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -44,7 +41,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
 import org.junit.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -55,14 +51,24 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
 import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
+import org.springframework.web.client.RestTemplate;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Integration tests for {@link KubernetesAppDeployer}.
  *
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @Author David Turanski
  */
-@SpringBootTest(classes = {KubernetesAutoConfiguration.class})
+@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+	"logging.level.org.springframework.cloud.deployer.spi=INFO"
+})
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
 	@ClassRule
@@ -226,19 +232,80 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
 
+
+	private void verifyAppEnv(String appId) {
+		String ip="";
+		int port = 0;
+
+		KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
+		boolean success = false;
+
+		Service svc = kubernetesClient.services().withName(appId).get();
+
+		if (svc != null && "LoadBalancer".equals(svc.getSpec().getType())) {
+			int tries = 0;
+			int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
+			while (tries++ < maxWait && !success) {
+				if (svc.getStatus() != null && svc.getStatus().getLoadBalancer() != null &&
+					svc.getStatus().getLoadBalancer().getIngress() != null &&
+					!(svc.getStatus().getLoadBalancer().getIngress().isEmpty())) {
+					ip = svc.getStatus().getLoadBalancer().getIngress().get(0).getIp();
+					port = svc.getSpec().getPorts().get(0).getPort();
+					success = true;
+				}
+				else {
+					try {
+						Thread.sleep(5000L);
+					}
+					catch (InterruptedException e) {
+					}
+					svc = kubernetesClient.services().withName(appId).get();
+				}
+			}
+			log.debug(String.format("LoadBalancer Ingress: %s",
+				svc.getStatus().getLoadBalancer().getIngress().toString()));
+		}
+
+		if (!success) {
+			fail("cannot get service information for " + appId);
+		}
+
+
+
+		String url = String.format("http://%s:%d/env",ip,port);
+
+		log.debug("getting app environment from " + url);
+		RestTemplate restTemplate = new RestTemplate();
+		HashMap<String,Object> env = restTemplate.getForObject(url, HashMap.class);
+
+		Map<String,String> systemEnvironment = (Map)env.get("systemEnvironment");
+		Map<String,String> applicationConfig = (Map)env.get(
+			"applicationConfig: [file:./config/application.properties]");
+
+		String hostName = systemEnvironment.get("HOSTNAME");
+		String expectedIndex =hostName.substring(hostName.lastIndexOf("-")+1);
+		String actualIndex = applicationConfig.get("INSTANCE_INDEX");
+		assertEquals(actualIndex,expectedIndex);
+	}
+
 	@Test
 	public void testDeploymentWithGroupAndIndex() throws IOException {
 		log.info("Testing {}...", "DeploymentWithWithGroupAndIndex");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
-		deployProperties.setCreateDeployment(originalProperties.isCreateDeployment());
+		deployProperties.setCreateLoadBalancer(true);
+		deployProperties.setMinutesToWaitForLoadBalancer(1);
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
 		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
 
-		AppDefinition definition = new AppDefinition(randomName(), new HashMap<>());
+		Map<String,String> appProperties = new  HashMap<>();
+		appProperties.put("security.basic.enabled","false");
+		appProperties.put("management.security.enabled","false");
+		AppDefinition definition = new AppDefinition(randomName(), appProperties);
 		Resource resource = testApplication();
 		Map<String, String> props = new HashMap<>();
 		props.put(AppDeployer.GROUP_PROPERTY_KEY, "foo");
 		props.put(AppDeployer.INDEXED_PROPERTY_KEY, "true");
+
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 
 		log.info("Deploying {}...", request.getDefinition().getName());
@@ -249,12 +316,13 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 		PodSpec spec = kubernetesClient.pods().withLabels(selector).list().getItems().get(0).getSpec();
+
 		Map<String, String> envVars = new HashMap<>();
 		for (EnvVar e : spec.getContainers().get(0).getEnv()) {
 			envVars.put(e.getName(), e.getValue());
 		}
 		assertThat(envVars.get("SPRING_CLOUD_APPLICATION_GROUP"), is("foo"));
-		assertThat(envVars.get("SPRING_APPLICATION_INDEX"), is("0"));
+		verifyAppEnv(deploymentId);
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
@@ -271,7 +339,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Override
 	protected Timeout deploymentTimeout() {
-		return new Timeout(60, 10000);
+		return new Timeout(300, 2000);
 	}
 
 	@Override

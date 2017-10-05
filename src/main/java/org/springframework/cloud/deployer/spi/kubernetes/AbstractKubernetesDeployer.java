@@ -16,17 +16,21 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import static java.lang.String.format;
 
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodSpecBuilder;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
@@ -37,17 +41,11 @@ import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodSpecBuilder;
-import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.Volume;
-import io.fabric8.kubernetes.client.KubernetesClient;
-
-import static java.lang.String.format;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for a deployer that targets Kubernetes.
@@ -56,6 +54,7 @@ import static java.lang.String.format;
  * @author Thomas Risberg
  * @author Mark Fisher
  * @author Donovan Muller
+ * @author David Turanski
  */
 public class AbstractKubernetesDeployer {
 
@@ -65,7 +64,7 @@ public class AbstractKubernetesDeployer {
 	protected static final String SPRING_MARKER_KEY = "role";
 	protected static final String SPRING_MARKER_VALUE = "spring-app";
 
-	protected static final Log logger = LogFactory.getLog(AbstractKubernetesDeployer.class);
+	protected final Log logger = LogFactory.getLog(getClass().getName());
 
 	protected ContainerFactory containerFactory;
 
@@ -96,7 +95,7 @@ public class AbstractKubernetesDeployer {
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
 	 * to "select" the right ReplicationControllers.
 	 */
-	protected Map<String, String> createIdMap(String appId, AppDeploymentRequest request, Integer instanceIndex) {
+	protected Map<String, String> createIdMap(String appId, AppDeploymentRequest request) {
 		//TODO: handling of app and group ids
 		Map<String, String> map = new HashMap<>();
 		map.put(SPRING_APP_KEY, appId);
@@ -104,8 +103,7 @@ public class AbstractKubernetesDeployer {
 		if (groupId != null) {
 			map.put(SPRING_GROUP_KEY, groupId);
 		}
-		String appInstanceId = instanceIndex == null ? appId : appId + "-" + instanceIndex;
-		map.put(SPRING_DEPLOYMENT_KEY, appInstanceId);
+		map.put(SPRING_DEPLOYMENT_KEY, appId);
 		return map;
 	}
 
@@ -127,18 +125,18 @@ public class AbstractKubernetesDeployer {
 		return statusBuilder.build();
 	}
 
+
 	/**
 	 * Create a PodSpec to be used for app and task deployments
 	 *
 	 * @param appId the app ID
 	 * @param request app deployment request
 	 * @param port port to use for app or null if none
-	 * @param instanceIndex instance index for app or null if no index
 	 * @param neverRestart use restart policy of Never
 	 * @return the PodSpec
 	 */
-	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request,
-	                                Integer port, Integer instanceIndex, boolean neverRestart) {
+	protected PodSpec createPodSpec(String appId, AppDeploymentRequest request, Integer port,
+		boolean neverRestart) {
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
 		// Add image secrets if set
@@ -147,7 +145,7 @@ public class AbstractKubernetesDeployer {
 		}
 
 		boolean hostNetwork = getHostNetwork(request);
-		Container container = containerFactory.create(appId, request, port, instanceIndex, hostNetwork);
+		Container container = containerFactory.create(appId, request, port, hostNetwork);
 
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
@@ -406,5 +404,4 @@ public class AbstractKubernetesDeployer {
 		long memAmount = ByteSizeUtils.parseToMebibytes(mem);
 		return memAmount + "Mi";
 	}
-
 }

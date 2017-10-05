@@ -229,7 +229,7 @@ public class KubernetesDeployerProperties {
 	 * Create a "Deployment" with a "Replica Set" instead of a "Replication Controller".
 	 * See https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
 	 */
-	private boolean createDeployment = false;
+	private boolean createDeployment = true;
 
 	/**
 	 * Create a "Job" instead of just a "Pod" when launching tasks.
@@ -454,10 +454,20 @@ public class KubernetesDeployerProperties {
 		this.hostNetwork = hostNetwork;
 	}
 
+	/**
+	 * @deprecated as of 1.3. This property is true by default and will not be an option in future releases.
+	 * @return
+	 */
+	@Deprecated
 	public boolean isCreateDeployment() {
 		return createDeployment;
 	}
 
+	/**
+	 * @deprecated as of 1.3.  This property is true by default and will not be an option in future releases.
+	 * @param createDeployment
+	 */
+	@Deprecated
 	public void setCreateDeployment(boolean createDeployment) {
 		this.createDeployment = createDeployment;
 	}
