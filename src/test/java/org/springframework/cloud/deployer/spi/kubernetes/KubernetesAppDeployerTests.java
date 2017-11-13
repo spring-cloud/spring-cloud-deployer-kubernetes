@@ -16,9 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -36,6 +33,9 @@ import org.springframework.core.io.Resource;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 /**
  * Unit tests for {@link KubernetesAppDeployer}
@@ -107,7 +107,6 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
 
 		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "linux"));
-
 	}
 
 	@Test
@@ -157,13 +156,13 @@ public class KubernetesAppDeployerTests {
 		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
 
 		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-			.containsAllEntriesOf(deployer.createIdMap(appId, appDeploymentRequest));
+				.containsAllEntriesOf(deployer.createIdMap(appId, appDeploymentRequest));
 		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-			.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
+				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
 
 		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
 		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels())
-			.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
+				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
 
 		Container container = statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0);
 
