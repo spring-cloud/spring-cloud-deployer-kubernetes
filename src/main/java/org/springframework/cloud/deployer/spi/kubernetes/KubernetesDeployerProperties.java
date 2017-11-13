@@ -19,9 +19,10 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author Florian Rosenberg
@@ -229,6 +230,12 @@ public class KubernetesDeployerProperties {
 	 * See https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
 	 */
 	private boolean createDeployment = false;
+
+	/**
+	 * Create a "Job" instead of just a "Pod" when launching tasks.
+	 * See https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+	 */
+	private boolean createJob = false;
 
 
 	public String getNamespace() {
@@ -453,5 +460,13 @@ public class KubernetesDeployerProperties {
 
 	public void setCreateDeployment(boolean createDeployment) {
 		this.createDeployment = createDeployment;
+	}
+
+	public boolean isCreateJob() {
+		return createJob;
+	}
+
+	public void setCreateJob(boolean createJob) {
+		this.createJob = createJob;
 	}
 }
