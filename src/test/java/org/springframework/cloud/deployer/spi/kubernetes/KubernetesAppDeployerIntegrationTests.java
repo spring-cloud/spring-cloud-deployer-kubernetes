@@ -339,7 +339,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Override
 	protected Timeout deploymentTimeout() {
-		return new Timeout(60, 5000);
+		return new Timeout(300, 2000);
 	}
 
 	@Override
