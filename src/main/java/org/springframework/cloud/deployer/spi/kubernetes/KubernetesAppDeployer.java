@@ -20,6 +20,8 @@ import static java.lang.String.format;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimList;
@@ -352,6 +354,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		podSpec.getContainers().get(0).getVolumeMounts()
 			.add(new VolumeMountBuilder().withName("config").withMountPath("/config").build());
 
+		podSpec.getInitContainers().add(createInitContainer());
+
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
 			.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector().withVolumeClaimTemplates(
 				new PersistentVolumeClaimBuilder().withNewSpec().withAccessModes(Arrays.asList("ReadWriteOnce"))
@@ -359,7 +363,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 					.endResources().endSpec().withNewMetadata().withName(appId).withLabels(idMap)
 					.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().build()).withServiceName(appId)
 			.withReplicas(replicas).withNewTemplate().withNewMetadata().withLabels(idMap)
-			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToAnnotations(indexProvidingInitContainer())
+			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(podSpec).endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
@@ -472,38 +476,25 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	 * config/application.properties on a shared volume so the main container has it. Using the legacy annotation
 	 * configuration since the current client version does not directly support InitContainers.
 	 *
-	 * @return a singleton map, {""pod.beta.kubernetes.io/init-containers": initContainerConfigAsJson}
+	 * Since 1.8 the annotation method has been removed, and the initContainer API is supported since 1.6
+	 *
+	 * @return a container definition with the above mentioned configuration
 	 */
-	private Map<String, String> indexProvidingInitContainer() {
-
-		Map<String, Object> initContainer = new HashMap<>();
-
-		initContainer.put("name", "index-provider");
-		initContainer.put("image", "busybox");
-		initContainer.put("imagePullPolicy", "IfNotPresent");
-
+	private Container createInitContainer() {
 		List<String> command = new LinkedList<>();
 
 		String commandString = String
-			.format("%s && %s", setIndexProperty("INSTANCE_INDEX"), setIndexProperty("spring.application.index"));
+				.format("%s && %s", setIndexProperty("INSTANCE_INDEX"), setIndexProperty("spring.application.index"));
 
 		command.add("sh");
 		command.add("-c");
-		;
 		command.add(commandString);
-		initContainer.put("command", command);
-		initContainer.put("volumeMounts",
-			Collections.singletonList(new VolumeMountBuilder().withName("config").withMountPath("/config").build()));
-
-		String json;
-		try {
-			json = objectMapper.writeValueAsString(Collections.singletonList(initContainer));
-		}
-		catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
-
-		return Collections.singletonMap("pod.beta.kubernetes.io/init-containers", json);
+		return new ContainerBuilder().withName("index-provider")
+				.withImage("busybox")
+				.withImagePullPolicy("IfNotPresent")
+				.withCommand(command)
+				.withVolumeMounts(new VolumeMountBuilder().withName("config").withMountPath("/config").build())
+				.build();
 	}
 
 	private String setIndexProperty(String name) {
