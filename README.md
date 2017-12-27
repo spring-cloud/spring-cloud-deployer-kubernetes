@@ -1,4 +1,18 @@
-# spring-cloud-deployer-kubernetes
+# Spring Cloud Deployer Kubernetes
+A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer) implementation for deploying long-lived streaming applications and short-lived tasks to Kubernetes.
+
+## Kubernetes Compatibility
+
+| Deployer \ Kubernetes | 1.4 | 1.5 | 1.6 | 1.7 | 1.8 |
+|-----------------------|-----|-----|-----|-----|-----|
+| **1.1**               | ✓   | ?   | ✕   | ✕   | ✕   |
+| **1.2**               | ✓   | ✓   | ?   | ?   | ?   |
+| **1.3**               | ✕   | ✕   | ✓   | ✓   | ✓   |
+| **HEAD**              | ✕   | ✕   | ✓   | ✓   | ✓   |
+
+- `✓` Fully supported version.
+- `?` Due to breaking changes between Kubernetes API versions, some features might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
+- `✕` Unsupported version.
 
 ## Building
 
