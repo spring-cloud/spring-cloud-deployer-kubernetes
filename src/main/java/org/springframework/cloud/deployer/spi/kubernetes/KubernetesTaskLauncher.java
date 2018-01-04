@@ -80,7 +80,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			Map<String, String> podLabelMap = new HashMap<>();
 			podLabelMap.put("task-name", request.getDefinition().getName());
 			podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-			PodSpec podSpec = createPodSpec(appId, request,true);
+			PodSpec podSpec = createPodSpec(appId, request, null, true);
 			if (properties.isCreateJob()){
 				launchJob(appId, podSpec, podLabelMap, idMap);
 			} else {
