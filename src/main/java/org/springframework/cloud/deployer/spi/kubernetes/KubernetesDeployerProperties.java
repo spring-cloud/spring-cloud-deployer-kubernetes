@@ -141,7 +141,7 @@ public class KubernetesDeployerProperties {
 	 * @deprecated Use spring.cloud.deployer.kubernetes.limits.memory
 	 */
 	@Deprecated
-	private String memory = "512Mi";
+	private String memory = "1024Mi";
 
 	/**
 	 * CPU to allocate for a Pod.
