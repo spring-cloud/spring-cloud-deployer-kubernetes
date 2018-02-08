@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -314,7 +314,11 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	private int getCountFromRequest(AppDeploymentRequest request) {
 		String countProperty = request.getDeploymentProperties().get(COUNT_PROPERTY_KEY);
 		return (countProperty != null) ? Integer.parseInt(countProperty) : 1;
+	}
 
+	private String getMemoryFromRequest(AppDeploymentRequest request) {
+		String memoryProperty = request.getDeploymentProperties().get(MEMORY_PROPERTY_KEY);
+		return (StringUtils.hasText(memoryProperty)) ? memoryProperty : "1024Mi";
 	}
 
 	@Deprecated
@@ -345,7 +349,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		logger.debug(String.format("Creating StatefulSet: %s on %d with %d replicas", appId, externalPort, replicas));
 
-		Map<String, Quantity> emptyStorageResource = Collections.singletonMap("storage", new Quantity("0Mi"));
+		Map<String, Quantity> emptyStorageResource = Collections.singletonMap("storage", new Quantity(getMemoryFromRequest(request)));
 
 		PodSpec podSpec = createPodSpec(appId, request, Integer.valueOf(externalPort), false);
 
