@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Donovan Muller
+ * @author Ilayaperumal Gopinathan
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
@@ -67,6 +68,42 @@ public class KubernetesDeployerProperties {
 
 		public void setMemory(String memory) {
 			this.memory = memory;
+		}
+	}
+
+	public static class StatefulSet {
+
+		private VolumeClaimTemplate volumeClaimTemplate = new VolumeClaimTemplate();
+
+		public VolumeClaimTemplate getVolumeClaimTemplate() {
+			return volumeClaimTemplate;
+		}
+
+		public void setVolumeClaimTemplate(VolumeClaimTemplate volumeClaimTemplate) {
+			this.volumeClaimTemplate = volumeClaimTemplate;
+		}
+
+		public static class VolumeClaimTemplate {
+
+			private String storage = "10Mi";
+
+			private String storageClassName;
+
+			public String getStorage() {
+				return storage;
+			}
+
+			public void setStorage(String storage) {
+				this.storage = storage;
+			}
+
+			public String getStorageClassName() {
+				return storageClassName;
+			}
+
+			public void setStorageClassName(String storageClassName) {
+				this.storageClassName = storageClassName;
+			}
 		}
 	}
 
@@ -160,6 +197,11 @@ public class KubernetesDeployerProperties {
 	 * Memory and CPU requests (i.e. guaranteed needed values) to allocate for a Pod.
 	 */
 	private Resources requests = new Resources();
+
+	/**
+	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
+	 */
+	private StatefulSet statefulSet = new StatefulSet();
 
 	/**
 	 * Environment variables to set for any deployed app container. To be used for service binding.
@@ -309,6 +351,15 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessProbePath(String readinessProbePath) {
 		this.readinessProbePath = readinessProbePath;
+	}
+
+	public StatefulSet getStatefulSet() {
+		return statefulSet;
+	}
+
+	public void setStatefulSet(
+			StatefulSet statefulSet) {
+		this.statefulSet = statefulSet;
 	}
 
 	/**

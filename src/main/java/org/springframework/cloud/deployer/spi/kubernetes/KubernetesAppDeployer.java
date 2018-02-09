@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimList;
@@ -73,6 +74,7 @@ import java.util.Map;
  * @author Mark Fisher
  * @author Donovan Muller
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -316,11 +318,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		return (countProperty != null) ? Integer.parseInt(countProperty) : 1;
 	}
 
-	private String getMemoryFromRequest(AppDeploymentRequest request) {
-		String memoryProperty = request.getDeploymentProperties().get(MEMORY_PROPERTY_KEY);
-		return (StringUtils.hasText(memoryProperty)) ? memoryProperty : "1024Mi";
-	}
-
 	@Deprecated
 	private ReplicationController createReplicationController(String appId, AppDeploymentRequest request,
 		Map<String, String> idMap, int externalPort) {
@@ -349,7 +346,15 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		logger.debug(String.format("Creating StatefulSet: %s on %d with %d replicas", appId, externalPort, replicas));
 
-		Map<String, Quantity> emptyStorageResource = Collections.singletonMap("storage", new Quantity(getMemoryFromRequest(request)));
+		Map<String, Quantity> storageResource = Collections.singletonMap("storage", new Quantity(getStatefulSetStorage(request)));
+
+		String storageClassName = getStatefulSetStorageClassName(request);
+
+		PersistentVolumeClaimBuilder persistentVolumeClaimBuilder = new PersistentVolumeClaimBuilder()
+				.withNewSpec().withStorageClassName(storageClassName).withAccessModes(Arrays.asList("ReadWriteOnce"))
+				.withNewResources().addToLimits(storageResource).addToRequests(storageResource)
+				.endResources().endSpec().withNewMetadata().withName(appId).withLabels(idMap)
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata();
 
 		PodSpec podSpec = createPodSpec(appId, request, Integer.valueOf(externalPort), false);
 
@@ -361,11 +366,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		podSpec.getInitContainers().add(createInitContainer());
 
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
-			.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector().withVolumeClaimTemplates(
-				new PersistentVolumeClaimBuilder().withNewSpec().withAccessModes(Arrays.asList("ReadWriteOnce"))
-					.withNewResources().addToLimits(emptyStorageResource).addToRequests(emptyStorageResource)
-					.endResources().endSpec().withNewMetadata().withName(appId).withLabels(idMap)
-					.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().build()).withServiceName(appId)
+			.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
+			.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
 			.withReplicas(replicas).withNewTemplate().withNewMetadata().withLabels(idMap)
 			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(podSpec).endTemplate().build();

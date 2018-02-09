@@ -42,6 +42,7 @@ import java.util.Map;
  *
  * @author Donovan Muller
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  */
 public class KubernetesAppDeployerTests {
 
@@ -174,8 +175,61 @@ public class KubernetesAppDeployerTests {
 		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);
 
 		assertThat(pvc.getSpec().getAccessModes()).containsOnly("ReadWriteOnce");
-		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("1024Mi");
-		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("1024Mi");
+		assertThat(pvc.getSpec().getStorageClassName()).isNull();
+		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("10Mi");
+		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("10Mi");
+	}
+
+	@Test
+	public void createStatufulSetWithOverridingRequest() throws Exception {
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName", "test");
+		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage", "25Mi");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		String appId = deployer.createDeploymentId(appDeploymentRequest);
+		Map<String, String> idMap = deployer.createIdMap(appId, appDeploymentRequest);
+
+		ObjectMapper objectMapper = new ObjectMapper();
+
+		String statefulSetJson = deployer.createStatefulSet(appId, appDeploymentRequest, idMap, 8080);
+
+		Map<String, Object> statefulSetMap = objectMapper.readValue(statefulSetJson, HashMap.class);
+
+		Map<String, Object> specMap = (Map<String, Object>) statefulSetMap.get("spec");
+		assertThat(specMap.get("podManagementPolicy")).isEqualTo("Parallel");
+
+		StatefulSet statefulSet = objectMapper.readValue(statefulSetJson, StatefulSet.class);
+
+		assertThat(statefulSet.getSpec().getReplicas()).isEqualTo(3);
+		assertThat(statefulSet.getSpec().getServiceName()).isEqualTo(appId);
+		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
+
+		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
+				.containsAllEntriesOf(deployer.createIdMap(appId, appDeploymentRequest));
+		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
+				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
+
+		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
+		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels())
+				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
+
+		Container container = statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0);
+
+		assertThat(container.getName()).isEqualTo(appId);
+		assertThat(container.getPorts().get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart().toString());
+
+		PersistentVolumeClaim pvc = statefulSet.getSpec().getVolumeClaimTemplates().get(0);
+		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);
+
+		assertThat(pvc.getSpec().getAccessModes()).containsOnly("ReadWriteOnce");
+		assertThat(pvc.getSpec().getStorageClassName()).isEqualTo("test");
+		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("25Mi");
+		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("25Mi");
 	}
 
 	private Resource getResource() {

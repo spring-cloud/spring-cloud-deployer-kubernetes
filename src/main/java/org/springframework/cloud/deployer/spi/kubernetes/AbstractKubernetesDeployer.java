@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -350,6 +350,22 @@ public class AbstractKubernetesDeployer {
 			requests.put("cpu", new Quantity(cpuOverride));
 		}
 		return requests;
+	}
+
+	protected String getStatefulSetStorageClassName(AppDeploymentRequest request) {
+		String storageClassName = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName");
+		if (storageClassName == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
+			storageClassName = properties.getStatefulSet().getVolumeClaimTemplate().getStorageClassName();
+		}
+		return storageClassName;
+	}
+
+	protected String getStatefulSetStorage(AppDeploymentRequest request) {
+		String storage = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage");
+		if (storage == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
+			storage = properties.getStatefulSet().getVolumeClaimTemplate().getStorage();
+		}
+		return storage;
 	}
 
 	/**
