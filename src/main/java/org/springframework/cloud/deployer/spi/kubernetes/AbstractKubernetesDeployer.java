@@ -365,7 +365,8 @@ public class AbstractKubernetesDeployer {
 		if (storage == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
 			storage = properties.getStatefulSet().getVolumeClaimTemplate().getStorage();
 		}
-		return storage;
+		long storageAmount = ByteSizeUtils.parseToMebibytes(storage);
+		return storageAmount + "Mi";
 	}
 
 	/**

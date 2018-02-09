@@ -85,7 +85,7 @@ public class KubernetesDeployerProperties {
 
 		public static class VolumeClaimTemplate {
 
-			private String storage = "10Mi";
+			private String storage = "10m";
 
 			private String storageClassName;
 

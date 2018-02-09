@@ -187,7 +187,7 @@ public class KubernetesAppDeployerTests {
 		Map<String, String> props = new HashMap<>();
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
 		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName", "test");
-		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage", "25Mi");
+		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage", "1g");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		String appId = deployer.createDeploymentId(appDeploymentRequest);
@@ -228,8 +228,8 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(pvc.getSpec().getAccessModes()).containsOnly("ReadWriteOnce");
 		assertThat(pvc.getSpec().getStorageClassName()).isEqualTo("test");
-		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("25Mi");
-		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("25Mi");
+		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("1024Mi");
+		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("1024Mi");
 	}
 
 	private Resource getResource() {
