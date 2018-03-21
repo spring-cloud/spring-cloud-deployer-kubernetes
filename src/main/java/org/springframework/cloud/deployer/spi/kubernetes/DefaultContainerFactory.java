@@ -149,18 +149,17 @@ public class DefaultContainerFactory implements ContainerFactory {
 			else {
 				container.addNewPort().withContainerPort(port).endPort();
 			}
-			container.withReadinessProbe(
-				new ProbeCreator(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
-					properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
-					request.getDeploymentProperties()).create()).withLivenessProbe(
-				new ProbeCreator(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
-					properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
-					request.getDeploymentProperties()).create());
 		}
 
-		//Add additional specified ports.  Further work is needed to add probe customization for each port.
 		List<Integer> additionalPorts = getContainerPorts(request);
-		if (!additionalPorts.isEmpty()) {
+		if(properties.getLivenessProbePort() != null && !additionalPorts.contains(properties.getLivenessProbePort())) {
+		    additionalPorts.add(properties.getLivenessProbePort());
+        }
+        if(properties.getReadinessProbePort() != null && !additionalPorts.contains(properties.getReadinessProbePort())) {
+            additionalPorts.add(properties.getReadinessProbePort());
+        }
+
+        if (!additionalPorts.isEmpty()) {
 			for (Integer containerPort : additionalPorts) {
 				if (hostNetwork) {
 					container.addNewPort().withContainerPort(containerPort).withHostPort(containerPort).endPort();
@@ -170,6 +169,31 @@ public class DefaultContainerFactory implements ContainerFactory {
 				}
 			}
 		}
+
+        if(properties.getReadinessProbePort() != null) {
+            container.withReadinessProbe(
+                    new ProbeCreator(properties.getReadinessProbePort(), properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
+                            properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
+                            request.getDeploymentProperties()).create());
+        }
+
+        if (properties.getLivenessProbePort() != null) {
+            container.withLivenessProbe(
+                    new ProbeCreator(properties.getLivenessProbePort(), properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
+                            properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
+                            request.getDeploymentProperties()).create());
+        }
+
+        if (properties.getReadinessProbePort() == null && properties.getLivenessProbePort() == null && port != null) {
+            container.withReadinessProbe(
+                    new ProbeCreator(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
+                            properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
+                            request.getDeploymentProperties()).create())
+                    .withLivenessProbe(
+                            new ProbeCreator(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
+                                    properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
+                                    request.getDeploymentProperties()).create());
+        }
 
 		//Override the containers default entry point with one specified during the app deployment
 		List<String> containerCommand = getContainerCommand(request);

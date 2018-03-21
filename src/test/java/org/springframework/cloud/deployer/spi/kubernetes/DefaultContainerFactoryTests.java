@@ -261,6 +261,65 @@ public class DefaultContainerFactoryTests {
 				new VolumeMount("/test/nfs/overridden", "testnfs", true, null));
 	}
 
+	@Test
+	public void createCustomLivenessPort(){
+		int defaultPort = 8080;
+		int livenessPort = 8090;
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setLivenessProbePort(livenessPort);
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		Container container = defaultContainerFactory.create("app-test",
+				appDeploymentRequest, defaultPort, true);
+		assertNotNull(container);
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+		assertTrue("There should be two container ports set", containerPorts.size() == 2);
+		assertTrue(8080 == containerPorts.get(0).getContainerPort());
+		assertTrue(8080 == containerPorts.get(0).getHostPort());
+		assertTrue(8090 == containerPorts.get(1).getHostPort());
+		assertTrue(8090 == containerPorts.get(1).getHostPort());
+		assertTrue(8090 == container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+
+	}
+
+	@Test
+	public void createCustomReadinessPort(){
+		int defaultPort = 8080;
+		int readinessPort = 8090;
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessProbePort(readinessPort);
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		Container container = defaultContainerFactory.create("app-test",
+				appDeploymentRequest, defaultPort, true);
+		assertNotNull(container);
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+		assertTrue("There should be two container ports set", containerPorts.size() == 2);
+		assertTrue(8080 == containerPorts.get(0).getContainerPort());
+		assertTrue(8080 == containerPorts.get(0).getHostPort());
+		assertTrue(8090 == containerPorts.get(1).getHostPort());
+		assertTrue(8090 == containerPorts.get(1).getHostPort());
+		assertTrue(8090 == container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+
+
 	private Resource getResource() {
 		return new DockerResource(
 				"springcloud/spring-cloud-deployer-spi-test-app:latest");
