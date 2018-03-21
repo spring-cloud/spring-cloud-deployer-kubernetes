@@ -161,6 +161,11 @@ public class KubernetesDeployerProperties {
 	private String livenessProbePath = "/health";
 
 	/**
+	 * Port that app container has to respond on for liveness check.
+	 */
+	private Integer livenessProbePort = null;
+
+	/**
 	 * Delay in seconds when the readiness check of the app container
 	 * should start checking if the module is fully up and running.
 	 */
@@ -185,6 +190,11 @@ public class KubernetesDeployerProperties {
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private String readinessProbePath = "/info";
+
+	/**
+	 * Port that app container has to respond on for readiness check.
+	 */
+	private Integer readinessProbePort = null;
 
 	/**
 	 * Memory and CPU limits (i.e. maximum needed values) to allocate for a Pod.
@@ -326,6 +336,14 @@ public class KubernetesDeployerProperties {
 		return livenessProbePath;
 	}
 
+	public Integer getLivenessProbePort() {
+		return livenessProbePort;
+	}
+
+	public void setLivenessProbePort(Integer livenessProbePort) {
+		this.livenessProbePort = livenessProbePort;
+	}
+
 	public void setLivenessProbePath(String livenessProbePath) {
 		this.livenessProbePath = livenessProbePath;
 	}
@@ -360,6 +378,14 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessProbePath(String readinessProbePath) {
 		this.readinessProbePath = readinessProbePath;
+	}
+
+	public Integer getReadinessProbePort() {
+		return readinessProbePort;
+	}
+
+	public void setReadinessProbePort(Integer readinessProbePort) {
+		this.readinessProbePort = readinessProbePort;
 	}
 
 	public StatefulSet getStatefulSet() {

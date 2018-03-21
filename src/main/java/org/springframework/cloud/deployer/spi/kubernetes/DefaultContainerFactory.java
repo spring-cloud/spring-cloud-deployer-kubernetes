@@ -152,18 +152,20 @@ public class DefaultContainerFactory implements ContainerFactory {
 			else {
 				container.addNewPort().withContainerPort(port).endPort();
 			}
-			container.withReadinessProbe(
-				new ProbeCreator(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
-					properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
-					request.getDeploymentProperties()).create()).withLivenessProbe(
-				new ProbeCreator(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
-					properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
-					request.getDeploymentProperties()).create());
 		}
 
-		//Add additional specified ports.  Further work is needed to add probe customization for each port.
+		Integer livenessPort = getProbePort(request, port, properties.getLivenessProbePort(), "liveness");
+		Integer readinessPort = getProbePort(request, port, properties.getReadinessProbePort(), "readiness");
+
 		List<Integer> additionalPorts = getContainerPorts(request);
-		if (!additionalPorts.isEmpty()) {
+		if (livenessPort != null && !additionalPorts.contains(livenessPort) && !livenessPort.equals(port)) {
+		    additionalPorts.add(livenessPort);
+        }
+        if (readinessPort != null && !additionalPorts.contains(readinessPort) && !readinessPort.equals(port)) {
+            additionalPorts.add(readinessPort);
+        }
+
+        if (!additionalPorts.isEmpty()) {
 			for (Integer containerPort : additionalPorts) {
 				if (hostNetwork) {
 					container.addNewPort().withContainerPort(containerPort).withHostPort(containerPort).endPort();
@@ -173,6 +175,22 @@ public class DefaultContainerFactory implements ContainerFactory {
 				}
 			}
 		}
+
+
+
+        if (readinessPort != null) {
+            container.withReadinessProbe(
+                    new ProbeCreator(readinessPort, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
+                            properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
+                            request.getDeploymentProperties()).create());
+        }
+
+        if (livenessPort != null) {
+            container.withLivenessProbe(
+                    new ProbeCreator(livenessPort, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
+                            properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
+                            request.getDeploymentProperties()).create());
+        }
 
 		//Override the containers default entry point with one specified during the app deployment
 		List<String> containerCommand = getContainerCommand(request);
@@ -326,6 +344,19 @@ public class DefaultContainerFactory implements ContainerFactory {
 			entryPointStyle = properties.getEntryPointStyle();
 		}
 		return entryPointStyle;
+	}
+
+	private Integer getProbePort(AppDeploymentRequest request, Integer defaultPort, Integer propertiesProbePort, String prefix) {
+		Integer readinessPort = null;
+		String probeKey = "spring.cloud.deployer.kubernetes.".concat(prefix).concat("ProbePort");
+		if(request.getDeploymentProperties().containsKey(probeKey)) {
+			readinessPort = Integer.parseInt(request.getDeploymentProperties().get(probeKey));
+		} else if (propertiesProbePort != null) {
+			readinessPort = propertiesProbePort;
+		} else if (defaultPort != null) {
+			readinessPort = defaultPort;
+		}
+		return readinessPort;
 	}
 
 	/**
