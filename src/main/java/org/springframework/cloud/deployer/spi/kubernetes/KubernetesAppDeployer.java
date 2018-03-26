@@ -27,8 +27,6 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ReplicationController;
-import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.ServicePort;
@@ -301,11 +299,13 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		int replicas = getCountFromRequest(request);
 
+		Map<String, String> annotations = getPodAnnotations(request);
+
 		Deployment d = new DeploymentBuilder().withNewMetadata().withName(appId).withLabels(idMap)
 			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withNewSpec().withReplicas(replicas)
 			.withNewTemplate().withNewMetadata().withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
-			.endMetadata().withSpec(createPodSpec(appId, request, Integer.valueOf(externalPort), false)).endTemplate()
-			.endSpec().build();
+			.withAnnotations(annotations).endMetadata().withSpec(createPodSpec(appId, request, externalPort, false))
+			.endTemplate().endSpec().build();
 
 		return client.extensions().deployments().create(d);
 	}
@@ -424,34 +424,50 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		spec.withSelector(idMap).addNewPortLike(servicePort).endPort();
 
-		Map<String, String> annotations = getServiceAnnotations(request.getDeploymentProperties());
+		Map<String, String> annotations = getServiceAnnotations(request);
 
 		client.services().inNamespace(client.getNamespace()).createNew().withNewMetadata().withName(appId)
 			.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(spec.build()).done();
 	}
 
-	/**
-	 * Get the service annotations for the deployment request.
-	 *
-	 * @param properties The deployment request deployment properties.
-	 * @return map of annottaions
-	 */
-	protected Map<String, String> getServiceAnnotations(Map<String, String> properties) {
-		Map<String, String> annotations = new HashMap<>();
-
-		String annotationsProperty = properties.getOrDefault("spring.cloud.deployer.kubernetes.serviceAnnotations", "");
+	private Map<String, String> getPodAnnotations(AppDeploymentRequest request) {
+		String annotationsProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.podAnnotations", "");
 
 		if (StringUtils.isEmpty(annotationsProperty)) {
-			annotationsProperty = this.properties.getServiceAnnotations();
+			annotationsProperty = properties.getPodAnnotations();
 		}
 
-		if (StringUtils.hasText(annotationsProperty)) {
-			String[] annotationPairs = annotationsProperty.split(",");
+		return getAnnotations(annotationsProperty);
+	}
+
+	private Map<String, String> getServiceAnnotations(AppDeploymentRequest request) {
+		String annotationsProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.serviceAnnotations", "");
+
+		if (StringUtils.isEmpty(annotationsProperty)) {
+			annotationsProperty = properties.getServiceAnnotations();
+		}
+
+		return getAnnotations(annotationsProperty);
+	}
+
+	/**
+	 * Extracts annotations from the provided value
+	 *
+	 * @param annotation The deployment request annotations
+	 * @return {@link Map} of annotations
+	 */
+	private Map<String, String> getAnnotations(String annotation) {
+		Map<String, String> annotations = new HashMap<>();
+
+		if (StringUtils.hasText(annotation)) {
+			String[] annotationPairs = annotation.split(",");
 			for (String annotationPair : annotationPairs) {
-				String[] annotation = annotationPair.split(":");
-				Assert.isTrue(annotation.length == 2, format("Invalid annotation value: '{}'", annotationPair));
-				annotations.put(annotation[0].trim(), annotation[1].trim());
+				String[] splitAnnotation = annotationPair.split(":");
+				Assert.isTrue(splitAnnotation.length == 2, format("Invalid annotation value: %s", annotationPair));
+				annotations.put(splitAnnotation[0].trim(), splitAnnotation[1].trim());
 			}
 		}
 
