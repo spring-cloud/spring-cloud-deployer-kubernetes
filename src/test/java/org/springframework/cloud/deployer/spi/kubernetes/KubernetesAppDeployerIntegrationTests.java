@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
@@ -29,6 +30,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
 
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -56,6 +58,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -182,6 +185,46 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
 		lbAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDeploymentWithPodAnnotation() {
+		log.info("Testing {}...", "DeploymentWithPodAnnotation");
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient, containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.podAnnotations",
+						"iam.amazonaws.com/role:role-arn"));
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = appDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Checking pod spec annotations of {}...", request.getDefinition().getName());
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("spring-deployment-id", request.getDefinition()
+				.getName()).list().getItems();
+
+		assertThat(pods, is(notNullValue()));
+		assertThat(pods.size(), is(1));
+
+		Pod pod = pods.get(0);
+		Map<String, String> annotations = pod.getMetadata().getAnnotations();
+		assertThat(annotations.size(), is(1));
+		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
+		assertTrue(annotations.get("iam.amazonaws.com/role").equals("role-arn"));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
