@@ -16,11 +16,9 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.hashids.Hashids;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -28,20 +26,15 @@ import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.Job;
-import io.fabric8.kubernetes.api.model.JobSpec;
-import io.fabric8.kubernetes.api.model.JobSpecBuilder;
-import io.fabric8.kubernetes.api.model.JobStatus;
-import io.fabric8.kubernetes.api.model.KubernetesResourceList;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import io.fabric8.kubernetes.api.model.PodTemplateSpec;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.lang.String.format;
 
 /**
  * A task launcher that targets Kubernetes.
@@ -81,8 +74,9 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			podLabelMap.put("task-name", request.getDefinition().getName());
 			podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
 			PodSpec podSpec = createPodSpec(appId, request, null, true);
+			Map<String, String> podAnnotationMap = getPodAnnotations(request);
 			if (properties.isCreateJob()){
-				launchJob(appId, podSpec, podLabelMap, idMap);
+				launchJob(appId, podSpec, podLabelMap, idMap, podAnnotationMap);
 			} else {
 				launchPod(appId, podSpec, podLabelMap, idMap);
 			}
@@ -169,12 +163,13 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 
-	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap) {
+	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap, Map<String, String> podAnnotationMap) {
 		JobSpec jobSpec = new JobSpecBuilder()
 				.withTemplate(new PodTemplateSpec(
 						new ObjectMetaBuilder()
 								.withLabels(podLabelMap)
 								.addToLabels(idMap)
+								.addToAnnotations(podAnnotationMap)
 								.build(),
 								podSpec)).build();
 		client.extensions().jobs()
@@ -251,6 +246,32 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		else {
 			return new TaskStatus(id, LaunchState.launching, new HashMap<>());
 		}
+	}
+
+	private Map<String, String> getPodAnnotations(AppDeploymentRequest request) {
+		String annotationsProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.podAnnotations", "");
+
+		if (StringUtils.isEmpty(annotationsProperty)) {
+			annotationsProperty = properties.getPodAnnotations();
+		}
+
+		return getAnnotations(annotationsProperty);
+	}
+
+	private Map<String, String> getAnnotations(String annotation) {
+		Map<String, String> annotations = new HashMap<>();
+
+		if (StringUtils.hasText(annotation)) {
+			String[] annotationPairs = annotation.split(",");
+			for (String annotationPair : annotationPairs) {
+				String[] splitAnnotation = annotationPair.split(":");
+				Assert.isTrue(splitAnnotation.length == 2, format("Invalid annotation value: %s", annotationPair));
+				annotations.put(splitAnnotation[0].trim(), splitAnnotation[1].trim());
+			}
+		}
+
+		return annotations;
 	}
 
 }
