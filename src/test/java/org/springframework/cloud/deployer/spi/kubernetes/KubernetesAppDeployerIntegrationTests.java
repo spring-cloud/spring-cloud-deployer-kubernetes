@@ -221,7 +221,10 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		Pod pod = pods.get(0);
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
-		assertThat(annotations.size(), is(2));
+		log.info("Number of annotations found" + annotations.size());
+		for (Map.Entry<String, String> annotationsEntry: annotations.entrySet()) {
+			log.info("Annotation key: " + annotationsEntry.getKey());
+		}
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
 		assertTrue(annotations.get("iam.amazonaws.com/role").equals("role-arn"));
 		assertTrue(annotations.containsKey("foo"));
