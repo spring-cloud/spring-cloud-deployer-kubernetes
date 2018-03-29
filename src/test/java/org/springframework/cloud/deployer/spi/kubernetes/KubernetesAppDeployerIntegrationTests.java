@@ -161,7 +161,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
-				Collections.singletonMap("spring.cloud.deployer.kubernetes.serviceAnnotations","foo:bar"));
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.serviceAnnotations","foo:bar,fab:baz"));
 
 		log.info("Deploying {}...", request.getDefinition().getName());
 		String deploymentId = lbAppDeployer.deploy(request);
@@ -179,8 +179,11 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Map<String, String> annotations = kubernetesClient.services().withName(request.getDefinition().getName()).get()
 				.getMetadata().getAnnotations();
 		assertThat(annotations, is(notNullValue()));
-		assertThat(annotations.size(), is(1));
+		assertThat(annotations.size(), is(2));
+		assertTrue(annotations.containsKey("foo"));
 		assertThat(annotations.get("foo"), is("bar"));
+		assertTrue(annotations.containsKey("fab"));
+		assertThat(annotations.get("fab"), is("baz"));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
@@ -200,7 +203,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
 				Collections.singletonMap("spring.cloud.deployer.kubernetes.podAnnotations",
-						"iam.amazonaws.com/role:role-arn"));
+						"iam.amazonaws.com/role:role-arn,foo:bar"));
 
 		log.info("Deploying {}...", request.getDefinition().getName());
 		String deploymentId = appDeployer.deploy(request);
@@ -218,9 +221,11 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		Pod pod = pods.get(0);
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
-		assertThat(annotations.size(), is(1));
+		assertThat(annotations.size(), is(2));
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
 		assertTrue(annotations.get("iam.amazonaws.com/role").equals("role-arn"));
+		assertTrue(annotations.containsKey("foo"));
+		assertTrue(annotations.get("foo").equals("bar"));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
