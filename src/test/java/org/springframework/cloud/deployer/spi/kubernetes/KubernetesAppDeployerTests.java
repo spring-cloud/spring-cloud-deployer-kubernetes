@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.entry;
  * @author Donovan Muller
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
+ * @author Chris Schaefer
  */
 public class KubernetesAppDeployerTests {
 
@@ -229,6 +230,38 @@ public class KubernetesAppDeployerTests {
 		assertThat(pvc.getSpec().getStorageClassName()).isEqualTo("test");
 		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("1024Mi");
 		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("1024Mi");
+	}
+
+	@Test
+	public void deployWithImagePullSecretDeploymentProperty() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.imagePullSecret", "regcred");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
+		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcred");
+	}
+
+	@Test
+	public void deployWithImagePullSecretDeployerProperty() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setImagePullSecret("regcred");
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
+		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcred");
 	}
 
 	private Resource getResource() {

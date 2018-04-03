@@ -140,9 +140,10 @@ public class AbstractKubernetesDeployer {
 		boolean neverRestart) {
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
-		// Add image secrets if set
-		if (properties.getImagePullSecret() != null) {
-			podSpec.addNewImagePullSecret(properties.getImagePullSecret());
+		String imagePullSecret = getImagePullSecret(request);
+
+		if (imagePullSecret != null) {
+			podSpec.addNewImagePullSecret(imagePullSecret);
 		}
 
 		boolean hostNetwork = getHostNetwork(request);
@@ -415,5 +416,16 @@ public class AbstractKubernetesDeployer {
 		}
 		long memAmount = ByteSizeUtils.parseToMebibytes(mem);
 		return memAmount + "Mi";
+	}
+
+	private String getImagePullSecret(AppDeploymentRequest request) {
+		String imagePullSecret = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.imagePullSecret", "");
+
+		if(StringUtils.isEmpty(imagePullSecret)) {
+			imagePullSecret = properties.getImagePullSecret();
+		}
+
+		return imagePullSecret;
 	}
 }
