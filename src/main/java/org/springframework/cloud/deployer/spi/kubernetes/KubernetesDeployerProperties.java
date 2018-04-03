@@ -152,7 +152,6 @@ public class KubernetesDeployerProperties {
 	/**
 	 * Port that app container has to respond on for liveness check.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private Integer livenessProbePort = null;
 
 	/**
@@ -184,7 +183,6 @@ public class KubernetesDeployerProperties {
 	/**
 	 * Port that app container has to respond on for readiness check.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private Integer readinessProbePort = null;
 
 	/**
