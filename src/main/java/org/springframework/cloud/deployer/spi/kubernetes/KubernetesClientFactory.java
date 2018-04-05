@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,40 +30,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 
 /**
- * Spring Bean configuration for the {@link KubernetesAppDeployer}.
+ * The class responsible for creating Kubernetes Client based on the deployer properties.
  *
- * @author Florian Rosenberg
- * @author Thomas Risberg
  * @author Ilayaperumal Gopinathan
  */
-@Configuration
-@EnableConfigurationProperties(KubernetesDeployerProperties.class)
-@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
-public class KubernetesAutoConfiguration {
-	
-	@Autowired
-	private KubernetesDeployerProperties properties;
+public class KubernetesClientFactory {
 
-	@Bean
-	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
-	                               ContainerFactory containerFactory) {
-		return new KubernetesAppDeployer(properties, kubernetesClient, containerFactory);
-	}
-
-	@Bean
-	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
-	                                 ContainerFactory containerFactory) {
-		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
-	}
-
-	@Bean
-	public KubernetesClient kubernetesClient() {
-		return KubernetesClientFactory.getKubernetesClient(this.properties);
-	}
-
-	@Bean
-	public ContainerFactory containerFactory() {
-		return new DefaultContainerFactory(properties);
+	public static KubernetesClient getKubernetesClient(KubernetesDeployerProperties kubernetesDeployerProperties) {
+		Config config = kubernetesDeployerProperties.getFabric8();
+		// Since namespace is used as a deployer as well as a client property, merging it from the deployer if it is not
+		// already set in the client properties.
+		if (config.getNamespace() == null) {
+			config.setNamespace(kubernetesDeployerProperties.getNamespace());
+		}
+		return new DefaultKubernetesClient(config);
 	}
 
 }

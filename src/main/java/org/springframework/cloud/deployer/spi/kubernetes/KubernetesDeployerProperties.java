@@ -19,10 +19,11 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.client.Config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author Florian Rosenberg
@@ -39,6 +40,16 @@ public class KubernetesDeployerProperties {
 	 * Constants for app deployment properties that don't have a deployer level default property.
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
+
+	private Config fabric8 = new Config();
+
+	public Config getFabric8() {
+		return this.fabric8;
+	}
+
+	public void setFabric8(Config fabric8) {
+		this.fabric8 = fabric8;
+	}
 
 	/**
 	 * Encapsulates resources for Kubernetes Container resource requests and limits
