@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +32,7 @@ import org.springframework.core.Ordered;
  *
  * @author Florian Rosenberg
  * @author Thomas Risberg
+ * @author Ilayaperumal Gopinathan
  */
 @Configuration
 @EnableConfigurationProperties(KubernetesDeployerProperties.class)
@@ -56,7 +56,7 @@ public class KubernetesAutoConfiguration {
 
 	@Bean
 	public KubernetesClient kubernetesClient() {
-		return new DefaultKubernetesClient().inNamespace(properties.getNamespace());
+		return KubernetesClientFactory.getKubernetesClient(this.properties);
 	}
 
 	@Bean
