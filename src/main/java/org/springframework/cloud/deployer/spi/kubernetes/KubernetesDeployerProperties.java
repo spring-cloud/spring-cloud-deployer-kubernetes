@@ -41,7 +41,7 @@ public class KubernetesDeployerProperties {
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
-	private Config fabric8 = new Config();
+	private Config fabric8 = Config.autoConfigure(null);
 
 	public Config getFabric8() {
 		return this.fabric8;
