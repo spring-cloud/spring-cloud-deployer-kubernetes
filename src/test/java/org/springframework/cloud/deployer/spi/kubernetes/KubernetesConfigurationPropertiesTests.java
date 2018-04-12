@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
 		"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
 		"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
-		"spring.cloud.deployer.kubernetes.namespace=testing"
+		"spring.cloud.deployer.kubernetes.fabric8.namespace=testing"
 })
 public class KubernetesConfigurationPropertiesTests {
 
