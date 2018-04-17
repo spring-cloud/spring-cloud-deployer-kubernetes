@@ -190,9 +190,10 @@ public class DefaultContainerFactoryTests {
 		Container containerShell = defaultContainerFactory.create("app-test",
 				appDeploymentRequestShell, null, false);
 		assertNotNull(containerShell);
-		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
-		assertTrue(containerShell.getArgs().size() == 0);
-
+		assertTrue(containerShell.getArgs().get(0).equals("--"));
+		assertTrue(containerShell.getArgs().get(1).equals("--foo.bar.baz=test"));
+		assertTrue(containerShell.getArgs().size() == 2);
+		
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
 				resource, props);

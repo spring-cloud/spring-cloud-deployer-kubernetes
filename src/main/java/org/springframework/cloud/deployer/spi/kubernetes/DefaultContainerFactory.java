@@ -120,10 +120,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 			}
 			break;
 		case shell:
-			for (String key : request.getDefinition().getProperties().keySet()) {
-				String envVar = key.replace('.', '_').toUpperCase();
-				envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
-			}
+			appArgs = createCommandArgs(request);
+			appArgs.add(0, "--");
 			break;
 		}
 
