@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -204,13 +205,15 @@ public class DefaultContainerFactoryTests {
 
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "boot");
 		AppDeploymentRequest appDeploymentRequestBoot = new AppDeploymentRequest(definition,
-				resource, props);
+				resource, props, Arrays.asList("--arg1=val1", "--arg2=val2"));
 		Container containerBoot = defaultContainerFactory.create("app-test",
 				appDeploymentRequestBoot, null, false);
 		assertNotNull(containerBoot);
 		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
 		assertTrue(containerBoot.getEnv().get(0).getValue().equals(new ObjectMapper().writeValueAsString(appProps)));
-		assertTrue(containerBoot.getArgs().size() == 0);
+		assertTrue(containerBoot.getArgs().size() == 2);
+		assertTrue(containerBoot.getArgs().get(0).equals("--arg1=val1"));
+		assertTrue(containerBoot.getArgs().get(1).equals("--arg2=val2"));
 	}
 
 	@Test

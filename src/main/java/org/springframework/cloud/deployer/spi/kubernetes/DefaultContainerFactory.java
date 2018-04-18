@@ -118,6 +118,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 			catch (JsonProcessingException e) {
 				throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
 			}
+
+			appArgs = request.getCommandlineArguments();
+
 			break;
 		case shell:
 			for (String key : request.getDefinition().getProperties().keySet()) {
