@@ -151,12 +151,15 @@ public class DefaultContainerFactory implements ContainerFactory {
 			}
 		}
 
+		Integer livenessPort = getProbePort(request, port, properties.getLivenessProbePort(), "liveness");
+		Integer readinessPort = getProbePort(request, port, properties.getReadinessProbePort(), "readiness");
+
 		List<Integer> additionalPorts = getContainerPorts(request);
-		if(properties.getLivenessProbePort() != null && !additionalPorts.contains(properties.getLivenessProbePort())) {
-		    additionalPorts.add(properties.getLivenessProbePort());
+		if (livenessPort != null && !additionalPorts.contains(livenessPort) && !livenessPort.equals(port)) {
+		    additionalPorts.add(livenessPort);
         }
-        if(properties.getReadinessProbePort() != null && !additionalPorts.contains(properties.getReadinessProbePort())) {
-            additionalPorts.add(properties.getReadinessProbePort());
+        if (readinessPort != null && !additionalPorts.contains(readinessPort) && !readinessPort.equals(port)) {
+            additionalPorts.add(readinessPort);
         }
 
         if (!additionalPorts.isEmpty()) {
@@ -170,29 +173,20 @@ public class DefaultContainerFactory implements ContainerFactory {
 			}
 		}
 
-        if(properties.getReadinessProbePort() != null) {
+
+
+        if (readinessPort != null) {
             container.withReadinessProbe(
-                    new ProbeCreator(properties.getReadinessProbePort(), properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
+                    new ProbeCreator(readinessPort, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
                             properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
                             request.getDeploymentProperties()).create());
         }
 
-        if (properties.getLivenessProbePort() != null) {
+        if (livenessPort != null) {
             container.withLivenessProbe(
-                    new ProbeCreator(properties.getLivenessProbePort(), properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
+                    new ProbeCreator(livenessPort, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
                             properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
                             request.getDeploymentProperties()).create());
-        }
-
-        if (properties.getReadinessProbePort() == null && properties.getLivenessProbePort() == null && port != null) {
-            container.withReadinessProbe(
-                    new ProbeCreator(port, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
-                            properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
-                            request.getDeploymentProperties()).create())
-                    .withLivenessProbe(
-                            new ProbeCreator(port, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
-                                    properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
-                                    request.getDeploymentProperties()).create());
         }
 
 		//Override the containers default entry point with one specified during the app deployment
@@ -347,6 +341,19 @@ public class DefaultContainerFactory implements ContainerFactory {
 			entryPointStyle = properties.getEntryPointStyle();
 		}
 		return entryPointStyle;
+	}
+
+	private Integer getProbePort(AppDeploymentRequest request, Integer defaultPort, Integer propertiesProbePort, String prefix) {
+		Integer readinessPort = null;
+		String probeKey = "spring.cloud.deployer.kubernetes.".concat(prefix).concat("ProbePort");
+		if(request.getDeploymentProperties().containsKey(probeKey)) {
+			readinessPort = Integer.parseInt(request.getDeploymentProperties().get(probeKey));
+		} else if (propertiesProbePort != null) {
+			readinessPort = propertiesProbePort;
+		} else if (defaultPort != null) {
+			readinessPort = defaultPort;
+		}
+		return readinessPort;
 	}
 
 	/**
