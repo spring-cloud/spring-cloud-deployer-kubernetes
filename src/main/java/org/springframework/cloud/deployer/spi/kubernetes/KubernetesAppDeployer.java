@@ -93,15 +93,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ContainerFactory containerFactory) {
 		this.properties = properties;
 		this.client = client;
-
 		if (client != null) {
 			this.httpClient = new KubernetesHttpClient(client);
-			this.STATEFULSETS_ENDPOINT = String.format("apis/apps/v1beta1/namespaces/%s/statefulsets",
-				client.getNamespace());
+			this.STATEFULSETS_ENDPOINT = String.format("apis/apps/%s/namespaces/%s/statefulsets",
+					KubernetesHttpClient.getApiVersionForK8sVersionFromCluster(this.httpClient), client.getNamespace());
 		}
-
 		this.containerFactory = containerFactory;
-
 	}
 
 	@Override

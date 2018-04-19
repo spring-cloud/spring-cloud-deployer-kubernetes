@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 the original author or authors.
+ * Copyright 2017-2018 the original author or authors.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.zafarkhaja.semver.Version;
 import io.fabric8.kubernetes.client.BaseClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import okhttp3.Call;
@@ -27,10 +29,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Wraps the {@link KubernetesClient} http client to send raw REST requests
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  **/
 class KubernetesHttpClient {
 
@@ -76,6 +81,26 @@ class KubernetesHttpClient {
 		Response response = execute((this.client.newCall(delete)));
 		response.close();
 		return response;
+	}
+
+	/**
+	 * Get API version to use for some of the Controller's API route mappings based on the kubernetes
+	 * version used in the underlying cluster.
+	 * @param client the KubernetesHttpClient to use
+	 * @return the appropriate API version to use
+	 */
+	public static String getApiVersionForK8sVersionFromCluster(KubernetesHttpClient client) {
+		try {
+			Response response = client.get("version", "");
+			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(), HashMap.class);
+			String k8sVersionFromCluster = versionResponse.get("gitVersion");
+			Version version = Version.valueOf(k8sVersionFromCluster.substring(1));
+			Version version110 = Version.valueOf("1.10.0");
+			return (version.greaterThanOrEqualTo(version110)) ? "v1" : "v1beta1";
+		}
+		catch (IOException e) {
+			throw new IllegalArgumentException("Exception retrieving cluster version info. "+ e.getMessage());
+		}
 	}
 
 	private Response execute(Call call) {
