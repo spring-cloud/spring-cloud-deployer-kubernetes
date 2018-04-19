@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 the original author or authors.
+ * Copyright 2017-2018 the original author or authors.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,6 +15,15 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.zafarkhaja.semver.Version;
 import io.fabric8.kubernetes.client.BaseClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import okhttp3.Call;
@@ -26,11 +35,10 @@ import okhttp3.Response;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.IOException;
-
 /**
  * Wraps the {@link KubernetesClient} http client to send raw REST requests
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  **/
 class KubernetesHttpClient {
 
@@ -41,7 +49,11 @@ class KubernetesHttpClient {
 
 	KubernetesHttpClient(KubernetesClient client) {
 		this.client = ((BaseClient)client).getHttpClient();
-		this.masterUrl = client.getMasterUrl().toString();
+		this.masterUrl = getMasterUrl(client.getMasterUrl().toString());
+	}
+
+	private String getMasterUrl(String masterUrl) {
+		return !masterUrl.endsWith("/") ? String.format("%s/", masterUrl) : masterUrl;
 	}
 
 	public Response post(String resourceEndpoint, String json) {
@@ -76,6 +88,35 @@ class KubernetesHttpClient {
 		Response response = execute((this.client.newCall(delete)));
 		response.close();
 		return response;
+	}
+
+	/**
+	 * Get API version to use for some of the Controller's API route mappings based on the kubernetes
+	 * version used in the underlying cluster.
+	 * @param client the KubernetesHttpClient to use
+	 * @return the appropriate API version to use
+	 */
+	public static String getApiVersionForK8sVersionFromCluster(KubernetesHttpClient client) {
+		try {
+			Response response = client.get("version", "");
+			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(),
+					new TypeReference<HashMap<String, String>>() {
+					});
+			return getApiVersion(versionResponse.get("gitVersion"));
+		}
+		catch (IOException e) {
+			throw new IllegalArgumentException("Exception retrieving cluster version info. "+ e.getMessage());
+		}
+	}
+
+	public static String getApiVersion(String k8sVersionFromCluster) {
+		Version version110 = Version.valueOf("1.10.0");
+		Pattern p = Pattern.compile("\\d+\\.\\d+\\.\\d");
+		Matcher m = p.matcher(k8sVersionFromCluster);
+		while (m.find()) {
+			k8sVersionFromCluster = m.group();
+		}
+		return Version.valueOf(k8sVersionFromCluster).greaterThanOrEqualTo(version110) ? "v1" : "v1beta1";
 	}
 
 	private Response execute(Call call) {
