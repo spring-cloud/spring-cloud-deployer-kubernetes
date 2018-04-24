@@ -15,6 +15,11 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.zafarkhaja.semver.Version;
 import io.fabric8.kubernetes.client.BaseClient;
@@ -27,10 +32,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Wraps the {@link KubernetesClient} http client to send raw REST requests
@@ -92,7 +93,8 @@ class KubernetesHttpClient {
 	public static String getApiVersionForK8sVersionFromCluster(KubernetesHttpClient client) {
 		try {
 			Response response = client.get("version", "");
-			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(), HashMap.class);
+			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(),
+					new TypeReference<HashMap<String, String>>(){});
 			String k8sVersionFromCluster = versionResponse.get("gitVersion");
 			Version version = Version.valueOf(k8sVersionFromCluster.substring(1));
 			Version version110 = Version.valueOf("1.10.0");
