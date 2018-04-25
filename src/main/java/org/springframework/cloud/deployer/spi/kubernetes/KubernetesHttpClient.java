@@ -96,6 +96,9 @@ class KubernetesHttpClient {
 			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(),
 					new TypeReference<HashMap<String, String>>(){});
 			String k8sVersionFromCluster = versionResponse.get("gitVersion");
+			if (k8sVersionFromCluster.contains("-")) {
+				k8sVersionFromCluster = k8sVersionFromCluster.substring(0, k8sVersionFromCluster.indexOf("-"));
+			}
 			Version version = Version.valueOf(k8sVersionFromCluster.substring(1));
 			Version version110 = Version.valueOf("1.10.0");
 			return (version.greaterThanOrEqualTo(version110)) ? "v1" : "v1beta1";
