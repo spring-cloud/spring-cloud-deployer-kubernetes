@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017 the original author or authors.
+ * Copyright 2016-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import org.springframework.util.StringUtils;
 
 /**
  * A task launcher that targets Kubernetes.
@@ -49,6 +51,7 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
  * @author Thomas Risberg
  * @author David Turanski
  * @author Leonardo Diniz
+ * @author Chris Schaefer
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 
@@ -80,12 +83,18 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			Map<String, String> podLabelMap = new HashMap<>();
 			podLabelMap.put("task-name", request.getDefinition().getName());
 			podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+
 			PodSpec podSpec = createPodSpec(appId, request, null, true);
-			if (properties.isCreateJob()){
-				launchJob(appId, podSpec, podLabelMap, idMap);
-			} else {
-				launchPod(appId, podSpec, podLabelMap, idMap);
+
+			Map<String, String> jobAnnotations = getJobAnnotations(request);
+
+			if (properties.isCreateJob()) {
+				launchJob(appId, podSpec, podLabelMap, idMap, jobAnnotations);
 			}
+			else {
+				launchPod(appId, podSpec, podLabelMap, idMap, jobAnnotations);
+			}
+
 			return appId;
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -156,20 +165,22 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 
-	private void launchPod(String appId, PodSpec podSpec, Map<String, String> labelMap, Map<String, String> idMap) {
+	private void launchPod(String appId, PodSpec podSpec, Map<String, String> labelMap, Map<String, String> idMap,
+						   Map<String, String> annotations) {
 		client.pods()
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
 				.withName(appId)
 				.withLabels(labelMap)
+				.withAnnotations(annotations)
 				.addToLabels(idMap)
 				.endMetadata()
 				.withSpec(podSpec)
 				.done();
 	}
 
-
-	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap) {
+	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap,
+						   Map<String, String> annotations) {
 		JobSpec jobSpec = new JobSpecBuilder()
 				.withTemplate(new PodTemplateSpec(
 						new ObjectMetaBuilder()
@@ -181,13 +192,13 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 				.inNamespace(client.getNamespace()).createNew()
 				.withNewMetadata()
 				.withName(appId)
+				.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
 				.addToLabels(idMap)
+				.withAnnotations(annotations)
 				.endMetadata()
 				.withSpec(jobSpec)
 				.done();
 	}
-
-
 
 	private List<String> getIdsForTaskName(String taskName) {
 		List<String> ids = new ArrayList<>();
@@ -207,6 +218,17 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			logger.warn(String.format("Failed to retrieve pods for task: %s", taskName), kce);
 		}
 		return ids;
+	}
+
+	private Map<String, String> getJobAnnotations(AppDeploymentRequest request) {
+		String annotationsProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.jobAnnotations", "");
+
+		if (StringUtils.isEmpty(annotationsProperty)) {
+			annotationsProperty = properties.getJobAnnotations();
+		}
+
+		return PropertyParserUtils.getAnnotations(annotationsProperty);
 	}
 
 	TaskStatus buildTaskStatus(String id) {

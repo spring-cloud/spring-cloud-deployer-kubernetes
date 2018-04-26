@@ -237,6 +237,11 @@ public class KubernetesDeployerProperties {
 	private String podAnnotations;
 
 	/**
+	 * Job annotations to set for the pod or job created for a job.
+	 */
+	private String jobAnnotations;
+
+	/**
 	 * Time to wait for load balancer to be available before attempting delete of service (in minutes).
 	 */
 	private int minutesToWaitForLoadBalancer = 5;
@@ -467,6 +472,14 @@ public class KubernetesDeployerProperties {
 
 	public void setPodAnnotations(String podAnnotations) {
 		this.podAnnotations = podAnnotations;
+	}
+
+	public String getJobAnnotations() {
+		return jobAnnotations;
+	}
+
+	public void setJobAnnotations(String jobAnnotations) {
+		this.jobAnnotations = jobAnnotations;
 	}
 
 	public int getMinutesToWaitForLoadBalancer() {

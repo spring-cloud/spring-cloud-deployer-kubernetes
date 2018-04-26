@@ -52,7 +52,6 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -62,8 +61,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import static java.lang.String.format;
 
 /**
  * A deployer that targets Kubernetes.
@@ -439,7 +436,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			annotationsProperty = properties.getPodAnnotations();
 		}
 
-		return getAnnotations(annotationsProperty);
+		return PropertyParserUtils.getAnnotations(annotationsProperty);
 	}
 
 	private Map<String, String> getServiceAnnotations(AppDeploymentRequest request) {
@@ -450,28 +447,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			annotationsProperty = properties.getServiceAnnotations();
 		}
 
-		return getAnnotations(annotationsProperty);
-	}
-
-	/**
-	 * Extracts annotations from the provided value
-	 *
-	 * @param annotation The deployment request annotations
-	 * @return {@link Map} of annotations
-	 */
-	private Map<String, String> getAnnotations(String annotation) {
-		Map<String, String> annotations = new HashMap<>();
-
-		if (StringUtils.hasText(annotation)) {
-			String[] annotationPairs = annotation.split(",");
-			for (String annotationPair : annotationPairs) {
-				String[] splitAnnotation = annotationPair.split(":");
-				Assert.isTrue(splitAnnotation.length == 2, format("Invalid annotation value: %s", annotationPair));
-				annotations.put(splitAnnotation[0].trim(), splitAnnotation[1].trim());
-			}
-		}
-
-		return annotations;
+		return PropertyParserUtils.getAnnotations(annotationsProperty);
 	}
 
 	/**
