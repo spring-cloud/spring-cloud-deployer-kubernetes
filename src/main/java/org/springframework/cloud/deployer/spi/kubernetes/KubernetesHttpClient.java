@@ -18,6 +18,8 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -94,18 +96,23 @@ class KubernetesHttpClient {
 		try {
 			Response response = client.get("version", "");
 			Map<String, String> versionResponse = new ObjectMapper().readValue(response.body().string(),
-					new TypeReference<HashMap<String, String>>(){});
-			String k8sVersionFromCluster = versionResponse.get("gitVersion");
-			if (k8sVersionFromCluster.contains("-")) {
-				k8sVersionFromCluster = k8sVersionFromCluster.substring(0, k8sVersionFromCluster.indexOf("-"));
-			}
-			Version version = Version.valueOf(k8sVersionFromCluster.substring(1));
-			Version version110 = Version.valueOf("1.10.0");
-			return (version.greaterThanOrEqualTo(version110)) ? "v1" : "v1beta1";
+					new TypeReference<HashMap<String, String>>() {
+					});
+			return getApiVersion(versionResponse.get("gitVersion"));
 		}
 		catch (IOException e) {
 			throw new IllegalArgumentException("Exception retrieving cluster version info. "+ e.getMessage());
 		}
+	}
+
+	public static String getApiVersion(String k8sVersionFromCluster) {
+		Version version110 = Version.valueOf("1.10.0");
+		Pattern p = Pattern.compile("\\d+\\.\\d+\\.\\d");
+		Matcher m = p.matcher(k8sVersionFromCluster);
+		while (m.find()) {
+			k8sVersionFromCluster = m.group();
+		}
+		return Version.valueOf(k8sVersionFromCluster).greaterThanOrEqualTo(version110) ? "v1" : "v1beta1";
 	}
 
 	private Response execute(Call call) {
