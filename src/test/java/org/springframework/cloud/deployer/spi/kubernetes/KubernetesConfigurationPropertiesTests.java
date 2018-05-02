@@ -20,7 +20,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
@@ -29,7 +34,7 @@ import static org.junit.Assert.assertEquals;
  * @author Ilayaperumal Gopinathan
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+@SpringBootTest(classes = {KubernetesConfigurationPropertiesTests.TestConfig.class}, properties = {
 		"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
 		"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
 		"spring.cloud.deployer.kubernetes.fabric8.namespace=testing"
@@ -45,5 +50,19 @@ public class KubernetesConfigurationPropertiesTests {
 		assertEquals("testing", kubernetesClient.getNamespace());
 		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
 		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+	}
+
+	@Configuration
+	@EnableConfigurationProperties(KubernetesDeployerProperties.class)
+	@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
+	public static class TestConfig {
+
+		@Autowired
+		private KubernetesDeployerProperties properties;
+
+		@Bean
+		public KubernetesClient kubernetesClient() {
+			return KubernetesClientFactory.getKubernetesClient(this.properties);
+		}
 	}
 }

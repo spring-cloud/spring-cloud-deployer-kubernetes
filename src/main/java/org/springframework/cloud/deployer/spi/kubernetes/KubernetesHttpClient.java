@@ -49,7 +49,11 @@ class KubernetesHttpClient {
 
 	KubernetesHttpClient(KubernetesClient client) {
 		this.client = ((BaseClient)client).getHttpClient();
-		this.masterUrl = client.getMasterUrl().toString();
+		this.masterUrl = getMasterUrl(client.getMasterUrl().toString());
+	}
+
+	private String getMasterUrl(String masterUrl) {
+		return !masterUrl.endsWith("/") ? String.format("%s/", masterUrl) : masterUrl;
 	}
 
 	public Response post(String resourceEndpoint, String json) {
