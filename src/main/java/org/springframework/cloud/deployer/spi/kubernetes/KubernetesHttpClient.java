@@ -34,6 +34,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.util.StringUtils;
 
 /**
  * Wraps the {@link KubernetesClient} http client to send raw REST requests
@@ -71,15 +72,17 @@ class KubernetesHttpClient {
 	}
 
 	public Response get(String resourceEndpoint, String appId) {
-		String url = this.masterUrl + resourceEndpoint + "/" + appId;
+		String url = buildUrl(resourceEndpoint, appId);
+
 		logger.debug("Getting " + url);
 
-		Request get =  new Request.Builder().get().url(url).build();
+		Request get = new Request.Builder().get().url(url).build();
+
 		return execute((this.client.newCall(get)));
 	}
 
 	public Response delete(String resourceEndpoint, String appId) {
-		String url = this.masterUrl + resourceEndpoint + "/" + appId;
+		String url = buildUrl(resourceEndpoint, appId);
 
 		logger.debug("Deleting " + url);
 
@@ -87,7 +90,14 @@ class KubernetesHttpClient {
 
 		Response response = execute((this.client.newCall(delete)));
 		response.close();
+
 		return response;
+	}
+
+	protected String buildUrl(String resourceEndpoint, String appId) {
+		String url = this.masterUrl + resourceEndpoint;
+
+		return StringUtils.hasText(appId) ? url + "/" + appId : url;
 	}
 
 	/**

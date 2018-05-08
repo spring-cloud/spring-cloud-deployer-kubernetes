@@ -52,6 +52,14 @@ public class KubernetesConfigurationPropertiesTests {
 		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
 	}
 
+	@Test
+	public void testTrailingSlash() {
+		KubernetesHttpClient kubernetesHttpClient = new KubernetesHttpClient(kubernetesClient);
+		assertEquals("http://localhost:8090/version", kubernetesHttpClient.buildUrl("version", ""));
+		assertEquals("http://localhost:8090/version", kubernetesHttpClient.buildUrl("version", null));
+		assertEquals("http://localhost:8090/version/myAppId", kubernetesHttpClient.buildUrl("version", "myAppId"));
+	}
+
 	@Configuration
 	@EnableConfigurationProperties(KubernetesDeployerProperties.class)
 	@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
