@@ -76,8 +76,9 @@ import java.util.Map;
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
 	private static final String SERVER_PORT_KEY = "server.port";
-	private String STATEFULSETS_ENDPOINT;
+
 	private KubernetesHttpClient httpClient;
+	private StatefulSetEndpoint statefulSetEndpoint = new StatefulSetEndpoint();
 
 	private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -93,11 +94,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ContainerFactory containerFactory) {
 		this.properties = properties;
 		this.client = client;
+
 		if (client != null) {
-			this.httpClient = new KubernetesHttpClient(client);
-			this.STATEFULSETS_ENDPOINT = String.format("apis/apps/%s/namespaces/%s/statefulsets",
-					KubernetesHttpClient.getApiVersionForK8sVersionFromCluster(this.httpClient), client.getNamespace());
+			httpClient = new KubernetesHttpClient(client);
+
+			String apiVersion = KubernetesHttpClient.getApiVersionForK8sVersionFromCluster(this.httpClient);
+			statefulSetEndpoint = new StatefulSetEndpoint(apiVersion, client.getNamespace());
 		}
+
 		this.containerFactory = containerFactory;
 	}
 
@@ -125,7 +129,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 				String statefulSetJson = createStatefulSet(appId, request, idMap, externalPort);
 
-				Response response = httpClient.post(STATEFULSETS_ENDPOINT, statefulSetJson);
+				Response response = httpClient.post(statefulSetEndpoint.getEndpoint(), statefulSetJson);
 				if (!response.isSuccessful()) {
 					throw new RuntimeException(String.format(
 						"Create StatefulSet failed. response code %d, message %s" ,response.code(),response.message()));
@@ -199,7 +203,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 					if (deplDeleted) {
 						logger.debug(String.format("Deleted Deployment for: %s %b", appIdToDelete, deplDeleted));
 					}
-					Response response = httpClient.delete(STATEFULSETS_ENDPOINT,appIdToDelete);
+					Response response = httpClient.delete(statefulSetEndpoint.getEndpoint(), appIdToDelete);
 					Boolean statefulSetDeleted = response.isSuccessful();
 					if (statefulSetDeleted) {
 						logger
@@ -348,7 +352,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			.endMetadata().withSpec(podSpec).endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
-			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(spec).build();
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata()
+				.withApiVersion(statefulSetEndpoint.getVersion()).withSpec(spec).build();
 
 		Map<String, Object> statefulSetMap = null;
 		try {
@@ -479,4 +484,25 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				name);
 	}
 
+
+	private static class StatefulSetEndpoint {
+		private String namespace = "default";
+		private String apiVersion = "v1beta1";
+
+		public StatefulSetEndpoint() {
+		}
+
+		public StatefulSetEndpoint(String apiVersion, String namespace) {
+			this.apiVersion = apiVersion;
+			this.namespace = namespace;
+		}
+
+		public String getVersion() {
+			return "apps/" + apiVersion;
+		}
+
+		public String getEndpoint() {
+			return String.format("apis/%s/namespaces/%s/statefulsets", getVersion(), namespace);
+		}
+	}
 }
