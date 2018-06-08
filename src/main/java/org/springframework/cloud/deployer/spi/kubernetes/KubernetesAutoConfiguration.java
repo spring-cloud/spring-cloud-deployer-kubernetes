@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
@@ -33,6 +34,7 @@ import org.springframework.core.Ordered;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author Ilayaperumal Gopinathan
+ * @author Chris Schaefer
  */
 @Configuration
 @EnableConfigurationProperties(KubernetesDeployerProperties.class)
@@ -43,12 +45,14 @@ public class KubernetesAutoConfiguration {
 	private KubernetesDeployerProperties properties;
 
 	@Bean
+	@ConditionalOnMissingBean(AppDeployer.class)
 	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
 	                               ContainerFactory containerFactory) {
 		return new KubernetesAppDeployer(properties, kubernetesClient, containerFactory);
 	}
 
 	@Bean
+	@ConditionalOnMissingBean(TaskLauncher.class)
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
 	                                 ContainerFactory containerFactory) {
 		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
