@@ -100,7 +100,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
-				Collections.singletonMap("spring.cloud.deployer.kubernetes.jobAnnotations", "key1:val1,key2:val2"));
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.jobAnnotations", "key1:val1,key2:val2,key3:val31:val32"));
 
 		log.info("Launching {}...", request.getDefinition().getName());
 
@@ -126,8 +126,10 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertTrue(annotations.get("key1").equals("val1"));
 		assertTrue(annotations.containsKey("key2"));
 		assertTrue(annotations.get("key2").equals("val2"));
+	    assertTrue(annotations.containsKey("key3"));
+	    assertTrue(annotations.get("key3").equals("val31:val32"));
 
-		log.info("Destroying {}...", taskName);
+	    log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
