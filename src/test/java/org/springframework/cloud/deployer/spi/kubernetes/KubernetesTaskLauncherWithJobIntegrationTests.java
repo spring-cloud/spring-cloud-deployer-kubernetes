@@ -130,6 +130,8 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		assertTrue(annotations.get("key1").equals("val1"));
 		assertTrue(annotations.containsKey("key2"));
 		assertTrue(annotations.get("key2").equals("val2"));
+        assertTrue(annotations.containsKey("key3"));
+        assertTrue(annotations.get("key3").equals("val31:val32"));
 
 		log.info("Destroying {}...", taskName);
 
