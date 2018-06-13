@@ -42,7 +42,7 @@ public class PropertyParserUtils {
 		if (StringUtils.hasText(annotation)) {
 			String[] annotationPairs = annotation.split(",");
 			for (String annotationPair : annotationPairs) {
-				String[] splitAnnotation = annotationPair.split(":");
+				String[] splitAnnotation = annotationPair.split(":", 2);
 				Assert.isTrue(splitAnnotation.length == 2, format("Invalid annotation value: %s", annotationPair));
 				annotations.put(splitAnnotation[0].trim(), splitAnnotation[1].trim());
 			}

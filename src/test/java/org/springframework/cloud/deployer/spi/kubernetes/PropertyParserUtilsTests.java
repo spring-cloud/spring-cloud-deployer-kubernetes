@@ -16,13 +16,12 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.Test;
 
 /**
  * Tests for PropertyParserUtils
@@ -41,13 +40,15 @@ public class PropertyParserUtilsTests {
 
 	@Test
 	public void testAnnotationParseMultiple() {
-		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation1:value1,annotation2:value2");
+		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation1:value1,annotation2:value2,annotation3:value31:value32");
 		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 2);
+		assertTrue(annotations.size() == 3);
 		assertTrue(annotations.containsKey("annotation1"));
 		assertTrue(annotations.get("annotation1").equals("value1"));
 		assertTrue(annotations.containsKey("annotation2"));
 		assertTrue(annotations.get("annotation2").equals("value2"));
+		assertTrue(annotations.containsKey("annotation3"));
+        assertTrue(annotations.get("annotation3").equals("value31:value32"));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
