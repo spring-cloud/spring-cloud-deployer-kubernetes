@@ -41,6 +41,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
@@ -105,7 +106,8 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		Resource resource = testApplication();
 
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
-				Collections.singletonMap("spring.cloud.deployer.kubernetes.jobAnnotations", "key1:val1,key2:val2"));
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.jobAnnotations",
+						"key1:val1,key2:val2,key3:val31:val32"));
 
 		log.info("Launching {}...", request.getDefinition().getName());
 
@@ -125,13 +127,14 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		assertThat(jobs.size(), is(1));
 
 		Map<String, String> annotations = jobs.get(0).getMetadata().getAnnotations();
-
+		assertFalse(annotations.isEmpty());
+		assertTrue(annotations.size() == 3);
 		assertTrue(annotations.containsKey("key1"));
 		assertTrue(annotations.get("key1").equals("val1"));
 		assertTrue(annotations.containsKey("key2"));
 		assertTrue(annotations.get("key2").equals("val2"));
-        assertTrue(annotations.containsKey("key3"));
-        assertTrue(annotations.get("key3").equals("val31:val32"));
+		assertTrue(annotations.containsKey("key3"));
+		assertTrue(annotations.get("key3").equals("val31:val32"));
 
 		log.info("Destroying {}...", taskName);
 

@@ -126,10 +126,10 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertTrue(annotations.get("key1").equals("val1"));
 		assertTrue(annotations.containsKey("key2"));
 		assertTrue(annotations.get("key2").equals("val2"));
-	    assertTrue(annotations.containsKey("key3"));
-	    assertTrue(annotations.get("key3").equals("val31:val32"));
+		assertTrue(annotations.containsKey("key3"));
+		assertTrue(annotations.get("key3").equals("val31:val32"));
 
-	    log.info("Destroying {}...", taskName);
+		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);

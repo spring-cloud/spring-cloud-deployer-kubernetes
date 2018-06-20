@@ -40,15 +40,28 @@ public class PropertyParserUtilsTests {
 
 	@Test
 	public void testAnnotationParseMultiple() {
-		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation1:value1,annotation2:value2,annotation3:value31:value32");
+		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation1:value1,annotation2:value2");
 		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 3);
+		assertTrue(annotations.size() == 2);
 		assertTrue(annotations.containsKey("annotation1"));
 		assertTrue(annotations.get("annotation1").equals("value1"));
 		assertTrue(annotations.containsKey("annotation2"));
 		assertTrue(annotations.get("annotation2").equals("value2"));
-		assertTrue(annotations.containsKey("annotation3"));
-        assertTrue(annotations.get("annotation3").equals("value31:value32"));
+	}
+
+	@Test
+	public void testAnnotationMultipleColon() {
+		String annotation = "iam.amazonaws.com/role:arn:aws:iam::12345678:role/role-name,key1:val1:val2:val3," +
+				"key2:val4::val5:val6::val7:val8";
+		Map<String, String> annotations = PropertyParserUtils.getAnnotations(annotation);
+		assertFalse(annotations.isEmpty());
+		assertTrue(annotations.size() == 3);
+		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
+		assertTrue(annotations.get("iam.amazonaws.com/role").equals("arn:aws:iam::12345678:role/role-name"));
+		assertTrue(annotations.containsKey("key1"));
+		assertTrue(annotations.get("key1").equals("val1:val2:val3"));
+		assertTrue(annotations.containsKey("key2"));
+		assertTrue(annotations.get("key2").equals("val4::val5:val6::val7:val8"));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
