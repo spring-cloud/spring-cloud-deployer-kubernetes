@@ -28,6 +28,8 @@ import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceAccount;
+import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -378,6 +380,42 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		testAppDeployer.undeploy(deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDeploymentServiceAccountName() {
+		log.info("Testing {}...", "DeploymentServiceAccountName");
+
+		ServiceAccount deploymentServiceAccount =
+				new ServiceAccountBuilder().withNewMetadata().withName("appsa").endMetadata().build();
+
+		kubernetesClient.serviceAccounts().create(deploymentServiceAccount);
+
+		String serviceAccountName = deploymentServiceAccount.getMetadata().getName();
+
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+		deployProperties.setDeploymentServiceAccountName(serviceAccountName);
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+				containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication());
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = appDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.serviceAccounts().delete(deploymentServiceAccount);
 	}
 
 	@Override

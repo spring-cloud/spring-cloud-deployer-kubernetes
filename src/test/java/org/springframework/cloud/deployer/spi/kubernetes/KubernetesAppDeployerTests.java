@@ -36,6 +36,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Unit tests for {@link KubernetesAppDeployer}
@@ -233,7 +234,7 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
-	public void deployWithImagePullSecretDeploymentProperty() throws Exception {
+	public void deployWithImagePullSecretDeploymentProperty() {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		Map<String, String> props = new HashMap<>();
@@ -249,7 +250,7 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
-	public void deployWithImagePullSecretDeployerProperty() throws Exception {
+	public void deployWithImagePullSecretDeployerProperty() {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
@@ -262,6 +263,57 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
 		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcred");
+	}
+
+	@Test
+	public void deployWithDeploymentServiceAccountNameDeploymentProperties() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.deploymentServiceAccountName", "myserviceaccount");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName().equals("myserviceaccount"));
+	}
+
+	@Test
+	public void deployWithDeploymentServiceAccountNameDeployerProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setDeploymentServiceAccountName("myserviceaccount");
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName().equals("myserviceaccount"));
+	}
+
+	@Test
+	public void deployWithDeploymentServiceAccountNameDeploymentPropertyOverride() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.deploymentServiceAccountName", "overridesan");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setDeploymentServiceAccountName("defaultsan");
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName().equals("overridesan"));
 	}
 
 	private Resource getResource() {

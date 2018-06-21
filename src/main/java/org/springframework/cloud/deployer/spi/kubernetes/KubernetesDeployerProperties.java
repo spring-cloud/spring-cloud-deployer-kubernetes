@@ -296,6 +296,10 @@ public class KubernetesDeployerProperties {
 	 */
 	private boolean createJob = false;
 
+	/**
+	 * Service account name to use for app deployments
+	 */
+	private String deploymentServiceAccountName;
 
 	public String getNamespace() {
 		return namespace;
@@ -578,5 +582,13 @@ public class KubernetesDeployerProperties {
 
 	public void setCreateJob(boolean createJob) {
 		this.createJob = createJob;
+	}
+
+	public String getDeploymentServiceAccountName() {
+		return deploymentServiceAccountName;
+	}
+
+	public void setDeploymentServiceAccountName(String deploymentServiceAccountName) {
+		this.deploymentServiceAccountName = deploymentServiceAccountName;
 	}
 }

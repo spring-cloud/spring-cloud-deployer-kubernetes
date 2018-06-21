@@ -177,6 +177,12 @@ public class AbstractKubernetesDeployer {
 			podSpec.withRestartPolicy("Never");
 		}
 
+		String deploymentServiceAcccountName = getDeploymentServiceAccountName(request);
+
+		if (deploymentServiceAcccountName != null) {
+			podSpec.withServiceAccountName(deploymentServiceAcccountName);
+		}
+
 		return podSpec.build();
 	}
 
@@ -427,5 +433,16 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return imagePullSecret;
+	}
+
+	private String getDeploymentServiceAccountName(AppDeploymentRequest request) {
+		String deploymentServiceAccountName =
+				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.deploymentServiceAccountName");
+
+		if (StringUtils.isEmpty(deploymentServiceAccountName)) {
+			deploymentServiceAccountName = properties.getDeploymentServiceAccountName();
+		}
+
+		return deploymentServiceAccountName;
 	}
 }
