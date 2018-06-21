@@ -20,11 +20,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,6 +36,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.HTTPHeader;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -70,8 +76,8 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, null, false);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 		assertEquals(3, container.getEnv().size());
 		EnvVar envVar1 = container.getEnv().get(0);
@@ -96,8 +102,8 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, null, false);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 		assertThat(container.getCommand()).containsExactly("echo", "arg1", "arg2");
 	}
@@ -116,8 +122,8 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, null, false);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
@@ -142,7 +148,8 @@ public class DefaultContainerFactoryTests {
 				resource, props);
 
 		//Attempting to create with an invalid integer set for a port should cause an exception to bubble up.
-		defaultContainerFactory.create("app-test", appDeploymentRequest, null, false);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		defaultContainerFactory.create(containerConfiguration);
 	}
 
 	@Test
@@ -159,8 +166,9 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, null, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
@@ -188,8 +196,9 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "shell");
 		AppDeploymentRequest appDeploymentRequestShell = new AppDeploymentRequest(definition,
 				resource, props);
-		Container containerShell = defaultContainerFactory.create("app-test",
-				appDeploymentRequestShell, null, false);
+		ContainerConfiguration shellContainerConfiguration = new ContainerConfiguration("app-test",
+				appDeploymentRequestShell);
+		Container containerShell = defaultContainerFactory.create(shellContainerConfiguration);
 		assertNotNull(containerShell);
 		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
 		assertTrue(containerShell.getArgs().size() == 0);
@@ -197,8 +206,9 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
 				resource, props);
-		Container containerExec = defaultContainerFactory.create("app-test",
-				appDeploymentRequestExec, null, false);
+		ContainerConfiguration execContainerConfiguration = new ContainerConfiguration("app-test",
+				appDeploymentRequestExec);
+		Container containerExec = defaultContainerFactory.create(execContainerConfiguration);
 		assertNotNull(containerExec);
 		assertTrue(containerExec.getEnv().size() == 1);
 		assertTrue(containerExec.getArgs().get(0).equals("--foo.bar.baz=test"));
@@ -206,8 +216,9 @@ public class DefaultContainerFactoryTests {
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "boot");
 		AppDeploymentRequest appDeploymentRequestBoot = new AppDeploymentRequest(definition,
 				resource, props, Arrays.asList("--arg1=val1", "--arg2=val2"));
-		Container containerBoot = defaultContainerFactory.create("app-test",
-				appDeploymentRequestBoot, null, false);
+		ContainerConfiguration bootContainerConfiguration = new ContainerConfiguration("app-test",
+				appDeploymentRequestBoot);
+		Container containerBoot = defaultContainerFactory.create(bootContainerConfiguration);
 		assertNotNull(containerBoot);
 		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
 		assertTrue(containerBoot.getEnv().get(0).getValue().equals(new ObjectMapper().writeValueAsString(appProps)));
@@ -233,7 +244,8 @@ public class DefaultContainerFactoryTests {
 					+ "]");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, props);
 
-		Container container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, false);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
 				new VolumeMount("/test/hostPath", "testhostpath", null, null),
@@ -256,7 +268,9 @@ public class DefaultContainerFactoryTests {
 						+ "{name: 'testpvc', mountPath: '/test/pvc/overridden'}, "
 						+ "{name: 'testnfs', mountPath: '/test/nfs/overridden', readOnly: 'true'}"
 					+ "]");
-		container = defaultContainerFactory.create("app-test", appDeploymentRequest, null, false);
+
+		containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
+		container = defaultContainerFactory.create(containerConfiguration);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
 				new VolumeMount("/test/hostPath", "testhostpath", false, null),
@@ -280,8 +294,10 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, defaultPort, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(defaultPort)
+				.withHostNetwork(true);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -311,8 +327,10 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, defaultPort, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(defaultPort);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -342,8 +360,10 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, defaultPort, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(defaultPort);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -373,8 +393,10 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, defaultPort, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(defaultPort);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
@@ -402,8 +424,10 @@ public class DefaultContainerFactoryTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
-		Container container = defaultContainerFactory.create("app-test",
-				appDeploymentRequest, defaultPort, true);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(defaultPort);
+		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
@@ -414,8 +438,92 @@ public class DefaultContainerFactoryTests {
 		assertTrue(8080 == container.getReadinessProbe().getHttpGet().getPort().getIntVal());
 	}
 
+	@Test
+	public void testProbeCredentialsSecret() throws Exception {
+		Secret secret = randomSecret();
+		String secretName = secret.getMetadata().getName();
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeCredentialsSecret", secretName);
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(8080)
+				.withProbeCredentialsSecret(secret);
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(new KubernetesDeployerProperties());
+		Container container = containerFactory.create(containerConfiguration);
+
+		String credentials = containerConfiguration.getProbeCredentialsSecret().getData()
+				.get(ProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME);
+
+		HTTPHeader livenessProbeHeader = container.getLivenessProbe().getHttpGet().getHttpHeaders().get(0);
+		assertEquals(ProbeCreator.AUTHORIZATION_HEADER_NAME, livenessProbeHeader.getName());
+		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, livenessProbeHeader.getValue());
+
+		HTTPHeader readinessProbeHeader = container.getReadinessProbe().getHttpGet().getHttpHeaders().get(0);
+		assertEquals(ProbeCreator.AUTHORIZATION_HEADER_NAME, readinessProbeHeader.getName());
+		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, readinessProbeHeader.getValue());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testProbeCredentialsInvalidSecret() throws Exception {
+		Secret secret = randomSecret();
+		secret.setData(Collections.singletonMap("unexpectedkey", "dXNlcjpwYXNz"));
+
+		String secretName = secret.getMetadata().getName();
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeCredentialsSecret", secretName);
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(8080)
+				.withProbeCredentialsSecret(secret);
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(new KubernetesDeployerProperties());
+		containerFactory.create(containerConfiguration);
+
+		fail();
+	}
+
+	@Test
+	public void testProbeHeadersWithoutAuth() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource());
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(8080);
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(new KubernetesDeployerProperties());
+		Container container = containerFactory.create(containerConfiguration);
+
+		assertTrue("Liveness probe should not contain any HTTP headers",
+				container.getLivenessProbe().getHttpGet().getHttpHeaders().isEmpty());
+		assertTrue("Readiness probe should not contain any HTTP headers",
+				container.getReadinessProbe().getHttpGet().getHttpHeaders().isEmpty());
+	}
+
 	private Resource getResource() {
 		return new DockerResource(
 				"springcloud/spring-cloud-deployer-spi-test-app:latest");
+	}
+
+	private Secret randomSecret() {
+		String secretName = "secret-" + UUID.randomUUID().toString().substring(0, 18);
+		String secretValue = "dXNlcjpwYXNz"; // base64 encoded string of: user:pass
+
+		ObjectMeta objectMeta = new ObjectMeta();
+		objectMeta.setName(secretName);
+
+		Secret secret = new Secret();
+		secret.setData(Collections.singletonMap(ProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME, secretValue));
+		secret.setMetadata(objectMeta);
+
+		return secret;
 	}
 }

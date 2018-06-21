@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@ import io.fabric8.kubernetes.api.model.Container;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author David Turanski
+ * @author Chris Schaefer
  */
 public interface ContainerFactory {
-
 	/**
 	 * @deprecated use create(String appId, AppDeploymentRequest request, Integer externalPort,boolean hostNetwork).
 	 */
@@ -38,12 +38,22 @@ public interface ContainerFactory {
 
 	/**
 	 *
+	 * @deprecated use create(ContainerConfiguration containerConfiguration)
+	 *
 	 * @param appId the application Id
 	 * @param request the {@link AppDeploymentRequest}
 	 * @param externalPort the external port
 	 * @param hostNetwork true if the application should use the host network
 	 * @return a {@link Container}
 	 */
+	@Deprecated
 	Container create(String appId, AppDeploymentRequest request, Integer externalPort, boolean hostNetwork);
 
+	/**
+	 * Creates a {@link Container} using configuration from the provided {@link ContainerConfiguration}.
+	 *
+	 * @param containerConfiguration the {@link ContainerConfiguration}
+	 * @return a {@link Container}
+	 */
+	Container create(ContainerConfiguration containerConfiguration);
 }

@@ -21,9 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
-import io.fabric8.kubernetes.api.model.Probe;
-import io.fabric8.kubernetes.api.model.ProbeBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,11 +69,24 @@ public class DefaultContainerFactory implements ContainerFactory {
 	@Deprecated
 	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
 		boolean hostNetwork) {
-		return this.create(appId, request, port, hostNetwork);
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, request)
+				.withHostNetwork(hostNetwork)
+				.withExternalPort(port);
+		return this.create(containerConfiguration);
 	}
 
 	@Override
+	@Deprecated
 	public Container create(String appId, AppDeploymentRequest request, Integer port, boolean hostNetwork) {
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, request)
+				.withHostNetwork(hostNetwork)
+				.withExternalPort(port);
+		return this.create(containerConfiguration);
+	}
+
+	@Override
+	public Container create(ContainerConfiguration containerConfiguration) {
+		AppDeploymentRequest request = containerConfiguration.getAppDeploymentRequest();
 
 		String image;
 		try {
@@ -142,11 +153,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		ContainerBuilder container = new ContainerBuilder();
-		container.withName(appId).withImage(image).withEnv(envVars).withArgs(appArgs)
+		container.withName(containerConfiguration.getAppId()).withImage(image).withEnv(envVars).withArgs(appArgs)
 			.withVolumeMounts(getVolumeMounts(request));
 
+		Integer port = containerConfiguration.getExternalPort();
+
 		if (port != null) {
-			if (hostNetwork) {
+			if (containerConfiguration.isHostNetwork()) {
 				container.addNewPort().withContainerPort(port).withHostPort(port).endPort();
 			}
 			else {
@@ -156,11 +169,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 		List<Integer> additionalPorts = getContainerPorts(request);
 
-		createProbes(request, container, port, additionalPorts);
+		createProbes(request, container, port, additionalPorts, containerConfiguration.getProbeCredentialsSecret());
 
 		if (!additionalPorts.isEmpty()) {
 			for (Integer containerPort : additionalPorts) {
-				if (hostNetwork) {
+				if (containerConfiguration.isHostNetwork()) {
 					container.addNewPort().withContainerPort(containerPort).withHostPort(containerPort).endPort();
 				}
 				else {
@@ -324,7 +337,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	}
 
 	private void createProbes(AppDeploymentRequest request, ContainerBuilder container, Integer port,
-							  List<Integer> additionalPorts) {
+							  List<Integer> additionalPorts, Secret probeCredentialsSecret) {
 		Integer livenessPort = getProbePort(request, port, properties.getLivenessProbePort(), "liveness");
 		Integer readinessPort = getProbePort(request, port, properties.getReadinessProbePort(), "readiness");
 
@@ -340,14 +353,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 			container.withReadinessProbe(
 					new ProbeCreator(readinessPort, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
 							properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
-							request.getDeploymentProperties()).create());
+							request.getDeploymentProperties()).withProbeCredentialsSecret(probeCredentialsSecret).create());
 		}
 
 		if (livenessPort != null) {
 			container.withLivenessProbe(
 					new ProbeCreator(livenessPort, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
 							properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
-							request.getDeploymentProperties()).create());
+							request.getDeploymentProperties()).withProbeCredentialsSecret(probeCredentialsSecret).create());
 		}
 	}
 
@@ -366,59 +379,5 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		return probePort;
-	}
-
-	/**
-	 * Create a readiness/liveness probe overriding any value that is provided as a deployment property.
-	 */
-	private static class ProbeCreator {
-
-		static final String KUBERNETES_DEPLOYER_PREFIX = "spring.cloud.deployer.kubernetes";
-
-		Integer externalPort;
-		String endpoint;
-		int timeout;
-		int initialDelay;
-		int period;
-
-		ProbeCreator(Integer externalPort, String endpoint, int timeout, int initialDelay, int period, String prefix,
-			Map<String, String> deployProperties) {
-			this.externalPort = externalPort;
-			if (deployProperties.containsKey(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbePath")) {
-				this.endpoint = String
-					.valueOf(deployProperties.get(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbePath").trim());
-			}
-			else {
-				this.endpoint = endpoint;
-			}
-			if (deployProperties.containsKey(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbeTimeout")) {
-				this.timeout = Integer
-					.valueOf(deployProperties.get(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbeTimeout").trim());
-			}
-			else {
-				this.timeout = timeout;
-			}
-			if (deployProperties.containsKey(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbeDelay")) {
-				this.initialDelay = Integer
-					.valueOf(deployProperties.get(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbeDelay").trim());
-			}
-			else {
-				this.initialDelay = initialDelay;
-			}
-			if (deployProperties.containsKey(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbePeriod")) {
-				this.period = Integer
-					.valueOf(deployProperties.get(KUBERNETES_DEPLOYER_PREFIX + "." + prefix + "ProbePeriod").trim());
-			}
-			else {
-				this.period = period;
-			}
-		}
-
-		Probe create() {
-			return new ProbeBuilder()
-				.withHttpGet(new HTTPGetActionBuilder().withPath(endpoint).withNewPort(externalPort).build())
-				.withTimeoutSeconds(timeout).withInitialDelaySeconds(initialDelay).withPeriodSeconds(period).build();
-
-		}
 	}
 }
