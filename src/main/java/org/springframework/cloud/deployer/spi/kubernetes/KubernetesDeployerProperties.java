@@ -197,6 +197,11 @@ public class KubernetesDeployerProperties {
 	private Integer readinessProbePort = null;
 
 	/**
+	 * The secret name containing the credentials to use when accessing secured probe endpoints.
+	 */
+	private String probeCredentialsSecret;
+
+	/**
 	 * Memory and CPU limits (i.e. maximum needed values) to allocate for a Pod.
 	 */
 	private Resources limits = new Resources();
@@ -395,6 +400,14 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessProbePort(Integer readinessProbePort) {
 		this.readinessProbePort = readinessProbePort;
+	}
+
+	public String getProbeCredentialsSecret() {
+		return probeCredentialsSecret;
+	}
+
+	public void setProbeCredentialsSecret(String probeCredentialsSecret) {
+		this.probeCredentialsSecret = probeCredentialsSecret;
 	}
 
 	public StatefulSet getStatefulSet() {

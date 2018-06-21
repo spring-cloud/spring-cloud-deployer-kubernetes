@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -147,7 +148,13 @@ public class AbstractKubernetesDeployer {
 		}
 
 		boolean hostNetwork = getHostNetwork(request);
-		Container container = containerFactory.create(appId, request, port, hostNetwork);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, request)
+				.withProbeCredentialsSecret(getProbeCredentialsSecret(request))
+				.withExternalPort(port)
+				.withHostNetwork(hostNetwork);
+
+		Container container = containerFactory.create(containerConfiguration);
 
 		// add memory and cpu resource limits
 		ResourceRequirements req = new ResourceRequirements();
@@ -444,5 +451,16 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return deploymentServiceAccountName;
+
+	private Secret getProbeCredentialsSecret(AppDeploymentRequest request) {
+		Secret secret = null;
+		String probeCredentialsSecret = "spring.cloud.deployer.kubernetes.probeCredentialsSecret";
+
+		if (request.getDeploymentProperties().containsKey(probeCredentialsSecret)) {
+			String secretName = request.getDeploymentProperties().get(probeCredentialsSecret);
+			secret = client.secrets().withName(secretName).get();
+		}
+
+		return secret;
 	}
 }
