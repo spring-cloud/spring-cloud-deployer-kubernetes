@@ -132,8 +132,7 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
-	public void createStatufulSet() throws Exception {
-
+	public void createStatefulSet() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
@@ -146,13 +145,9 @@ public class KubernetesAppDeployerTests {
 
 		String statefulSetJson = deployer.createStatefulSet(appId, appDeploymentRequest, idMap, 8080);
 
-		Map<String, Object> statefulSetMap = objectMapper.readValue(statefulSetJson, HashMap.class);
-
-		Map<String, Object> specMap = (Map<String, Object>) statefulSetMap.get("spec");
-		assertThat(specMap.get("podManagementPolicy")).isEqualTo("Parallel");
-
 		StatefulSet statefulSet = objectMapper.readValue(statefulSetJson, StatefulSet.class);
 
+		assertThat(statefulSet.getSpec().getPodManagementPolicy()).isEqualTo("Parallel");
 		assertThat(statefulSet.getSpec().getReplicas()).isEqualTo(3);
 		assertThat(statefulSet.getSpec().getServiceName()).isEqualTo(appId);
 		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
@@ -170,7 +165,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(container.getName()).isEqualTo(appId);
 		assertThat(container.getPorts().get(0).getContainerPort()).isEqualTo(8080);
-		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart().toString());
+		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart());
 
 		PersistentVolumeClaim pvc = statefulSet.getSpec().getVolumeClaimTemplates().get(0);
 		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);
@@ -182,8 +177,7 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
-	public void createStatufulSetWithOverridingRequest() throws Exception {
-
+	public void createStatefulSetWithOverridingRequest() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
@@ -198,13 +192,9 @@ public class KubernetesAppDeployerTests {
 
 		String statefulSetJson = deployer.createStatefulSet(appId, appDeploymentRequest, idMap, 8080);
 
-		Map<String, Object> statefulSetMap = objectMapper.readValue(statefulSetJson, HashMap.class);
-
-		Map<String, Object> specMap = (Map<String, Object>) statefulSetMap.get("spec");
-		assertThat(specMap.get("podManagementPolicy")).isEqualTo("Parallel");
-
 		StatefulSet statefulSet = objectMapper.readValue(statefulSetJson, StatefulSet.class);
 
+		assertThat(statefulSet.getSpec().getPodManagementPolicy()).isEqualTo("Parallel");
 		assertThat(statefulSet.getSpec().getReplicas()).isEqualTo(3);
 		assertThat(statefulSet.getSpec().getServiceName()).isEqualTo(appId);
 		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
@@ -222,7 +212,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(container.getName()).isEqualTo(appId);
 		assertThat(container.getPorts().get(0).getContainerPort()).isEqualTo(8080);
-		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart().toString());
+		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart());
 
 		PersistentVolumeClaim pvc = statefulSet.getSpec().getVolumeClaimTemplates().get(0);
 		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);

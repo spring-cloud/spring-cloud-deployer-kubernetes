@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -120,7 +119,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			int externalPort = configureExternalPort(request);
 
 			String indexedProperty = request.getDeploymentProperties().get(INDEXED_PROPERTY_KEY);
-			boolean indexed = (indexedProperty != null) ? Boolean.valueOf(indexedProperty).booleanValue() : false;
+			boolean indexed = (indexedProperty != null) ? Boolean.valueOf(indexedProperty) : false;
 
 			if (indexed) {
 				Map<String, String> idMap = createIdMap(appId, request);
@@ -335,7 +334,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				.endResources().endSpec().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata();
 
-		PodSpec podSpec = createPodSpec(appId, request, Integer.valueOf(externalPort), false);
+		PodSpec podSpec = createPodSpec(appId, request, externalPort, false);
 
 		podSpec.getVolumes().add(new VolumeBuilder().withName("config").withNewEmptyDir().endEmptyDir().build());
 
@@ -345,35 +344,22 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		podSpec.getInitContainers().add(createInitContainer());
 
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
-			.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
-			.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
-			.withReplicas(replicas).withNewTemplate().withNewMetadata().withLabels(idMap)
-			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
-			.endMetadata().withSpec(podSpec).endTemplate().build();
+				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
+				.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
+				.withPodManagementPolicy("Parallel").withReplicas(replicas).withNewTemplate().withNewMetadata()
+				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(podSpec)
+				.endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata()
 				.withApiVersion(statefulSetEndpoint.getVersion()).withSpec(spec).build();
 
-		Map<String, Object> statefulSetMap = null;
 		try {
 			String ssString = objectMapper.writeValueAsString(statefulSet);
-			statefulSetMap = objectMapper.readValue(ssString, HashMap.class);
-		}
-		catch (JsonProcessingException e) {
-			logger.error("Could not create StatefulSet.", e);
+			return objectMapper.writeValueAsString(objectMapper.readValue(ssString, HashMap.class));
 		}
 		catch (IOException e) {
 			logger.error("Could not create StatefulSet.", e);
-		}
-
-		Map<String, Object> specMap = (Map) statefulSetMap.get("spec");
-		specMap.put("podManagementPolicy", "Parallel");
-
-		try {
-			return objectMapper.writeValueAsString(statefulSetMap);
-		}
-		catch (JsonProcessingException e) {
 			throw new RuntimeException(e);
 		}
 	}
