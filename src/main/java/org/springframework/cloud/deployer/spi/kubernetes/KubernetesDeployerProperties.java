@@ -158,7 +158,7 @@ public class KubernetesDeployerProperties {
 	 * Path that app container has to respond to for liveness check.
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private String livenessProbePath = "/health";
+	private String livenessProbePath;
 
 	/**
 	 * Port that app container has to respond on for liveness check.
@@ -189,7 +189,7 @@ public class KubernetesDeployerProperties {
 	 * Path that app container has to respond to for readiness check.
 	 */
 	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
-	private String readinessProbePath = "/info";
+	private String readinessProbePath;
 
 	/**
 	 * Port that app container has to respond on for readiness check.

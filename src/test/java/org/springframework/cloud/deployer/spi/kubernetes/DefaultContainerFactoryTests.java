@@ -439,6 +439,124 @@ public class DefaultContainerFactoryTests {
 	}
 
 	@Test
+	public void createProbesWithDefaultEndpoints() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	@Test
+	public void createProbesWithBoot2Endpoints() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.bootMajorVersion", "2");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	@Test
+	public void createProbesWithOverrides() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessProbePath", "/liveness");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessProbePath", "/readiness");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	@Test
+	public void createProbesWithPropertyOverrides() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessProbePath("/readiness");
+		kubernetesDeployerProperties.setLivenessProbePath("/liveness");
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, null);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	@Test
 	public void testProbeCredentialsSecret() throws Exception {
 		Secret secret = randomSecret();
 		String secretName = secret.getMetadata().getName();

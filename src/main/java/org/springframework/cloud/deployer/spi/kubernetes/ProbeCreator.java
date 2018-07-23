@@ -28,39 +28,34 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Create a readiness/liveness probe overriding any value that is provided as a deployment property.
+ * Base class for creating Probe's
+ *
+ * @author Chris Schaefer
  */
-class ProbeCreator {
-	private static final String KUBERNETES_DEPLOYER_PREFIX = "spring.cloud.deployer.kubernetes";
+abstract class ProbeCreator {
+	protected static final String KUBERNETES_DEPLOYER_PREFIX = "spring.cloud.deployer.kubernetes";
 	protected static final String AUTHORIZATION_HEADER_NAME = "Authorization";
 	protected static final String PROBE_CREDENTIALS_SECRET_KEY_NAME = "credentials";
+	protected static final String BOOT_1_READINESS_PROBE_PATH = "/info";
+	protected static final String BOOT_2_READINESS_PROBE_PATH = "/actuator" + BOOT_1_READINESS_PROBE_PATH;
+	protected static final String BOOT_1_LIVENESS_PROBE_PATH = "/health";
+	protected static final String BOOT_2_LIVENESS_PROBE_PATH = "/actuator" + BOOT_1_LIVENESS_PROBE_PATH;
+	private static final int BOOT_2_MAJOR_VERSION = 2;
 
-	private Integer externalPort;
-	private String endpoint;
-	private int timeout;
-	private int initialDelay;
-	private int period;
-	private String prefix;
-	private Map<String, String> deployProperties;
-	private Secret probeCredentialsSecret;
+	private ContainerConfiguration containerConfiguration;
 
-	ProbeCreator(Integer externalPort, String endpoint, int timeout, int initialDelay, int period, String prefix,
-				 Map<String, String> deployProperties) {
+	private KubernetesDeployerProperties kubernetesDeployerProperties;
 
-		this.externalPort = externalPort;
-		this.endpoint = endpoint;
-		this.timeout = timeout;
-		this.initialDelay = initialDelay;
-		this.period = period;
-		this.prefix = prefix;
-		this.deployProperties = deployProperties;
+	ProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
+			ContainerConfiguration containerConfiguration) {
+		this.containerConfiguration = containerConfiguration;
+		this.kubernetesDeployerProperties = kubernetesDeployerProperties;
 	}
 
 	Probe create() {
-		setPropertyOverrides();
-
-		HTTPGetActionBuilder httpGetActionBuilder = new HTTPGetActionBuilder().withPath(endpoint)
-				.withNewPort(externalPort);
+		HTTPGetActionBuilder httpGetActionBuilder = new HTTPGetActionBuilder()
+				.withPath(getProbePath())
+				.withNewPort(getPort());
 
 		List<HTTPHeader> httpHeaders = getHttpHeaders();
 
@@ -70,36 +65,46 @@ class ProbeCreator {
 
 		return new ProbeBuilder()
 				.withHttpGet(httpGetActionBuilder.build())
-				.withTimeoutSeconds(timeout).withInitialDelaySeconds(initialDelay).withPeriodSeconds(period).build();
+				.withTimeoutSeconds(getTimeout())
+				.withInitialDelaySeconds(getInitialDelay())
+				.withPeriodSeconds(getPeriod())
+				.build();
 	}
 
-	ProbeCreator withProbeCredentialsSecret(Secret probeCredentialsSecret) {
-		this.probeCredentialsSecret = probeCredentialsSecret;
-		return this;
+	protected abstract String getProbePath();
+
+	protected abstract Integer getPort();
+
+	protected abstract int getTimeout();
+
+	protected abstract int getInitialDelay();
+
+	protected abstract int getPeriod();
+
+	protected KubernetesDeployerProperties getKubernetesDeployerProperties() {
+		return kubernetesDeployerProperties;
 	}
 
-	private void setPropertyOverrides() {
-		String probePropertyPrefix = KUBERNETES_DEPLOYER_PREFIX + "." + prefix;
+	protected Map<String, String> getDeploymentProperties() {
+		return containerConfiguration.getAppDeploymentRequest().getDeploymentProperties();
+	}
 
-		String probePathKey = probePropertyPrefix + "ProbePath";
-		if (deployProperties.containsKey(probePathKey)) {
-			this.endpoint = deployProperties.get(probePathKey);
+	protected Integer getDefaultPort() {
+		return containerConfiguration.getExternalPort();
+	}
+
+	protected boolean useBoot2ProbePath() {
+		String bootMajorVersionProperty = KUBERNETES_DEPLOYER_PREFIX + ".bootMajorVersion";
+
+		if (getDeploymentProperties().containsKey(bootMajorVersionProperty)) {
+			Integer bootMajorVersion = Integer.valueOf(getDeploymentProperties().get(bootMajorVersionProperty));
+
+			if (bootMajorVersion == BOOT_2_MAJOR_VERSION) {
+				return true;
+			}
 		}
 
-		String probeTimeoutKey = probePropertyPrefix + "ProbeTimeout";
-		if (deployProperties.containsKey(probeTimeoutKey)) {
-			this.timeout = Integer.valueOf(deployProperties.get(probeTimeoutKey));
-		}
-
-		String probeDelayKey = probePropertyPrefix + "ProbeDelay";
-		if (deployProperties.containsKey(probeDelayKey)) {
-			this.initialDelay = Integer.valueOf(deployProperties.get(probeDelayKey));
-		}
-
-		String probePeriodKey = probePropertyPrefix + "ProbePeriod";
-		if (deployProperties.containsKey(probePeriodKey)) {
-			this.period = Integer.valueOf(deployProperties.get(probePeriodKey));
-		}
+		return false;
 	}
 
 	private List<HTTPHeader> getHttpHeaders() {
@@ -116,6 +121,8 @@ class ProbeCreator {
 
 	private HTTPHeader getAuthorizationHeader() {
 		HTTPHeader httpHeader = null;
+
+		Secret probeCredentialsSecret = containerConfiguration.getProbeCredentialsSecret();
 
 		if (probeCredentialsSecret != null) {
 			Assert.isTrue(probeCredentialsSecret.getData().containsKey(PROBE_CREDENTIALS_SECRET_KEY_NAME),

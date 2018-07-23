@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,9 +36,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -156,23 +158,21 @@ public class DefaultContainerFactory implements ContainerFactory {
 		container.withName(containerConfiguration.getAppId()).withImage(image).withEnv(envVars).withArgs(appArgs)
 			.withVolumeMounts(getVolumeMounts(request));
 
-		Integer port = containerConfiguration.getExternalPort();
+		Set<Integer> ports = new HashSet<>();
 
-		if (port != null) {
-			if (containerConfiguration.isHostNetwork()) {
-				container.addNewPort().withContainerPort(port).withHostPort(port).endPort();
-			}
-			else {
-				container.addNewPort().withContainerPort(port).endPort();
-			}
+		Integer defaultPort = containerConfiguration.getExternalPort();
+
+		if (defaultPort != null) {
+			ports.add(defaultPort);
 		}
 
-		List<Integer> additionalPorts = getContainerPorts(request);
+		ports.addAll(getContainerPorts(request));
 
-		createProbes(request, container, port, additionalPorts, containerConfiguration.getProbeCredentialsSecret());
+		configureReadinessProbe(containerConfiguration, container, ports);
+		configureLivenessProbe(containerConfiguration, container, ports);
 
-		if (!additionalPorts.isEmpty()) {
-			for (Integer containerPort : additionalPorts) {
+		if (!ports.isEmpty()) {
+			for (Integer containerPort : ports) {
 				if (containerConfiguration.isHostNetwork()) {
 					container.addNewPort().withContainerPort(containerPort).withHostPort(containerPort).endPort();
 				}
@@ -189,6 +189,30 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		return container.build();
+	}
+
+	private void configureReadinessProbe(ContainerConfiguration containerConfiguration,
+						ContainerBuilder containerBuilder, Set<Integer> ports) {
+		Probe readinessProbe = new ReadinessProbeCreator(properties, containerConfiguration).create();
+
+		Integer readinessProbePort = readinessProbe.getHttpGet().getPort().getIntVal();
+
+		if (readinessProbePort != null) {
+			containerBuilder.withReadinessProbe(readinessProbe);
+			ports.add(readinessProbePort);
+		}
+	}
+
+	private void configureLivenessProbe(ContainerConfiguration containerConfiguration,
+						ContainerBuilder containerBuilder, Set<Integer> ports) {
+		Probe livenessProbe = new LivenessProbeCreator(properties, containerConfiguration).create();
+
+		Integer livenessProbePort = livenessProbe.getHttpGet().getPort().getIntVal();
+
+		if (livenessProbePort != null) {
+			containerBuilder.withLivenessProbe(livenessProbe);
+			ports.add(livenessProbePort);
+		}
 	}
 
 	/**
@@ -334,50 +358,5 @@ public class DefaultContainerFactory implements ContainerFactory {
 			entryPointStyle = properties.getEntryPointStyle();
 		}
 		return entryPointStyle;
-	}
-
-	private void createProbes(AppDeploymentRequest request, ContainerBuilder container, Integer port,
-							  List<Integer> additionalPorts, Secret probeCredentialsSecret) {
-		Integer livenessPort = getProbePort(request, port, properties.getLivenessProbePort(), "liveness");
-		Integer readinessPort = getProbePort(request, port, properties.getReadinessProbePort(), "readiness");
-
-		if (livenessPort != null && !additionalPorts.contains(livenessPort) && !livenessPort.equals(port)) {
-			additionalPorts.add(livenessPort);
-		}
-
-		if (readinessPort != null && !additionalPorts.contains(readinessPort) && !readinessPort.equals(port)) {
-			additionalPorts.add(readinessPort);
-		}
-
-		if (readinessPort != null) {
-			container.withReadinessProbe(
-					new ProbeCreator(readinessPort, properties.getReadinessProbePath(), properties.getReadinessProbeTimeout(),
-							properties.getReadinessProbeDelay(), properties.getReadinessProbePeriod(), "readiness",
-							request.getDeploymentProperties()).withProbeCredentialsSecret(probeCredentialsSecret).create());
-		}
-
-		if (livenessPort != null) {
-			container.withLivenessProbe(
-					new ProbeCreator(livenessPort, properties.getLivenessProbePath(), properties.getLivenessProbeTimeout(),
-							properties.getLivenessProbeDelay(), properties.getLivenessProbePeriod(), "liveness",
-							request.getDeploymentProperties()).withProbeCredentialsSecret(probeCredentialsSecret).create());
-		}
-	}
-
-	private Integer getProbePort(AppDeploymentRequest request, Integer defaultPort, Integer propertiesProbePort, String prefix) {
-		Integer probePort = null;
-		String probeKey = "spring.cloud.deployer.kubernetes." + prefix + "ProbePort";
-
-		if (request.getDeploymentProperties().containsKey(probeKey)) {
-			probePort = Integer.parseInt(request.getDeploymentProperties().get(probeKey));
-		}
-		else if (propertiesProbePort != null) {
-			probePort = propertiesProbePort;
-		}
-		else if (defaultPort != null) {
-			probePort = defaultPort;
-		}
-
-		return probePort;
 	}
 }
