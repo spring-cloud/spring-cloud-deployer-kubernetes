@@ -55,10 +55,10 @@ public class RunAbstractKubernetesDeployerTests {
 	}
 
 	@Test
-	public void deduceImagePullPolicy_fallsBackToAlwaysIfOverrideNotParseable() throws Exception {
+	public void deduceImagePullPolicy_fallsBackToIfNotPresentIfOverrideNotParseable() throws Exception {
 		deploymentProperties.put("spring.cloud.deployer.kubernetes.imagePullPolicy", "not-a-real-value");
 		ImagePullPolicy pullPolicy = kubernetesDeployer.deduceImagePullPolicy(deploymentRequest);
-		assertThat(pullPolicy, is(ImagePullPolicy.Always));
+		assertThat(pullPolicy, is(ImagePullPolicy.IfNotPresent));
 	}
 
 	@Test

@@ -323,8 +323,8 @@ public class AbstractKubernetesDeployer {
 		} else {
 			pullPolicy = ImagePullPolicy.relaxedValueOf(pullPolicyOverride);
 			if (pullPolicy == null) {
-				logger.warn("Parsing of pull policy " + pullPolicyOverride + " failed, using default \"Always\".");
-				pullPolicy = ImagePullPolicy.Always;
+				logger.warn("Parsing of pull policy " + pullPolicyOverride + " failed, using default \"IfNotPresent\".");
+				pullPolicy = ImagePullPolicy.IfNotPresent;
 			}
 		}
 		logger.debug("Using imagePullPolicy " + pullPolicy);
