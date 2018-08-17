@@ -248,17 +248,17 @@ public class DefaultContainerFactoryTests {
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
-				new VolumeMount("/test/hostPath", "testhostpath", null, null),
-				new VolumeMount("/test/pvc", "testpvc", true, null),
-				new VolumeMount("/test/nfs", "testnfs", null, null));
+				new VolumeMount("/test/hostPath", null, "testhostpath", null, null),
+				new VolumeMount("/test/pvc", null, "testpvc", true, null),
+				new VolumeMount("/test/nfs", null, "testnfs", null, null));
 
 		// test volume mounts defined as app deployment property, overriding the deployer property
 		kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties
 				.setVolumeMounts(Stream.of(
-						new VolumeMount("/test/hostPath", "testhostpath", false, null),
-						new VolumeMount("/test/pvc", "testpvc", true, null),
-						new VolumeMount("/test/nfs", "testnfs", false, null))
+						new VolumeMount("/test/hostPath", null, "testhostpath", false, null),
+						new VolumeMount("/test/pvc", null, "testpvc", true, null),
+						new VolumeMount("/test/nfs", null, "testnfs", false, null))
 				.collect(Collectors.toList()));
 		defaultContainerFactory = new DefaultContainerFactory(kubernetesDeployerProperties);
 
@@ -273,9 +273,9 @@ public class DefaultContainerFactoryTests {
 		container = defaultContainerFactory.create(containerConfiguration);
 
 		assertThat(container.getVolumeMounts()).containsOnly(
-				new VolumeMount("/test/hostPath", "testhostpath", false, null),
-				new VolumeMount("/test/pvc/overridden", "testpvc", null, null),
-				new VolumeMount("/test/nfs/overridden", "testnfs", true, null));
+				new VolumeMount("/test/hostPath", null, "testhostpath", false, null),
+				new VolumeMount("/test/pvc/overridden", null, "testpvc", null, null),
+				new VolumeMount("/test/nfs/overridden", null, "testnfs", true, null));
 	}
 
 	@Test

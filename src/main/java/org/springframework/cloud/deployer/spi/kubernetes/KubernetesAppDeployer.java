@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
@@ -26,23 +25,26 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ReplicationController;
+import io.fabric8.kubernetes.api.model.ReplicationControllerList;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
-import io.fabric8.kubernetes.api.model.extensions.Deployment;
-import io.fabric8.kubernetes.api.model.extensions.DeploymentBuilder;
-import io.fabric8.kubernetes.api.model.extensions.StatefulSet;
-import io.fabric8.kubernetes.api.model.extensions.StatefulSetBuilder;
-import io.fabric8.kubernetes.api.model.extensions.StatefulSetSpec;
-import io.fabric8.kubernetes.api.model.extensions.StatefulSetSpecBuilder;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
+import io.fabric8.kubernetes.api.model.apps.DeploymentList;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetList;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetSpec;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import okhttp3.Response;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,8 +55,6 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -76,11 +76,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	private static final String SERVER_PORT_KEY = "server.port";
 
-	private KubernetesHttpClient httpClient;
-	private StatefulSetEndpoint statefulSetEndpoint = new StatefulSetEndpoint();
-
-	private ObjectMapper objectMapper = new ObjectMapper();
-
 	protected final Log logger = LogFactory.getLog(getClass().getName());
 
 	@Autowired
@@ -93,50 +88,36 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		ContainerFactory containerFactory) {
 		this.properties = properties;
 		this.client = client;
-
-		if (client != null) {
-			httpClient = new KubernetesHttpClient(client);
-
-			String apiVersion = KubernetesHttpClient.getApiVersionForK8sVersionFromCluster(this.httpClient);
-			statefulSetEndpoint = new StatefulSetEndpoint(apiVersion, client.getNamespace());
-		}
-
 		this.containerFactory = containerFactory;
 	}
 
 	@Override
 	public String deploy(AppDeploymentRequest request) {
-
 		String appId = createDeploymentId(request);
 		logger.debug(String.format("Deploying app: %s", appId));
 
 		try {
 			AppStatus status = status(appId);
+
 			if (!status.getState().equals(DeploymentState.unknown)) {
 				throw new IllegalStateException(String.format("App '%s' is already deployed", appId));
 			}
 
 			int externalPort = configureExternalPort(request);
-
 			String indexedProperty = request.getDeploymentProperties().get(INDEXED_PROPERTY_KEY);
 			boolean indexed = (indexedProperty != null) ? Boolean.valueOf(indexedProperty) : false;
 
+			Map<String, String> idMap = createIdMap(appId, request);
+
 			if (indexed) {
-				Map<String, String> idMap = createIdMap(appId, request);
 				logger.debug(String.format("Creating Service: %s on %d with", appId, externalPort));
 				createService(appId, request, idMap, externalPort);
 
-				String statefulSetJson = createStatefulSet(appId, request, idMap, externalPort);
-
-				Response response = httpClient.post(statefulSetEndpoint.getEndpoint(), statefulSetJson);
-				if (!response.isSuccessful()) {
-					throw new RuntimeException(String.format(
-						"Create StatefulSet failed. response code %d, message %s" ,response.code(),response.message()));
-				}
+				logger.debug(String.format("Creating StatefulSet: %s", appId));
+				createStatefulSet(appId, request, idMap, externalPort);
 			}
 			else {
-				Map<String, String> idMap = createIdMap(appId, request);
-				logger.debug(String.format("Creating Service: %s on {}", appId, externalPort));
+				logger.debug(String.format("Creating Service: %s on %d", appId, externalPort));
 				createService(appId, request, idMap, externalPort);
 
 				logger.debug(String.format("Creating Deployment: %s", appId));
@@ -191,48 +172,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 						logger.debug(String.format("LoadBalancer Ingress: %s",
 							svc.getStatus().getLoadBalancer().getIngress().toString()));
 					}
-					Boolean svcDeleted = client.services().withName(appIdToDelete).delete();
-					logger.debug(String.format("Deleted Service for: %s %b", appIdToDelete, svcDeleted));
-					Boolean rcDeleted = client.replicationControllers().withName(appIdToDelete).delete();
-					if (rcDeleted) {
-						logger.debug(
-							String.format("Deleted Replication Controller for: %s %b", appIdToDelete, rcDeleted));
-					}
-					Boolean deplDeleted = client.extensions().deployments().withName(appIdToDelete).delete();
-					if (deplDeleted) {
-						logger.debug(String.format("Deleted Deployment for: %s %b", appIdToDelete, deplDeleted));
-					}
-					Response response = httpClient.delete(statefulSetEndpoint.getEndpoint(), appIdToDelete);
-					Boolean statefulSetDeleted = response.isSuccessful();
-					if (statefulSetDeleted) {
-						logger
-							.debug(String.format("Deleted StatefulSet for: %s %b", appIdToDelete, statefulSetDeleted));
-					}
 
-					Map<String, String> selector = new HashMap<>();
-					selector.put(SPRING_APP_KEY, appIdToDelete);
-					FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
-						.withLabels(selector);
-					if (podsToDelete != null && podsToDelete.list().getItems() != null) {
-						Boolean podDeleted = podsToDelete.delete();
-						logger.debug(String.format("Deleted Pods for: %s %b", appIdToDelete, podDeleted));
-					}
-					else {
-						logger.debug(String.format("No Pods to delete for: %s", appIdToDelete));
-					}
-
-					FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList, Boolean, Watch, Watcher<PersistentVolumeClaim>> pvcsToDelete = client
-						.persistentVolumeClaims().withLabels(selector);
-					if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {
-						Boolean pvcDeleted = pvcsToDelete.delete();
-						if (pvcDeleted) {
-							logger.debug(String.format("Deleted pvcs for: %s %b", appIdToDelete, pvcDeleted));
-						}
-						else {
-							logger.debug(String.format("No pvcs to delete for: %s", appIdToDelete));
-						}
-					}
-
+					deleteAllObjects(appIdToDelete);
 				}
 				catch (RuntimeException e) {
 					logger.error(e.getMessage(), e);
@@ -298,13 +239,16 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		Map<String, String> annotations = getPodAnnotations(request);
 
-		Deployment d = new DeploymentBuilder().withNewMetadata().withName(appId).withLabels(idMap)
-			.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withNewSpec().withReplicas(replicas)
-			.withNewTemplate().withNewMetadata().withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
-			.withAnnotations(annotations).endMetadata().withSpec(createPodSpec(appId, request, externalPort, false))
-			.endTemplate().endSpec().build();
+		PodSpec podSpec = createPodSpec(appId, request, externalPort, false);
 
-		return client.extensions().deployments().create(d);
+		Deployment d = new DeploymentBuilder().withNewMetadata().withName(appId).withLabels(idMap)
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withNewSpec().withNewSelector()
+				.addToMatchLabels(idMap).endSelector().withReplicas(replicas).withNewTemplate().withNewMetadata()
+				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).withAnnotations(annotations)
+				.endMetadata().withSpec(podSpec).endTemplate().endSpec()
+				.build();
+
+		return client.apps().deployments().create(d);
 	}
 
 	private int getCountFromRequest(AppDeploymentRequest request) {
@@ -314,24 +258,22 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	/**
 	 * Create a StatefulSet
-	 * @return as a Json string since the Model does not support 'podManagementPolicy' and we need to set it to
-	 * Parallel.
 	 */
-	protected String createStatefulSet(String appId, AppDeploymentRequest request, Map<String, String> idMap,
-		int externalPort) {
-
+	protected void createStatefulSet(String appId, AppDeploymentRequest request, Map<String, String> idMap,
+											int externalPort) {
 		int replicas = getCountFromRequest(request);
 
 		logger.debug(String.format("Creating StatefulSet: %s on %d with %d replicas", appId, externalPort, replicas));
 
-		Map<String, Quantity> storageResource = Collections.singletonMap("storage", new Quantity(getStatefulSetStorage(request)));
+		Map<String, Quantity> storageResource = Collections.singletonMap("storage",
+				new Quantity(getStatefulSetStorage(request)));
 
 		String storageClassName = getStatefulSetStorageClassName(request);
 
-		PersistentVolumeClaimBuilder persistentVolumeClaimBuilder = new PersistentVolumeClaimBuilder()
-				.withNewSpec().withStorageClassName(storageClassName).withAccessModes(Arrays.asList("ReadWriteOnce"))
-				.withNewResources().addToLimits(storageResource).addToRequests(storageResource)
-				.endResources().endSpec().withNewMetadata().withName(appId).withLabels(idMap)
+		PersistentVolumeClaimBuilder persistentVolumeClaimBuilder = new PersistentVolumeClaimBuilder().withNewSpec().
+				withStorageClassName(storageClassName).withAccessModes(Collections.singletonList("ReadWriteOnce"))
+				.withNewResources().addToLimits(storageResource).addToRequests(storageResource).endResources()
+				.endSpec().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata();
 
 		PodSpec podSpec = createPodSpec(appId, request, externalPort, false);
@@ -351,17 +293,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				.endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
-				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata()
-				.withApiVersion(statefulSetEndpoint.getVersion()).withSpec(spec).build();
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(spec).build();
 
-		try {
-			String ssString = objectMapper.writeValueAsString(statefulSet);
-			return objectMapper.writeValueAsString(objectMapper.readValue(ssString, HashMap.class));
-		}
-		catch (IOException e) {
-			logger.error("Could not create StatefulSet.", e);
-			throw new RuntimeException(e);
-		}
+		client.apps().statefulSets().create(statefulSet);
 	}
 
 	protected void createService(String appId, AppDeploymentRequest request, Map<String, String> idMap,
@@ -411,7 +345,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		Map<String, String> annotations = getServiceAnnotations(request);
 
-		client.services().inNamespace(client.getNamespace()).createNew().withNewMetadata().withName(appId)
+		client.services().createNew().withNewMetadata().withName(appId)
 			.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(spec.build()).done();
 	}
@@ -470,25 +404,77 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				name);
 	}
 
+	private void deleteAllObjects(String appIdToDelete) {
+		Map<String, String> labels = Collections.singletonMap(SPRING_APP_KEY, appIdToDelete);
 
-	private static class StatefulSetEndpoint {
-		private String namespace = "default";
-		private String apiVersion = "v1beta1";
+		deleteService(labels);
+		deleteReplicationController(labels);
+		deleteDeployment(labels);
+		deleteStatefulSet(labels);
+		deletePod(labels);
+		deletePvc(labels);
+	}
 
-		public StatefulSetEndpoint() {
+	private void deleteService(Map<String, String> labels) {
+		FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> servicesToDelete =
+				client.services().withLabels(labels);
+
+		if (servicesToDelete != null && servicesToDelete.list().getItems() != null) {
+			boolean servicesDeleted = servicesToDelete.delete();
+			logger.debug(String.format("Service deleted for: %s - %b", labels, servicesDeleted));
 		}
+	}
 
-		public StatefulSetEndpoint(String apiVersion, String namespace) {
-			this.apiVersion = apiVersion;
-			this.namespace = namespace;
+	private void deleteReplicationController(Map<String, String> labels) {
+		FilterWatchListDeletable<ReplicationController, ReplicationControllerList, Boolean, Watch,
+				Watcher<ReplicationController>> replicationControllersToDelete = client.replicationControllers()
+				.withLabels(labels);
+
+		if (replicationControllersToDelete != null && replicationControllersToDelete.list().getItems() != null) {
+			boolean replicationControllersDeleted = replicationControllersToDelete.delete();
+			logger.debug(String.format("ReplicationController deleted for: %s - %b", labels,
+					replicationControllersDeleted));
 		}
+	}
 
-		public String getVersion() {
-			return "apps/" + apiVersion;
+	private void deleteDeployment(Map<String, String> labels) {
+		FilterWatchListDeletable<Deployment, DeploymentList, Boolean, Watch, Watcher<Deployment>> deploymentsToDelete =
+				client.apps().deployments().withLabels(labels);
+
+		if (deploymentsToDelete != null && deploymentsToDelete.list().getItems() != null) {
+			boolean deploymentsDeleted = deploymentsToDelete.delete();
+			logger.debug(String.format("Deployment deleted for: %s - %b", labels, deploymentsDeleted));
 		}
+	}
 
-		public String getEndpoint() {
-			return String.format("apis/%s/namespaces/%s/statefulsets", getVersion(), namespace);
+	private void deleteStatefulSet(Map<String, String> labels) {
+		FilterWatchListDeletable<StatefulSet, StatefulSetList, Boolean, Watch, Watcher<StatefulSet>> ssToDelete =
+				client.apps().statefulSets().withLabels(labels);
+
+		if (ssToDelete != null && ssToDelete.list().getItems() != null) {
+			boolean ssDeleted = ssToDelete.delete();
+			logger.debug(String.format("StatefulSet deleted for: %s - %b", labels, ssDeleted));
+		}
+	}
+
+	private void deletePod(Map<String, String> labels) {
+		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+				.withLabels(labels);
+
+		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
+			boolean podsDeleted = podsToDelete.delete();
+			logger.debug(String.format("Pod deleted for: %s - %b", labels, podsDeleted));
+		}
+	}
+
+	private void deletePvc(Map<String, String> labels) {
+		FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList, Boolean, Watch,
+				Watcher<PersistentVolumeClaim>> pvcsToDelete = client.persistentVolumeClaims()
+				.withLabels(labels);
+
+		if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {
+			boolean pvcsDeleted = pvcsToDelete.delete();
+			logger.debug(String.format("PVC deleted for: %s - %b", labels, pvcsDeleted));
 		}
 	}
 }

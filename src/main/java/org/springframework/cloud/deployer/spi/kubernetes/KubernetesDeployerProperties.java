@@ -573,7 +573,7 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated as of 1.3. This property is true by default and will not be an option in future releases.
-	 * @return
+	 * @return should a deployment be created
 	 */
 	@Deprecated
 	public boolean isCreateDeployment() {

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import io.fabric8.kubernetes.api.model.Job;
+import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
@@ -122,7 +122,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		log.info("Checking Job spec annotations of {}...", taskName);
 
-		List<Job> jobs = kubernetesClient.extensions().jobs().withLabel("task-name", taskName).list().getItems();
+		List<Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
 
 		assertThat(jobs.size(), is(1));
 

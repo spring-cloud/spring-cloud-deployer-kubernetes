@@ -32,6 +32,7 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * @author Ilayaperumal Gopinathan
+ * @author Chris Schaefer
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {KubernetesConfigurationPropertiesTests.TestConfig.class}, properties = {
@@ -50,14 +51,6 @@ public class KubernetesConfigurationPropertiesTests {
 		assertEquals("testing", kubernetesClient.getNamespace());
 		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
 		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
-	}
-
-	@Test
-	public void testTrailingSlash() {
-		KubernetesHttpClient kubernetesHttpClient = new KubernetesHttpClient(kubernetesClient);
-		assertEquals("http://localhost:8090/version", kubernetesHttpClient.buildUrl("version", ""));
-		assertEquals("http://localhost:8090/version", kubernetesHttpClient.buildUrl("version", null));
-		assertEquals("http://localhost:8090/version/myAppId", kubernetesHttpClient.buildUrl("version", "myAppId"));
 	}
 
 	@Configuration

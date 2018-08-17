@@ -22,6 +22,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.batch.JobList;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import org.hashids.Hashids;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -31,10 +37,10 @@ import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.Job;
-import io.fabric8.kubernetes.api.model.JobSpec;
-import io.fabric8.kubernetes.api.model.JobSpecBuilder;
-import io.fabric8.kubernetes.api.model.JobStatus;
+import io.fabric8.kubernetes.api.model.batch.Job;
+import io.fabric8.kubernetes.api.model.batch.JobSpec;
+import io.fabric8.kubernetes.api.model.batch.JobSpecBuilder;
+import io.fabric8.kubernetes.api.model.batch.JobStatus;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -73,12 +79,14 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	public String launch(AppDeploymentRequest request) {
 		String appId = createDeploymentId(request);
 		TaskStatus status = status(appId);
+
 		if (!status.getState().equals(LaunchState.unknown)) {
 			throw new IllegalStateException("Task " + appId + " already exists with a state of " + status);
 		}
-		Map<String, String> idMap = createIdMap(appId, request);
 
+		Map<String, String> idMap = createIdMap(appId, request);
 		logger.debug(String.format("Launching pod for task: %s", appId));
+
 		try {
 			Map<String, String> podLabelMap = new HashMap<>();
 			podLabelMap.put("task-name", request.getDefinition().getName());
@@ -112,22 +120,10 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	@Override
 	public void cleanup(String id) {
 		try {
-			boolean deleted;
-			String workload;
 			if (properties.isCreateJob()) {
-				workload = "job";
-				logger.debug(String.format("Deleting %s for task: %s", workload, id));
-				deleted = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).delete();
+				deleteJob(id);
 			} else {
-				workload = "pod";
-				logger.debug(String.format("Deleting %s for task: %s", workload, id));
-				deleted = client.pods().inNamespace(client.getNamespace()).withName(id).delete();
-			}
-
-			if (deleted) {
-				logger.debug(String.format("Deleted %s successfully: %s", workload, id));
-			} else {
-				logger.debug(String.format("Delete failed for %s: %s", workload, id));
+				deletePod(id);
 			}
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -168,7 +164,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	private void launchPod(String appId, PodSpec podSpec, Map<String, String> labelMap, Map<String, String> idMap,
 						   Map<String, String> annotations) {
 		client.pods()
-				.inNamespace(client.getNamespace()).createNew()
+				.createNew()
 				.withNewMetadata()
 				.withName(appId)
 				.withLabels(labelMap)
@@ -181,15 +177,15 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap,
 						   Map<String, String> annotations) {
+		ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
+		PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
+
 		JobSpec jobSpec = new JobSpecBuilder()
-				.withTemplate(new PodTemplateSpec(
-						new ObjectMetaBuilder()
-								.withLabels(podLabelMap)
-								.addToLabels(idMap)
-								.build(),
-								podSpec)).build();
-		client.extensions().jobs()
-				.inNamespace(client.getNamespace()).createNew()
+				.withTemplate(podTemplateSpec)
+				.build();
+
+		client.batch().jobs()
+				.createNew()
 				.withNewMetadata()
 				.withName(appId)
 				.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
@@ -202,21 +198,24 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private List<String> getIdsForTaskName(String taskName) {
 		List<String> ids = new ArrayList<>();
+
 		try {
-			KubernetesResourceList resourceList;
+			KubernetesResourceList<?> resourceList;
+
 			if(properties.isCreateJob()){
-				resourceList = client.extensions().jobs().inNamespace(client.getNamespace()).withLabel("task-name", taskName).list();
+				resourceList = client.batch().jobs().withLabel("task-name", taskName).list();
 			} else {
-				resourceList = client.pods().inNamespace(client.getNamespace()).withLabel("task-name", taskName).list();
-			}
-			for (HasMetadata hasMetadata : (List<HasMetadata>)resourceList.getItems()) {
-				ids.add(hasMetadata.getMetadata().getName());
+				resourceList = client.pods().withLabel("task-name", taskName).list();
 			}
 
+			for (HasMetadata hasMetadata : resourceList.getItems()) {
+				ids.add(hasMetadata.getMetadata().getName());
+			}
 		}
 		catch (KubernetesClientException kce) {
 			logger.warn(String.format("Failed to retrieve pods for task: %s", taskName), kce);
 		}
+
 		return ids;
 	}
 
@@ -233,41 +232,49 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	TaskStatus buildTaskStatus(String id) {
 		String phase;
+
 		if(properties.isCreateJob()){
-			Job job = client.extensions().jobs().inNamespace(client.getNamespace()).withName(id).get();
+			Job job = getJob(id);
+
 			if (job == null) {
 				return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 			}
+
 			JobStatus jobStatus = job.getStatus();
+
 			if (jobStatus == null) {
 				return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 			}
+
 			boolean failed = jobStatus.getFailed() != null && jobStatus.getFailed() > 0;
 			boolean succeeded = jobStatus.getSucceeded() != null && jobStatus.getSucceeded() > 0;
+
 			phase = failed ? "Failed" : succeeded ? "Succeeded" : null;
 		} else {
-			Pod pod = client.pods().inNamespace(client.getNamespace()).withName(id).get();
+			Pod pod = getPod(id);
+
 			if (pod == null) {
 				return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 			}
+
 			PodStatus podStatus = pod.getStatus();
 			if (podStatus == null) {
 				return new TaskStatus(id, LaunchState.unknown, new HashMap<>());
 			}
+
 			phase = podStatus.getPhase();
 		}
+
 		if (phase != null) {
-			if (phase.equals("Pending")) {
-				return new TaskStatus(id, LaunchState.launching, new HashMap<>());
-			}
-			else if (phase.equals("Failed")) {
-				return new TaskStatus(id, LaunchState.failed, new HashMap<>());
-			}
-			else if (phase.equals("Succeeded")) {
-				return new TaskStatus(id, LaunchState.complete, new HashMap<>());
-			}
-			else {
-				return new TaskStatus(id, LaunchState.running, new HashMap<>());
+			switch (phase) {
+				case "Pending":
+					return new TaskStatus(id, LaunchState.launching, new HashMap<>());
+				case "Failed":
+					return new TaskStatus(id, LaunchState.failed, new HashMap<>());
+				case "Succeeded":
+					return new TaskStatus(id, LaunchState.complete, new HashMap<>());
+				default:
+					return new TaskStatus(id, LaunchState.running, new HashMap<>());
 			}
 		}
 		else {
@@ -275,4 +282,49 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 	}
 
+	private void deleteJob(String id) {
+		FilterWatchListDeletable<Job, JobList, Boolean, Watch, Watcher<Job>> jobsToDelete = client.batch().jobs()
+				.withLabel(SPRING_APP_KEY, id);
+
+		if (jobsToDelete != null && jobsToDelete.list().getItems() != null) {
+			logger.debug(String.format("Deleting Job for task: %s", id));
+			boolean jobDeleted = jobsToDelete.delete();
+			logger.debug(String.format("Job deleted for: %s - %b", id, jobDeleted));
+		}
+	}
+
+	private void deletePod(String id) {
+		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+				.withLabel(SPRING_APP_KEY, id);
+
+		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
+			logger.debug(String.format("Deleting Pod for task: %s", id));
+			boolean podsDeleted = podsToDelete.delete();
+			logger.debug(String.format("Pod deleted for: %s - %b", id, podsDeleted));
+		}
+	}
+
+	private Job getJob(String jobName) {
+		List<Job> jobs = client.batch().jobs().withLabel(SPRING_APP_KEY, jobName).list().getItems();
+
+		for (Job job : jobs) {
+			if (jobName.equals(job.getMetadata().getName())) {
+				return job;
+			}
+		}
+
+		return null;
+	}
+
+	private Pod getPod(String jobName) {
+		List<Pod> pods = client.pods().withLabel(SPRING_APP_KEY, jobName).list().getItems();
+
+		for (Pod pod : pods) {
+			if (jobName.equals((pod.getMetadata().getName()))) {
+				return pod;
+			}
+		}
+
+		return null;
+	}
 }

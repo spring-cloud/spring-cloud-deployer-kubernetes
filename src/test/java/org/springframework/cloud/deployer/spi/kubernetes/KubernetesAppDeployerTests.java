@@ -16,13 +16,11 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
-import io.fabric8.kubernetes.api.model.extensions.StatefulSet;
 import org.junit.Test;
 import org.springframework.boot.bind.YamlConfigurationFactory;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -92,8 +90,11 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
 
+		HostPathVolumeSource hostPathVolumeSource = new HostPathVolumeSourceBuilder()
+				.withPath("/test/override/hostPath").build();
+
 		assertThat(podSpec.getVolumes()).containsOnly(
-			new VolumeBuilder().withName("testhostpath").withNewHostPath("/test/override/hostPath").build(),
+			new VolumeBuilder().withName("testhostpath").withHostPath(hostPathVolumeSource).build(),
 			new VolumeBuilder().withName("testpvc").withNewPersistentVolumeClaim("testClaim", true).build(),
 			new VolumeBuilder().withName("testnfs").withNewNfs("/test/override/nfs", null, "192.168.1.1:111").build());
 	}
@@ -129,98 +130,6 @@ public class KubernetesAppDeployerTests {
 				new EnvVar("car", "caz", null),
 				new EnvVar("boo", "zoo,gnu", null),
 				new EnvVar("doo", "dar", null));
-	}
-
-	@Test
-	public void createStatefulSet() throws Exception {
-		AppDefinition definition = new AppDefinition("app-test", null);
-		Map<String, String> props = new HashMap<>();
-		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		String appId = deployer.createDeploymentId(appDeploymentRequest);
-		Map<String, String> idMap = deployer.createIdMap(appId, appDeploymentRequest);
-
-		ObjectMapper objectMapper = new ObjectMapper();
-
-		String statefulSetJson = deployer.createStatefulSet(appId, appDeploymentRequest, idMap, 8080);
-
-		StatefulSet statefulSet = objectMapper.readValue(statefulSetJson, StatefulSet.class);
-
-		assertThat(statefulSet.getSpec().getPodManagementPolicy()).isEqualTo("Parallel");
-		assertThat(statefulSet.getSpec().getReplicas()).isEqualTo(3);
-		assertThat(statefulSet.getSpec().getServiceName()).isEqualTo(appId);
-		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
-
-		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-				.containsAllEntriesOf(deployer.createIdMap(appId, appDeploymentRequest));
-		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
-
-		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
-		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels())
-				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
-
-		Container container = statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0);
-
-		assertThat(container.getName()).isEqualTo(appId);
-		assertThat(container.getPorts().get(0).getContainerPort()).isEqualTo(8080);
-		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart());
-
-		PersistentVolumeClaim pvc = statefulSet.getSpec().getVolumeClaimTemplates().get(0);
-		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);
-
-		assertThat(pvc.getSpec().getAccessModes()).containsOnly("ReadWriteOnce");
-		assertThat(pvc.getSpec().getStorageClassName()).isNull();
-		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("10Mi");
-		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("10Mi");
-	}
-
-	@Test
-	public void createStatefulSetWithOverridingRequest() throws Exception {
-		AppDefinition definition = new AppDefinition("app-test", null);
-		Map<String, String> props = new HashMap<>();
-		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
-		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName", "test");
-		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage", "1g");
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		String appId = deployer.createDeploymentId(appDeploymentRequest);
-		Map<String, String> idMap = deployer.createIdMap(appId, appDeploymentRequest);
-
-		ObjectMapper objectMapper = new ObjectMapper();
-
-		String statefulSetJson = deployer.createStatefulSet(appId, appDeploymentRequest, idMap, 8080);
-
-		StatefulSet statefulSet = objectMapper.readValue(statefulSetJson, StatefulSet.class);
-
-		assertThat(statefulSet.getSpec().getPodManagementPolicy()).isEqualTo("Parallel");
-		assertThat(statefulSet.getSpec().getReplicas()).isEqualTo(3);
-		assertThat(statefulSet.getSpec().getServiceName()).isEqualTo(appId);
-		assertThat(statefulSet.getMetadata().getName()).isEqualTo(appId);
-
-		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-				.containsAllEntriesOf(deployer.createIdMap(appId, appDeploymentRequest));
-		assertThat(statefulSet.getSpec().getSelector().getMatchLabels())
-				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
-
-		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
-		assertThat(statefulSet.getSpec().getTemplate().getMetadata().getLabels())
-				.contains(entry(KubernetesAppDeployer.SPRING_MARKER_KEY, KubernetesAppDeployer.SPRING_MARKER_VALUE));
-
-		Container container = statefulSet.getSpec().getTemplate().getSpec().getContainers().get(0);
-
-		assertThat(container.getName()).isEqualTo(appId);
-		assertThat(container.getPorts().get(0).getContainerPort()).isEqualTo(8080);
-		assertThat(container.getImage()).isEqualTo(getResource().getURI().getSchemeSpecificPart());
-
-		PersistentVolumeClaim pvc = statefulSet.getSpec().getVolumeClaimTemplates().get(0);
-		assertThat(pvc.getMetadata().getName()).isEqualTo(appId);
-
-		assertThat(pvc.getSpec().getAccessModes()).containsOnly("ReadWriteOnce");
-		assertThat(pvc.getSpec().getStorageClassName()).isEqualTo("test");
-		assertThat(pvc.getSpec().getResources().getLimits().get("storage").getAmount()).isEqualTo("1024Mi");
-		assertThat(pvc.getSpec().getResources().getRequests().get("storage").getAmount()).isEqualTo("1024Mi");
 	}
 
 	@Test
