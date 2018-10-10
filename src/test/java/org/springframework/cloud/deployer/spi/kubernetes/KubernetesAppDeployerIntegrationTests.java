@@ -38,6 +38,7 @@ import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetSpec;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -566,6 +567,43 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		appDeployer.undeploy(deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDeploymentLabels() {
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
+				"label1:value1,label2:value2");
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+
+		List<Deployment> deployments = kubernetesClient.apps().deployments().withLabels(selector).list().getItems();
+
+		Map<String, String> specLabels = deployments.get(0).getSpec().getTemplate().getMetadata().getLabels();
+
+		assertTrue("Label 'label1' not found in deployment spec", specLabels.containsKey("label1"));
+		assertEquals("Unexpected value for label1", "value1", specLabels.get("label1"));
+		assertTrue("Label 'label2' not found in deployment spec", specLabels.containsKey("label2"));
+		assertEquals("Unexpected value for label1", "value2", specLabels.get("label2"));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
 	}
 
 	@Override

@@ -29,12 +29,15 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link KubernetesAppDeployer}
@@ -213,6 +216,49 @@ public class KubernetesAppDeployerTests {
 
 		assertNotNull(podSpec.getServiceAccountName());
 		assertThat(podSpec.getServiceAccountName().equals("overridesan"));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testInvalidDeploymentLabelDelimiter() {
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
+				"label1|value1");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		kubernetesAppDeployer.getDeploymentLabels(appDeploymentRequest);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testInvalidMultipleDeploymentLabelDelimiter() {
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
+				"label1:value1 label2:value2");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		kubernetesAppDeployer.getDeploymentLabels(appDeploymentRequest);
+	}
+
+	@Test
+	public void testDeploymentLabels() {
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
+				"label1:value1,label2:value2");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		Map<String, String> deploymentLabels = kubernetesAppDeployer.getDeploymentLabels(appDeploymentRequest);
+
+		assertTrue("Deployment labels should not be empty", !deploymentLabels.isEmpty());
+		assertEquals("Invalid number of labels", 2, deploymentLabels.size());
+		assertTrue("Expected label 'label1' not found", deploymentLabels.containsKey("label1"));
+		assertEquals("Invalid value for 'label1'", "value1", deploymentLabels.get("label1"));
+		assertTrue("Expected label 'label2' not found", deploymentLabels.containsKey("label2"));
+		assertEquals("Invalid value for 'label2'", "value2", deploymentLabels.get("label2"));
 	}
 
 	private Resource getResource() {

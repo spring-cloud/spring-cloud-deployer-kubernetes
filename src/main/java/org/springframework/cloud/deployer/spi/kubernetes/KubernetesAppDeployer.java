@@ -53,6 +53,7 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
@@ -60,6 +61,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.String.format;
 
 /**
  * A deployer that targets Kubernetes.
@@ -238,15 +241,16 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		int replicas = getCountFromRequest(request);
 
 		Map<String, String> annotations = getPodAnnotations(request);
+		Map<String, String> deploymentLabels = getDeploymentLabels(request);
 
 		PodSpec podSpec = createPodSpec(appId, request, externalPort, false);
 
 		Deployment d = new DeploymentBuilder().withNewMetadata().withName(appId).withLabels(idMap)
-				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withNewSpec().withNewSelector()
-				.addToMatchLabels(idMap).endSelector().withReplicas(replicas).withNewTemplate().withNewMetadata()
-				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).withAnnotations(annotations)
-				.endMetadata().withSpec(podSpec).endTemplate().endSpec()
-				.build();
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels).endMetadata()
+				.withNewSpec().withNewSelector().addToMatchLabels(idMap).endSelector().withReplicas(replicas)
+				.withNewTemplate().withNewMetadata().withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
+				.addToLabels(deploymentLabels).withAnnotations(annotations).endMetadata().withSpec(podSpec).endTemplate()
+				.endSpec().build();
 
 		return client.apps().deployments().create(d);
 	}
@@ -370,6 +374,26 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		}
 
 		return PropertyParserUtils.getAnnotations(annotationsProperty);
+	}
+
+	protected Map<String, String> getDeploymentLabels(AppDeploymentRequest request) {
+		Map<String, String> labels = new HashMap<>();
+
+		String deploymentLabels = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.deploymentLabels", "");
+
+		if (StringUtils.hasText(deploymentLabels)) {
+			String[] deploymentLabel = deploymentLabels.split(",");
+
+			for (String label : deploymentLabel) {
+				String[] labelPair = label.split(":");
+				Assert.isTrue(labelPair.length == 2,
+						format("Invalid label format, expected 'labelKey:labelValue', got: '%s'", labelPair));
+				labels.put(labelPair[0].trim(), labelPair[1].trim());
+			}
+		}
+
+		return labels;
 	}
 
 	/**
