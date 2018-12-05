@@ -59,6 +59,7 @@ public class KubernetesAutoConfiguration {
 	}
 
 	@Bean
+	@ConditionalOnMissingBean(KubernetesClient.class)
 	public KubernetesClient kubernetesClient() {
 		return KubernetesClientFactory.getKubernetesClient(this.properties);
 	}
