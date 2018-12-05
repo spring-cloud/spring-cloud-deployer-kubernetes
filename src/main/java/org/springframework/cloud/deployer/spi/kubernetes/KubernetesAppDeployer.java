@@ -262,6 +262,11 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	/**
 	 * Create a StatefulSet
+	 *
+	 * @param appId the application id
+	 * @param request the {@link AppDeploymentRequest}
+	 * @param idMap the map of labels to use
+	 * @param externalPort the external port of the container
 	 */
 	protected void createStatefulSet(String appId, AppDeploymentRequest request, Map<String, String> idMap,
 											int externalPort) {

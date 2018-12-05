@@ -62,7 +62,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	/**
 	 * Override the default {@link RunningPhaseDeploymentStateResolver} implementation.
 	 *
-	 * @param runningPhaseDeploymentStateResolver
+	 * @param runningPhaseDeploymentStateResolver the {@link RunningPhaseDeploymentStateResolver} to use
 	 */
 	public void setRunningPhaseDeploymentStateResolver(
 		RunningPhaseDeploymentStateResolver runningPhaseDeploymentStateResolver) {

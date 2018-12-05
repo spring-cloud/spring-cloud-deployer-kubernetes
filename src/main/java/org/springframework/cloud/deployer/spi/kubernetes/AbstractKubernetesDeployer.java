@@ -82,6 +82,8 @@ public class AbstractKubernetesDeployer {
 	/**
 	 * Create the RuntimeEnvironmentInfo.
 	 *
+	 * @param spiClass the SPI interface class
+	 * @param implementationClass the SPI implementation class
 	 * @return the Kubernetes runtime environment info
 	 */
 	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
@@ -101,6 +103,10 @@ public class AbstractKubernetesDeployer {
 	/**
 	 * Creates a map of labels for a given ID. This will allow Kubernetes services
 	 * to "select" the right ReplicationControllers.
+	 *
+	 * @param appId the application id
+	 * @param request The {@link AppDeploymentRequest}
+	 * @return the built id map of labels
 	 */
 	protected Map<String, String> createIdMap(String appId, AppDeploymentRequest request) {
 		//TODO: handling of app and group ids
@@ -210,7 +216,7 @@ public class AbstractKubernetesDeployer {
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
 	 * Deployment properties override deployer properties.
 	 *
-	 * @param request
+	 * @param request the {@link AppDeploymentRequest}
 	 * @return the configured volumes
 	 */
 	protected List<Volume> getVolumes(AppDeploymentRequest request) {
@@ -251,7 +257,8 @@ public class AbstractKubernetesDeployer {
 	 * <p>
 	 * Also supports the deprecated properties {@code spring.cloud.deployer.kubernetes.memory/cpu}.
 	 *
-	 * @param request    The deployment properties.
+	 * @param request The deployment properties.
+	 * @return the resource limits to use
 	 */
 	protected Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
 		String memDeployer = getCommonDeployerMemory(request);
@@ -342,7 +349,8 @@ public class AbstractKubernetesDeployer {
 	 * runtime.
 	 * Falls back to the server properties if not present in the deployment request.
 	 *
-	 * @param request    The deployment properties.
+	 * @param request The deployment properties.
+	 * @return the resource requests to use
 	 */
 	protected Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
 		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");

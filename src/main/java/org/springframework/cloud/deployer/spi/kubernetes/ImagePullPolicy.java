@@ -36,7 +36,7 @@ public enum ImagePullPolicy {
 
     /**
      * Tries to convert {@code name} to an {@link ImagePullPolicy} by ignoring case, dashes, underscores
-     * and so on like Spring Boot does it in {@link org.springframework.boot.bind.RelaxedConversionService}.
+     * and so on in a relaxed fashion.
      *
      * @param name The name to convert to an {@link ImagePullPolicy}.
      * @return The {@link ImagePullPolicy} for {@code name} or {@code null} if the conversion was not possible.

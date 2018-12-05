@@ -222,6 +222,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	/**
 	 * Create command arguments
+	 *
+	 * @param request the {@link AppDeploymentRequest}
+	 * @return the command line arguments to use
 	 */
 	protected List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
@@ -247,7 +250,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * Volume mounts can be specified as deployer properties as well as app deployment properties.
 	 * Deployment properties override deployer properties.
 	 *
-	 * @param request
+	 * @param request the {@link AppDeploymentRequest}
 	 * @return the configured volume mounts
 	 */
 	protected List<VolumeMount> getVolumeMounts(AppDeploymentRequest request) {

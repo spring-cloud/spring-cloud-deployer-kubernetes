@@ -421,6 +421,8 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated Use {@link #getLimits()}
+	 *
+	 * @return the memory limits to use
 	 */
 	@Deprecated
 	public String getMemory() {
@@ -429,6 +431,8 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated Use {@link #setLimits(Resources)}
+	 *
+	 * @param memory the memory limit to set
 	 */
 	@Deprecated
 	public void setMemory(String memory) {
@@ -437,6 +441,8 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated Use {@link #getLimits()}
+	 *
+	 * @return the CPU limits to use
 	 */
 	@Deprecated
 	public String getCpu() {
@@ -445,6 +451,8 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated Use {@link #setLimits(Resources)}
+	 *
+	 * @param cpu the CPU limits to set
 	 */
 	@Deprecated
 	public void setCpu(String cpu) {
@@ -582,7 +590,7 @@ public class KubernetesDeployerProperties {
 
 	/**
 	 * @deprecated as of 1.3.  This property is true by default and will not be an option in future releases.
-	 * @param createDeployment
+	 * @param createDeployment create a deployment or not
 	 */
 	@Deprecated
 	public void setCreateDeployment(boolean createDeployment) {
