@@ -25,10 +25,14 @@ import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.boot.bind.YamlConfigurationFactory;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -40,6 +44,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -251,16 +256,18 @@ public class DefaultContainerFactory implements ContainerFactory {
 		String volumeMountDeploymentProperty = request.getDeploymentProperties()
 			.getOrDefault("spring.cloud.deployer.kubernetes.volumeMounts", "");
 		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
-			YamlConfigurationFactory<KubernetesDeployerProperties> volumeMountYamlConfigurationFactory = new YamlConfigurationFactory<>(
-				KubernetesDeployerProperties.class);
-			volumeMountYamlConfigurationFactory.setYaml("{ volumeMounts: " + volumeMountDeploymentProperty + " }");
 			try {
-				volumeMountYamlConfigurationFactory.afterPropertiesSet();
-				volumeMounts.addAll(volumeMountYamlConfigurationFactory.getObject().getVolumeMounts());
-			}
-			catch (Exception e) {
+				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+				String tmpYaml = "{ volume-mounts: " + volumeMountDeploymentProperty + " }";
+				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
+				Properties yaml = properties.getObject();
+				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+				KubernetesDeployerProperties deployerProperties = new Binder(source)
+						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
+				volumeMounts.addAll(deployerProperties.getVolumeMounts());
+			} catch (Exception e) {
 				throw new IllegalArgumentException(
-					String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
+						String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
 			}
 		}
 		// only add volume mounts that have not already been added, based on the volume mount's name

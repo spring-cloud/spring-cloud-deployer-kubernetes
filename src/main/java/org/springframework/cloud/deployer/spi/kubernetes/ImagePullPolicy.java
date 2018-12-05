@@ -16,9 +16,12 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.boot.bind.RelaxedNames;
+import java.util.HashMap;
+import java.util.Map;
 
-import java.util.EnumSet;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 /**
  * ImagePullPolicy for containers inside a Kubernetes Pod, cf. http://kubernetes.io/docs/user-guide/images/
@@ -39,16 +42,16 @@ public enum ImagePullPolicy {
      * @return The {@link ImagePullPolicy} for {@code name} or {@code null} if the conversion was not possible.
      */
     public static ImagePullPolicy relaxedValueOf(String name) {
-        for (ImagePullPolicy candidate : EnumSet.allOf(ImagePullPolicy.class)) {
-            for (String relaxedName : new RelaxedNames(candidate.name())) {
-                if (relaxedName.equals(name)) {
-                    return candidate;
-                }
-            }
-            if (candidate.name().equalsIgnoreCase(name)) {
-                return candidate;
-            }
-        }
+		// 'value' is just a dummy key as you can't bind a single value to an enum
+		Map<String, String> props = new HashMap<>();
+		props.put("value", name);
+		MapConfigurationPropertySource source = new MapConfigurationPropertySource(props);
+		Binder binder = new Binder(source);
+		try {
+			return binder.bind("value", Bindable.of(ImagePullPolicy.class)).get();
+		} catch (Exception e) {
+			// error means we couldn't bind, caller seem to handle null
+		}
         return null;
     }
 

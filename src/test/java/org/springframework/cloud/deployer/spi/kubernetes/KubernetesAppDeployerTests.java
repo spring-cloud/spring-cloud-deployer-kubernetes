@@ -22,7 +22,10 @@ import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import org.junit.Test;
-import org.springframework.boot.bind.YamlConfigurationFactory;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -32,6 +35,7 @@ import org.springframework.core.io.Resource;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -266,10 +270,10 @@ public class KubernetesAppDeployerTests {
 	}
 
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {
-		YamlConfigurationFactory<KubernetesDeployerProperties> yamlConfigurationFactory = new YamlConfigurationFactory<>(
-			KubernetesDeployerProperties.class);
-		yamlConfigurationFactory.setResource(new ClassPathResource("dataflow-server.yml"));
-		yamlConfigurationFactory.afterPropertiesSet();
-		return yamlConfigurationFactory.getObject();
+		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+		properties.setResources(new ClassPathResource("dataflow-server.yml"));
+		Properties yaml = properties.getObject();
+		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
 	}
 }
