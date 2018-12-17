@@ -40,7 +40,7 @@ abstract class ProbeCreator {
 	protected static final String BOOT_2_READINESS_PROBE_PATH = "/actuator" + BOOT_1_READINESS_PROBE_PATH;
 	protected static final String BOOT_1_LIVENESS_PROBE_PATH = "/health";
 	protected static final String BOOT_2_LIVENESS_PROBE_PATH = "/actuator" + BOOT_1_LIVENESS_PROBE_PATH;
-	private static final int BOOT_2_MAJOR_VERSION = 2;
+	private static final int BOOT_1_MAJOR_VERSION = 1;
 
 	private ContainerConfiguration containerConfiguration;
 
@@ -93,13 +93,13 @@ abstract class ProbeCreator {
 		return containerConfiguration.getExternalPort();
 	}
 
-	protected boolean useBoot2ProbePath() {
+	protected boolean useBoot1ProbePath() {
 		String bootMajorVersionProperty = KUBERNETES_DEPLOYER_PREFIX + ".bootMajorVersion";
 
 		if (getDeploymentProperties().containsKey(bootMajorVersionProperty)) {
 			Integer bootMajorVersion = Integer.valueOf(getDeploymentProperties().get(bootMajorVersionProperty));
 
-			if (bootMajorVersion == BOOT_2_MAJOR_VERSION) {
+			if (bootMajorVersion == BOOT_1_MAJOR_VERSION) {
 				return true;
 			}
 		}

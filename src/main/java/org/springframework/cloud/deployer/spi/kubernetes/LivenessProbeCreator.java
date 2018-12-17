@@ -60,11 +60,11 @@ class LivenessProbeCreator extends ProbeCreator {
 			return getKubernetesDeployerProperties().getLivenessProbePath();
 		}
 
-		if (useBoot2ProbePath()) {
-			return BOOT_2_LIVENESS_PROBE_PATH;
+		if (useBoot1ProbePath()) {
+			return BOOT_1_LIVENESS_PROBE_PATH;
 		}
 
-		return BOOT_1_LIVENESS_PROBE_PATH;
+		return BOOT_2_LIVENESS_PROBE_PATH;
 	}
 
 	@Override

@@ -460,20 +460,20 @@ public class DefaultContainerFactoryTests {
 		assertNotNull(container);
 
 		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
 
 		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
 	}
 
 	@Test
-	public void createProbesWithBoot2Endpoints() {
+	public void createProbesWithBoot1Endpoints() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
 
 		Map<String,String> appProperties = new HashMap<>();
-		appProperties.put("spring.cloud.deployer.kubernetes.bootMajorVersion", "2");
+		appProperties.put("spring.cloud.deployer.kubernetes.bootMajorVersion", "1");
 
 		AppDefinition definition = new AppDefinition("app-test", appProperties);
 		Resource resource = getResource();
@@ -490,10 +490,10 @@ public class DefaultContainerFactoryTests {
 		assertNotNull(container);
 
 		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
 
 		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(ProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
 	}
 
 	@Test

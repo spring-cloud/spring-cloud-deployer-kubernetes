@@ -60,11 +60,11 @@ class ReadinessProbeCreator extends ProbeCreator {
 			return getKubernetesDeployerProperties().getReadinessProbePath();
 		}
 
-		if (useBoot2ProbePath()) {
-			return BOOT_2_READINESS_PROBE_PATH;
+		if (useBoot1ProbePath()) {
+			return BOOT_1_READINESS_PROBE_PATH;
 		}
 
-		return BOOT_1_READINESS_PROBE_PATH;
+		return BOOT_2_READINESS_PROBE_PATH;
 	}
 
 	@Override
