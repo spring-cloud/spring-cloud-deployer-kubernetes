@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,6 +140,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		logger.debug(String.format("Undeploying app: %s", appId));
 		AppStatus status = status(appId);
 		if (status.getState().equals(DeploymentState.unknown)) {
+			// ensure objects for this appId are deleted in the event a previous deployment failed.
+			// allows for log inspection prior to making an undeploy request.
+			deleteAllObjects(appId);
+
 			throw new IllegalStateException(String.format("App '%s' is not deployed", appId));
 		}
 		List<Service> apps = client.services().withLabel(SPRING_APP_KEY, appId).list().getItems();

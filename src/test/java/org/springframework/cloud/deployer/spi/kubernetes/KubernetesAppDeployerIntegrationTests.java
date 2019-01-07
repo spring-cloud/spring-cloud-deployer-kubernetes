@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 the original author or authors.
+ * Copyright 2016-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -603,7 +603,56 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		appDeployer.undeploy(deploymentId);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
 
+	@Test
+	public void testCleanupOnDeployFailure() throws InterruptedException {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		// simulate a pod going into an un-schedulable state
+		KubernetesDeployerProperties.Resources resources = new KubernetesDeployerProperties.Resources();
+		resources.setCpu("9000000");
+
+		kubernetesDeployerProperties.setLimits(resources);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		// attempt to undeploy the failed deployment
+		log.info("Undeploying {}...", deploymentId);
+
+		try {
+			appDeployer.undeploy(deploymentId);
+		} catch (Exception e) {
+			log.info("Got expected not not deployed exception on undeployment: " + e.getMessage());
+		}
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+
+		log.info("Deploying {}... again", deploymentId);
+
+		// ensure a previous failed deployment with the same name was cleaned up and can be deployed again
+		deployer.deploy(appDeploymentRequest);
+
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		appDeployer.undeploy(deploymentId);
+
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
 
 	@Override
