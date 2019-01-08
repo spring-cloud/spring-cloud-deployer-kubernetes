@@ -262,7 +262,7 @@ public class KubernetesAppDeployerTests {
 	}
 
 	private Resource getResource() {
-		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:1.3.4.RELEASE");
 	}
 
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {

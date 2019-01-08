@@ -668,7 +668,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Override
 	protected Resource testApplication() {
-		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:1.3.4.RELEASE");
 	}
 
 	private Matcher<String> hasInstanceAttribute(final Matcher<Map<? extends String, ?>> mapMatcher,

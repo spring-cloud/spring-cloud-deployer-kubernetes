@@ -628,7 +628,7 @@ public class DefaultContainerFactoryTests {
 
 	private Resource getResource() {
 		return new DockerResource(
-				"springcloud/spring-cloud-deployer-spi-test-app:latest");
+				"springcloud/spring-cloud-deployer-spi-test-app:1.3.4.RELEASE");
 	}
 
 	private Secret randomSecret() {

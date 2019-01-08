@@ -77,7 +77,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 	@Override
 	protected Resource testApplication() {
-		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:1.3.4.RELEASE");
 	}
 
 	@Override
