@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -290,12 +290,6 @@ public class KubernetesDeployerProperties {
 	private boolean hostNetwork = false;
 
 	/**
-	 * Create a "Deployment" with a "Replica Set" instead of a "Replication Controller".
-	 * See https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
-	 */
-	private boolean createDeployment = true;
-
-	/**
 	 * Create a "Job" instead of just a "Pod" when launching tasks.
 	 * See https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 	 */
@@ -419,46 +413,6 @@ public class KubernetesDeployerProperties {
 		this.statefulSet = statefulSet;
 	}
 
-	/**
-	 * @deprecated Use {@link #getLimits()}
-	 *
-	 * @return the memory limits to use
-	 */
-	@Deprecated
-	public String getMemory() {
-		return getLimits().getMemory();
-	}
-
-	/**
-	 * @deprecated Use {@link #setLimits(Resources)}
-	 *
-	 * @param memory the memory limit to set
-	 */
-	@Deprecated
-	public void setMemory(String memory) {
-		getLimits().setMemory(memory);
-	}
-
-	/**
-	 * @deprecated Use {@link #getLimits()}
-	 *
-	 * @return the CPU limits to use
-	 */
-	@Deprecated
-	public String getCpu() {
-		return getLimits().getCpu();
-	}
-
-	/**
-	 * @deprecated Use {@link #setLimits(Resources)}
-	 *
-	 * @param cpu the CPU limits to set
-	 */
-	@Deprecated
-	public void setCpu(String cpu) {
-		getLimits().setCpu(cpu);
-	}
-
 	public String[] getEnvironmentVariables() {
 		return environmentVariables;
 	}
@@ -577,24 +531,6 @@ public class KubernetesDeployerProperties {
 
 	public void setHostNetwork(boolean hostNetwork) {
 		this.hostNetwork = hostNetwork;
-	}
-
-	/**
-	 * @deprecated as of 1.3. This property is true by default and will not be an option in future releases.
-	 * @return should a deployment be created
-	 */
-	@Deprecated
-	public boolean isCreateDeployment() {
-		return createDeployment;
-	}
-
-	/**
-	 * @deprecated as of 1.3.  This property is true by default and will not be an option in future releases.
-	 * @param createDeployment create a deployment or not
-	 */
-	@Deprecated
-	public void setCreateDeployment(boolean createDeployment) {
-		this.createDeployment = createDeployment;
 	}
 
 	public boolean isCreateJob() {

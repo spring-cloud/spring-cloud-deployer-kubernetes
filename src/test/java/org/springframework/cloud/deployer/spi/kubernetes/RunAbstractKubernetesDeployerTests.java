@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 the original author or authors.
+ * Copyright 2016-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
  * Unit test for {@link AbstractKubernetesDeployer}.
  *
  * @author Moritz Schulze
+ * @author Chris Schaefer
  */
 public class RunAbstractKubernetesDeployerTests {
 
@@ -62,26 +63,10 @@ public class RunAbstractKubernetesDeployerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void limitCpu_noDeploymentProperty_deprecatedServerProperty_usesServerProperty() throws Exception {
-		serverProperties.setCpu("500m");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("500m")));
-	}
-
-	@Test
 	public void limitCpu_noDeploymentProperty_serverProperty_usesServerProperty() throws Exception {
 		serverProperties.getLimits().setCpu("400m");
 		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
 		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("400m")));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	public void limitMemory_noDeploymentProperty_deprecatedServerProperty_usesServerProperty() throws Exception {
-		serverProperties.setMemory("640Mi");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("640Mi")));
 	}
 
 	@Test
@@ -92,27 +77,11 @@ public class RunAbstractKubernetesDeployerTests {
 	}
 
 	@Test
-	public void limitCpu_deploymentProperty_deprecatedKey_usesDeploymentProperty() throws Exception {
-		serverProperties.getLimits().setCpu("100m");
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.cpu", "300m");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("300m")));
-	}
-
-	@Test
 	public void limitCpu_deploymentProperty_usesDeploymentProperty() throws Exception {
 		serverProperties.getLimits().setCpu("100m");
 		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.cpu", "400m");
 		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
 		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("400m")));
-	}
-
-	@Test
-	public void limitMemory_deploymentProperty_deprecatedKey_usesDeploymentProperty() throws Exception {
-		serverProperties.getLimits().setMemory("640Mi");
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.memory", "1024Mi");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("1024Mi")));
 	}
 
 	@Test
@@ -151,66 +120,5 @@ public class RunAbstractKubernetesDeployerTests {
 		deploymentProperties.put("spring.cloud.deployer.kubernetes.requests.memory", "256Mi");
 		Map<String, Quantity> requests = kubernetesDeployer.deduceResourceRequests(deploymentRequest);
 		MatcherAssert.assertThat(requests.get("memory"), is(new Quantity("256Mi")));
-	}
-
-	@Test
-	public void limitMemory_commonDeploymentProperty_noUnit() throws Exception {
-		deploymentProperties.put(AppDeployer.MEMORY_PROPERTY_KEY, "512");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("512Mi")));
-	}
-
-	@Test
-	public void limitMemory_commonDeploymentProperty_mSuffix() throws Exception {
-		deploymentProperties.put(AppDeployer.MEMORY_PROPERTY_KEY, "512m");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("512Mi")));
-	}
-
-	@Test
-	public void limitMemory_commonDeploymentProperty_gSuffix() throws Exception {
-		deploymentProperties.put(AppDeployer.MEMORY_PROPERTY_KEY, "1g");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("1024Mi")));
-	}
-
-	@Test
-	public void limitCpu_commonDeploymentProperty_wholeNumber() throws Exception {
-		deploymentProperties.put(AppDeployer.CPU_PROPERTY_KEY, "1");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("1")));
-	}
-
-	@Test
-	public void limitCpu_commonDeploymentProperty_fraction() throws Exception {
-		deploymentProperties.put(AppDeployer.CPU_PROPERTY_KEY, "0.5");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("0.5")));
-	}
-
-	@Test
-	public void limitMemory_commonDeploymentProperty_getsOverridden() throws Exception {
-		deploymentProperties.put(AppDeployer.MEMORY_PROPERTY_KEY, "512m");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("512Mi")));
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.memory", "640Mi");
-		limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("640Mi")));
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.memory", "768Mi");
-		limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("memory"), is(new Quantity("768Mi")));
-	}
-
-	@Test
-	public void limitCpu_commonDeploymentProperty_getsOverridden() throws Exception {
-		deploymentProperties.put(AppDeployer.CPU_PROPERTY_KEY, "1");
-		Map<String, Quantity> limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("1")));
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.cpu", "500m");
-		limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("500m")));
-		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.cpu", "750m");
-		limits = kubernetesDeployer.deduceResourceLimits(deploymentRequest);
-		MatcherAssert.assertThat(limits.get("cpu"), is(new Quantity("750m")));
 	}
 }

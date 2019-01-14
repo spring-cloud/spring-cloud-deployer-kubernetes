@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,25 +70,6 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	public DefaultContainerFactory(KubernetesDeployerProperties properties) {
 		this.properties = properties;
-	}
-
-	@Override
-	@Deprecated
-	public Container create(String appId, AppDeploymentRequest request, Integer port, Integer instanceIndex,
-		boolean hostNetwork) {
-		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, request)
-				.withHostNetwork(hostNetwork)
-				.withExternalPort(port);
-		return this.create(containerConfiguration);
-	}
-
-	@Override
-	@Deprecated
-	public Container create(String appId, AppDeploymentRequest request, Integer port, boolean hostNetwork) {
-		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, request)
-				.withHostNetwork(hostNetwork)
-				.withExternalPort(port);
-		return this.create(containerConfiguration);
 	}
 
 	@Override

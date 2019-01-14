@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,6 @@ public class AbstractKubernetesDeployer {
 	 * @return the built id map of labels
 	 */
 	protected Map<String, String> createIdMap(String appId, AppDeploymentRequest request) {
-		//TODO: handling of app and group ids
 		Map<String, String> map = new HashMap<>();
 		map.put(SPRING_APP_KEY, appId);
 		String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
@@ -255,67 +254,29 @@ public class AbstractKubernetesDeployer {
 	 * <p>
 	 * Falls back to the server properties if not present in the deployment request.
 	 * <p>
-	 * Also supports the deprecated properties {@code spring.cloud.deployer.kubernetes.memory/cpu}.
 	 *
 	 * @param request The deployment properties.
 	 * @return the resource limits to use
 	 */
 	protected Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
-		String memDeployer = getCommonDeployerMemory(request);
-		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.memory");
-		if (memDeployer != null) {
-			if (memOverride == null) {
-				memOverride = memDeployer;
-			}
-			else {
-				logger.warn(String.format("Both " + AppDeployer.MEMORY_PROPERTY_KEY +
-								"=%s and spring.cloud.deployer.kubernetes.memory=%s specified, the latter will take precedence.",
-						memDeployer, memOverride));
-			}
-		}
-		String memLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
-		if (memLimitsOverride != null) {
-			// Non-deprecated value has priority
-			memOverride = memLimitsOverride;
+		String memory = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
+
+		if (StringUtils.isEmpty(memory)) {
+			memory = properties.getLimits().getMemory();
 		}
 
-		// Use server property if there is no request setting
-		if (memOverride == null) {
-			if (properties.getLimits().getMemory() != null) {
-				memOverride = properties.getLimits().getMemory();
-			}
-		}
+		String cpu = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.cpu");
 
-		String cpuDeployer = request.getDeploymentProperties().get(AppDeployer.CPU_PROPERTY_KEY);
-		String cpuOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.cpu");
-		if (cpuDeployer != null) {
-			if (cpuOverride == null) {
-				cpuOverride = cpuDeployer;
-			}
-			else {
-				logger.warn(String.format("Both " + AppDeployer.CPU_PROPERTY_KEY +
-								"=%s and spring.cloud.deployer.kubernetes.cpu=%s specified, the latter will take precedence.",
-						cpuDeployer, cpuOverride));
-			}
+		if (StringUtils.isEmpty(cpu)) {
+			cpu = properties.getLimits().getCpu();
 		}
-		String cpuLimitsOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.cpu");
-		if (cpuLimitsOverride != null) {
-			// Non-deprecated value has priority
-			cpuOverride = cpuLimitsOverride;
-		}
-
-		// Use server property if there is no request setting
-		if (cpuOverride == null) {
-			if (properties.getLimits().getCpu() != null) {
-				cpuOverride = properties.getLimits().getCpu();
-			}
-		}
-
-		logger.debug("Using limits - cpu: " + cpuOverride + " mem: " + memOverride);
 
 		Map<String,Quantity> limits = new HashMap<String,Quantity>();
-		limits.put("memory", new Quantity(memOverride));
-		limits.put("cpu", new Quantity(cpuOverride));
+		limits.put("memory", new Quantity(memory));
+		limits.put("cpu", new Quantity(cpu));
+
+		logger.debug("Using limits - cpu: " + cpu + " mem: " + memory);
+
 		return limits;
 	}
 
@@ -434,15 +395,6 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return nodeSelectors;
-	}
-
-	private String getCommonDeployerMemory(AppDeploymentRequest request) {
-		String mem = request.getDeploymentProperties().get(AppDeployer.MEMORY_PROPERTY_KEY);
-		if (mem == null) {
-			return null;
-		}
-		long memAmount = ByteSizeUtils.parseToMebibytes(mem);
-		return memAmount + "Mi";
 	}
 
 	private String getImagePullSecret(AppDeploymentRequest request) {
