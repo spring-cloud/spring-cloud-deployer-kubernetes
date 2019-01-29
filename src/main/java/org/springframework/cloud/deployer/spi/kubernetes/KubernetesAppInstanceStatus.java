@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import java.util.Map;
  * @author Florian Rosenberg
  * @author Thomas Risberg
  * @author David Turanski
+ * @author Chris Schaefer
  */
 public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
@@ -122,6 +123,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 				pod.getMetadata().getLabels().get(AbstractKubernetesDeployer.SPRING_APP_KEY));
 			result.put(AbstractKubernetesDeployer.SPRING_DEPLOYMENT_KEY.replace('-', '.'),
 				pod.getMetadata().getLabels().get(AbstractKubernetesDeployer.SPRING_DEPLOYMENT_KEY));
+			result.put("guid", pod.getMetadata().getUid());
 		}
 		if (service != null) {
 			result.put("service.name", service.getMetadata().getName());

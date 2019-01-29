@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
@@ -133,7 +135,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
 			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
-		envVars.add(new EnvVar("SPRING_CLOUD_APPLICATION_GUID", "${HOSTNAME}", null));
+
+		envVars.add(getGUIDEnvVar());
 
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
 			envVars.add(new EnvVar("SPRING_CLOUD_APPLICATION_GROUP",
@@ -175,6 +178,20 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		return container.build();
+	}
+
+	private EnvVar getGUIDEnvVar() {
+		ObjectFieldSelector objectFieldSelector = new ObjectFieldSelector();
+		objectFieldSelector.setFieldPath("metadata.uid");
+
+		EnvVarSource envVarSource = new EnvVarSource();
+		envVarSource.setFieldRef(objectFieldSelector);
+
+		EnvVar guidEnvVar = new EnvVar();
+		guidEnvVar.setValueFrom(envVarSource);
+		guidEnvVar.setName("SPRING_CLOUD_APPLICATION_GUID");
+
+		return guidEnvVar;
 	}
 
 	private void configureReadinessProbe(ContainerConfiguration containerConfiguration,
