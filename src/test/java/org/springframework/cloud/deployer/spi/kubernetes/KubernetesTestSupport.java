@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 the original author or authors.
+ * Copyright 2016-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
  * JUnit {@link org.junit.Rule} that detects the fact that a Kubernetes installation is available.
  *
  * @author Thomas Risberg
+ * @author Chris Schaefer
  */
 public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<KubernetesClient> {
 
@@ -65,7 +65,7 @@ public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<K
 
 		@Bean
 		public KubernetesClient kubernetesClient() {
-			return new DefaultKubernetesClient().inNamespace(properties.getNamespace());
+			return KubernetesClientFactory.getKubernetesClient(this.properties);
 		}
 	}
 }

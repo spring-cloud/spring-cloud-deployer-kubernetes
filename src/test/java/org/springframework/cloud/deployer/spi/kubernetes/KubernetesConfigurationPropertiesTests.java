@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,11 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
@@ -34,36 +30,43 @@ import static org.junit.Assert.assertEquals;
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {KubernetesConfigurationPropertiesTests.TestConfig.class}, properties = {
-		"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
-		"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
-		"spring.cloud.deployer.kubernetes.fabric8.namespace=testing"
-})
+@RunWith(Enclosed.class)
 public class KubernetesConfigurationPropertiesTests {
+	@RunWith(SpringRunner.class)
+	@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+			"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
+			"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
+			"spring.cloud.deployer.kubernetes.fabric8.namespace=testing"
+	})
+	public static class TestFabric8Properties {
+		@Autowired
+		private KubernetesClient kubernetesClient;
 
-	@Autowired
-	private KubernetesClient kubernetesClient;
-
-	@Test
-	public void testFabric8Properties() {
-		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-		assertEquals("testing", kubernetesClient.getNamespace());
-		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+		@Test
+		public void testFabric8Properties() {
+			assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
+			assertEquals("testing", kubernetesClient.getNamespace());
+			assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
+			assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+		}
 	}
 
-	@Configuration
-	@EnableConfigurationProperties(KubernetesDeployerProperties.class)
-	@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
-	public static class TestConfig {
-
+	@RunWith(SpringRunner.class)
+	@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+			"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
+			"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
+			"spring.cloud.deployer.kubernetes.namespace=toplevel"
+	})
+	public static class TestDeployerNamespaceOverride {
 		@Autowired
-		private KubernetesDeployerProperties properties;
+		private KubernetesClient kubernetesClient;
 
-		@Bean
-		public KubernetesClient kubernetesClient() {
-			return KubernetesClientFactory.getKubernetesClient(this.properties);
+		@Test
+		public void testFabric8Properties() {
+			assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
+			assertEquals("toplevel", kubernetesClient.getNamespace());
+			assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
+			assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
 		}
 	}
 }

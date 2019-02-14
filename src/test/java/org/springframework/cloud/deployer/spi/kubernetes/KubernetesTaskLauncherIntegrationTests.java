@@ -51,7 +51,9 @@ import org.springframework.core.io.Resource;
  * @author Thomas Risberg
  * @author Chris Schaefer
  */
-@SpringBootTest(classes = {KubernetesAutoConfiguration.class})
+@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+		"spring.cloud.deployer.kubernetes.namespace=default"
+})
 public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
 	@ClassRule

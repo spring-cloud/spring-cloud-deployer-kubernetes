@@ -53,7 +53,8 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  * @author Chris Schaefer
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
-@TestPropertySource(properties = {"spring.cloud.deployer.kubernetes.create-job=true"})
+@TestPropertySource(properties = {"spring.cloud.deployer.kubernetes.create-job=true",
+		"spring.cloud.deployer.kubernetes.namespace=default"})
 public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
 	@ClassRule

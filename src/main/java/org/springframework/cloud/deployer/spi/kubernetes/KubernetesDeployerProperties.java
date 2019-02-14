@@ -121,8 +121,7 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
-	private static String KUBERNETES_NAMESPACE =
-			System.getenv("KUBERNETES_NAMESPACE") != null ? System.getenv("KUBERNETES_NAMESPACE") : "default";
+	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**
 	 * Namespace to use.

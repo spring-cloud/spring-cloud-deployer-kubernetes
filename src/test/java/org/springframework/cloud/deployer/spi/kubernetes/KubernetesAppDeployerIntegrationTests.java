@@ -90,8 +90,9 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  * @Author David Turanski
  * @author Chris Schaefer
  */
-@SpringBootTest(classes = { KubernetesAutoConfiguration.class }, properties = {
-		"logging.level.org.springframework.cloud.deployer.spi=INFO"
+@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
+		"logging.level.org.springframework.cloud.deployer.spi=INFO",
+		"spring.cloud.deployer.kubernetes.namespace=default"
 })
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
