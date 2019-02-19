@@ -17,12 +17,6 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
 
@@ -30,43 +24,56 @@ import static org.junit.Assert.assertEquals;
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
  */
-@RunWith(Enclosed.class)
 public class KubernetesConfigurationPropertiesTests {
-	@RunWith(SpringRunner.class)
-	@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
-			"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
-			"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
-			"spring.cloud.deployer.kubernetes.fabric8.namespace=testing"
-	})
-	public static class TestFabric8Properties {
-		@Autowired
-		private KubernetesClient kubernetesClient;
+	@Test
+	public void testFabric8Namespacing() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getFabric8().setTrustCerts(true);
+		kubernetesDeployerProperties.getFabric8().setMasterUrl("http://localhost:8090");
+		// this can be set programatically in properties as well as an environment variable
+		// (ie: CI, cmd line, etc) so ensure we have a clean slate here
+		kubernetesDeployerProperties.setNamespace(null);
+		kubernetesDeployerProperties.getFabric8().setNamespace("testing");
 
-		@Test
-		public void testFabric8Properties() {
-			assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-			assertEquals("testing", kubernetesClient.getNamespace());
-			assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-			assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
-		}
+		KubernetesClient kubernetesClient = KubernetesClientFactory
+				.getKubernetesClient(kubernetesDeployerProperties);
+
+		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
+		assertEquals("testing", kubernetesClient.getNamespace());
+		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
+		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
 	}
 
-	@RunWith(SpringRunner.class)
-	@SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
-			"spring.cloud.deployer.kubernetes.fabric8.trustCerts=true",
-			"spring.cloud.deployer.kubernetes.fabric8.masterUrl=http://localhost:8090",
-			"spring.cloud.deployer.kubernetes.namespace=toplevel"
-	})
-	public static class TestDeployerNamespaceOverride {
-		@Autowired
-		private KubernetesClient kubernetesClient;
+	@Test
+	public void testTopLevelNamespacing() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getFabric8().setTrustCerts(true);
+		kubernetesDeployerProperties.getFabric8().setMasterUrl("http://localhost:8090");
+		kubernetesDeployerProperties.setNamespace("toplevel");
 
-		@Test
-		public void testFabric8Properties() {
-			assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-			assertEquals("toplevel", kubernetesClient.getNamespace());
-			assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-			assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
-		}
+		KubernetesClient kubernetesClient = KubernetesClientFactory
+				.getKubernetesClient(kubernetesDeployerProperties);
+
+		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
+		assertEquals("toplevel", kubernetesClient.getNamespace());
+		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
+		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+	}
+
+	@Test
+	public void testTopLevelNamespacingOverride() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getFabric8().setTrustCerts(true);
+		kubernetesDeployerProperties.getFabric8().setMasterUrl("http://localhost:8090");
+		kubernetesDeployerProperties.getFabric8().setNamespace("toplevel");
+		kubernetesDeployerProperties.setNamespace("toplevel");
+
+		KubernetesClient kubernetesClient = KubernetesClientFactory
+				.getKubernetesClient(kubernetesDeployerProperties);
+
+		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
+		assertEquals("toplevel", kubernetesClient.getNamespace());
+		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
+		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
 	}
 }
