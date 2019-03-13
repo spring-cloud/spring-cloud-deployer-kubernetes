@@ -124,6 +124,59 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+	public static class Toleration {
+
+		private String effect;
+
+		private String key;
+
+		private String operator;
+
+		private Long tolerationSeconds;
+
+		private String value;
+
+		public String getEffect() {
+			return effect;
+		}
+
+		public void setEffect(String effect) {
+			this.effect = effect;
+		}
+
+		public String getKey() {
+			return key;
+		}
+
+		public void setKey(String key) {
+			this.key = key;
+		}
+
+		public String getOperator() {
+			return operator;
+		}
+
+		public void setOperator(String operator) {
+			this.operator = operator;
+		}
+
+		public Long getTolerationSeconds() {
+			return tolerationSeconds;
+		}
+
+		public void setTolerationSeconds(Long tolerationSeconds) {
+			this.tolerationSeconds = tolerationSeconds;
+		}
+
+		public String getValue() {
+			return value;
+		}
+
+		public void setValue(String value) {
+			this.value = value;
+		}
+	}
+
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**
@@ -212,6 +265,11 @@ public class KubernetesDeployerProperties {
 	 * Memory and CPU requests (i.e. guaranteed needed values) to allocate for a Pod.
 	 */
 	private Resources requests = new Resources();
+
+	/**
+	 * Tolerations to allocate for a Pod.
+	 */
+	private List<Toleration> tolerations = new ArrayList<>();
 
 	/**
 	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
@@ -413,6 +471,14 @@ public class KubernetesDeployerProperties {
 	public void setStatefulSet(
 			StatefulSet statefulSet) {
 		this.statefulSet = statefulSet;
+	}
+
+	public List<Toleration> getTolerations() {
+		return tolerations;
+	}
+
+	public void setTolerations(List<Toleration> tolerations) {
+		this.tolerations = tolerations;
 	}
 
 	public String[] getEnvironmentVariables() {

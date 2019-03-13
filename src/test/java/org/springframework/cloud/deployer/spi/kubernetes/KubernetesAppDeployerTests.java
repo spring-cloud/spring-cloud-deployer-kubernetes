@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import io.fabric8.kubernetes.api.model.Toleration;
 import org.junit.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -65,6 +66,18 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
 
 		assertThat(podSpec.getVolumes()).isEmpty();
+	}
+
+	@Test
+	public void deployWithTolerations() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
+				new HashMap<>());
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getTolerations()).isNotEmpty();
 	}
 
 	@Test
@@ -222,6 +235,48 @@ public class KubernetesAppDeployerTests {
 		assertThat(podSpec.getServiceAccountName().equals("overridesan"));
 	}
 
+	@Test
+	public void deployWithGlobalTolerations() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
+				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations().size() == 2);
+		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"true")));
+	}
+
+	@Test
+	public void deployWithTolerationPropertyOverride() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
+				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties.Toleration toleration = new KubernetesDeployerProperties.Toleration();
+		toleration.setKey("test");
+		toleration.setValue("false");
+		toleration.setOperator("Equal");
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getTolerations().add(toleration);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations().size() == 2);
+		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"false")));
+	}
+
 	@Test(expected = IllegalArgumentException.class)
 	public void testInvalidDeploymentLabelDelimiter() {
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
@@ -271,7 +326,7 @@ public class KubernetesAppDeployerTests {
 
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {
 		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-		properties.setResources(new ClassPathResource("dataflow-server.yml"));
+		properties.setResources(new ClassPathResource("dataflow-server.yml"), new ClassPathResource("dataflow-server-tolerations.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();

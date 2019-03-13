@@ -20,14 +20,15 @@ import static java.lang.String.format;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
+import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
@@ -179,6 +180,7 @@ public class AbstractKubernetesDeployer {
 		if (nodeSelectors.size() > 0) {
 			podSpec.withNodeSelector(nodeSelectors);
 		}
+		podSpec.withTolerations(getTolerations(request));
 		// only add volumes with corresponding volume mounts
 		podSpec.withVolumes(getVolumes(request).stream()
 				.filter(volume -> container.getVolumeMounts().stream()
@@ -203,6 +205,44 @@ public class AbstractKubernetesDeployer {
 		return podSpec.build();
 	}
 
+	private KubernetesDeployerProperties getDeploymentProperties(AppDeploymentRequest request, String propertyKey, String yamlLabel) {
+		String deploymentProperty = request.getDeploymentProperties()
+				.getOrDefault(propertyKey, "");
+		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
+		if (!StringUtils.isEmpty(deploymentProperty)) {
+			try {
+				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
+				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
+				Properties yaml = properties.getObject();
+				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+				deployerProperties = new Binder(source)
+						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
+			} catch (Exception e) {
+				throw new IllegalArgumentException(
+						String.format("Invalid deployer spec '%s'", deploymentProperty), e);
+			}
+		}
+		return deployerProperties;
+	}
+
+	private List<Toleration> getTolerations(AppDeploymentRequest request) {
+		List<Toleration> tolerations = new ArrayList<>();
+
+		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.tolerations", "tolerations" );
+
+		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
+
+
+		properties.getTolerations().stream()
+				.filter(toleration -> tolerations.stream()
+						.noneMatch(existing -> existing.getKey().equals(toleration.getKey())))
+				.collect(Collectors.toList())
+				.forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
+
+		return tolerations;
+	}
+
 	/**
 	 * Volume deployment properties are specified in YAML format:
 	 *
@@ -221,23 +261,10 @@ public class AbstractKubernetesDeployer {
 	protected List<Volume> getVolumes(AppDeploymentRequest request) {
 		List<Volume> volumes = new ArrayList<>();
 
-		String volumeDeploymentProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
-		if (!StringUtils.isEmpty(volumeDeploymentProperty)) {
-			try {
-				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ volumes: " + volumeDeploymentProperty + " }";
-				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
-				Properties yaml = properties.getObject();
-				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				KubernetesDeployerProperties deployerProperties = new Binder(source)
-						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-				volumes.addAll(deployerProperties.getVolumes());
-			} catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
-			}
-		}
+		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.volumes", "volumes");
+
+		volumes.addAll(deployerProperties.getVolumes());
+
 		// only add volumes that have not already been added, based on the volume's name
 		// i.e. allow provided deployment volumes to override deployer defined volumes
 		volumes.addAll(properties.getVolumes().stream()
