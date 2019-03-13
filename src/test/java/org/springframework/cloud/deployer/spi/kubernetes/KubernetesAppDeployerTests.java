@@ -68,6 +68,18 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
+	public void deployWithTolerations() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
+				new HashMap<>());
+
+		deployer = new KubernetesAppDeployer(bindDeployerPropertiesTolerations(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getTolerations()).isNotEmpty();
+	}
+
+	@Test
 	public void deployWithVolumesAndVolumeMounts() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
@@ -272,6 +284,14 @@ public class KubernetesAppDeployerTests {
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {
 		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
 		properties.setResources(new ClassPathResource("dataflow-server.yml"));
+		Properties yaml = properties.getObject();
+		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
+	}
+
+	private KubernetesDeployerProperties bindDeployerPropertiesTolerations() throws Exception {
+		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+		properties.setResources(new ClassPathResource("dataflow-server-tolerations.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();

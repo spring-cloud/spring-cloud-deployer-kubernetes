@@ -18,17 +18,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodSpecBuilder;
-import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.Secret;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.ServiceList;
-import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -179,6 +169,7 @@ public class AbstractKubernetesDeployer {
 		if (nodeSelectors.size() > 0) {
 			podSpec.withNodeSelector(nodeSelectors);
 		}
+		podSpec.withTolerations(getTolerations(request));
 		// only add volumes with corresponding volume mounts
 		podSpec.withVolumes(getVolumes(request).stream()
 				.filter(volume -> container.getVolumeMounts().stream()
@@ -201,6 +192,35 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return podSpec.build();
+	}
+
+	private List<Toleration> getTolerations(AppDeploymentRequest request) {
+		List<Toleration> tolerations = new ArrayList<>();
+
+		String tolerationDeploymentProperty = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.tolerations", "");
+		if (!StringUtils.isEmpty(tolerationDeploymentProperty)) {
+			try {
+				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+				String tmpYaml = "{ tolerations: " + tolerationDeploymentProperty + " }";
+				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
+				Properties yaml = properties.getObject();
+				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+				KubernetesDeployerProperties deployerProperties = new Binder(source)
+						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
+				tolerations.addAll(deployerProperties.getTolerations());
+			} catch (Exception e) {
+				throw new IllegalArgumentException(
+						String.format("Invalid volume '%s'", tolerationDeploymentProperty), e);
+			}
+		}
+
+		tolerations.addAll(properties.getTolerations().stream()
+				.filter(toleration -> tolerations.stream()
+						.noneMatch(existing -> existing.getKey().equals(toleration.getKey()) && existing.getValue().equals(toleration.getValue())))
+				.collect(Collectors.toList()));
+
+		return tolerations;
 	}
 
 	/**

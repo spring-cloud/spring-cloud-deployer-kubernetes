@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
@@ -209,6 +210,11 @@ public class KubernetesDeployerProperties {
 	 * Memory and CPU requests (i.e. guaranteed needed values) to allocate for a Pod.
 	 */
 	private Resources requests = new Resources();
+
+	/**
+	 * Tolerations to allocate for a Pod.
+	 */
+	private List<Toleration> tolerations = new ArrayList<>();
 
 	/**
 	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
@@ -410,6 +416,14 @@ public class KubernetesDeployerProperties {
 	public void setStatefulSet(
 			StatefulSet statefulSet) {
 		this.statefulSet = statefulSet;
+	}
+
+	public List<Toleration> getTolerations() {
+		return tolerations;
+	}
+
+	public void setTolerations(List<Toleration> tolerations) {
+		this.tolerations = tolerations;
 	}
 
 	public String[] getEnvironmentVariables() {
