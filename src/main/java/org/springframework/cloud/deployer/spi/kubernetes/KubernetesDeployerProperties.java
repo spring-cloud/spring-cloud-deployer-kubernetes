@@ -32,6 +32,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Ilayaperumal Gopinathan
  * @author Leonardo Diniz
  * @author Chris Schaefer
+ * @author David Turanski
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
@@ -40,6 +41,8 @@ public class KubernetesDeployerProperties {
 	 * Constants for app deployment properties that don't have a deployer level default property.
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
+
+	private int maximumConcurrentTasks = 20;
 
 	private Config fabric8 = Config.autoConfigure(null);
 
@@ -546,5 +549,12 @@ public class KubernetesDeployerProperties {
 
 	public void setDeploymentServiceAccountName(String deploymentServiceAccountName) {
 		this.deploymentServiceAccountName = deploymentServiceAccountName;
+	}
+
+	public int getMaximumConcurrentTasks() {
+		return maximumConcurrentTasks;
+	}
+	public void setMaximumConcurrentTasks(int maximumConcurrentTasks) {
+		this.maximumConcurrentTasks = maximumConcurrentTasks;
 	}
 }
