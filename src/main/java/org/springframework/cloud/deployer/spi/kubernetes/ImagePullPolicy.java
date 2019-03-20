@@ -24,7 +24,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 /**
- * ImagePullPolicy for containers inside a Kubernetes Pod, cf. http://kubernetes.io/docs/user-guide/images/
+ * ImagePullPolicy for containers inside a Kubernetes Pod, cf. https://kubernetes.io/docs/user-guide/images/
  *
  * @author Moritz Schulze
  */
