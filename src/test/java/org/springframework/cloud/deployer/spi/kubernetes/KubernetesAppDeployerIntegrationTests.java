@@ -348,7 +348,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			fail("cannot get service information for " + appId);
 		}
 
-		String url = String.format("http://%s:%d/actuator/env", ip, port);
+		String url = String.format("https://%s:%d/actuator/env", ip, port);
 		log.debug("getting app environment from " + url);
 		RestTemplate restTemplate = new RestTemplate();
 
