@@ -40,11 +40,10 @@ public class KubernetesTaskLauncherMaximumConcurrentTasksTests {
 	private List<Pod> pods;
 
 	@Test
-	public void test() {
-
+	public void currentExecutionCount() {
 		assertThat(taskLauncher).isNotNull();
 
-		pods = fakeNews(10);
+		pods = stubForRunningPods(10);
 
 		MixedOperation podsOperation = mock(MixedOperation.class);
 		FilterWatchListDeletable filterWatchListDeletable = mock(FilterWatchListDeletable.class);
@@ -71,9 +70,9 @@ public class KubernetesTaskLauncherMaximumConcurrentTasksTests {
 		assertThat(executionCount).isEqualTo(10);
 	}
 
-	private List<Pod> fakeNews(int numTasks) {
+	private List<Pod> stubForRunningPods(int numTasks) {
 		List<Pod> items = new ArrayList<>();
-		for (int i=0; i<numTasks; i++) {
+		for (int i=0; i < numTasks; i++) {
 			items.add(new PodBuilder().withNewMetadata()
 				.withName("task-" +i).endMetadata()
 				.withNewStatus()

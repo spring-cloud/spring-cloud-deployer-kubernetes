@@ -168,7 +168,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Override
 	public int getRunningTaskExecutionCount() {
-
 		List<String> taskIds = getIdsForTasks(Optional.empty(), false);
 		AtomicInteger executionCount = new AtomicInteger();
 
@@ -232,7 +231,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private List<String> getIdsForTasks(Optional<String> taskName, boolean isCreateJob) {
 		List<String> ids = new ArrayList<>();
-
 		try {
 			KubernetesResourceList<?> resourceList = getTaskResources(taskName, isCreateJob);
 
@@ -266,8 +264,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 		return resourceList;
 	}
-
-
 
 	private Map<String, String> getJobAnnotations(AppDeploymentRequest request) {
 		String annotationsProperty = request.getDeploymentProperties()
