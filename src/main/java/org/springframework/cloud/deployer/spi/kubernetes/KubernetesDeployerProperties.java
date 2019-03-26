@@ -42,52 +42,52 @@ public class KubernetesDeployerProperties {
 	 * Delay in seconds when the Kubernetes liveness check of the app container
 	 * should start checking its health status.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// See https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int livenessProbeDelay = 10;
 
 	/**
 	 * Period in seconds for performing the Kubernetes liveness check of the app container.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// See https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int livenessProbePeriod = 60;
 
 	/**
 	 * Timeout in seconds for the Kubernetes liveness check of the app container.
 	 * If the health check takes longer than this value to return it is assumed as 'unavailable'.
 	 */
-	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// see https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int livenessProbeTimeout = 2;
 
 	/**
 	 * Path that app container has to respond to for liveness check.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// See https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private String livenessProbePath = "/health";
 
 	/**
 	 * Delay in seconds when the readiness check of the app container
 	 * should start checking if the module is fully up and running.
 	 */
-	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// see https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int readinessProbeDelay = 10;
 
 	/**
 	 * Period in seconds to perform the readiness check of the app container.
 	 */
-	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// see https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int readinessProbePeriod = 10;
 
 	/**
 	 * Timeout in seconds that the app container has to respond to its
 	 * health status during the readiness check.
 	 */
-	// see http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// see https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private int readinessProbeTimeout = 2;
 
 	/**
 	 * Path that app container has to respond to for readiness check.
 	 */
-	// See http://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
+	// See https://kubernetes.io/v1.0/docs/user-guide/production-pods.html#liveness-and-readiness-probes-aka-health-checks}
 	private String readinessProbePath = "/info";
 
 	/**
