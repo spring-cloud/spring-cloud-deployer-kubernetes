@@ -21,7 +21,7 @@ import org.springframework.boot.bind.RelaxedNames;
 import java.util.EnumSet;
 
 /**
- * ImagePullPolicy for containers inside a Kubernetes Pod, cf. http://kubernetes.io/docs/user-guide/images/
+ * ImagePullPolicy for containers inside a Kubernetes Pod, cf. https://kubernetes.io/docs/user-guide/images/
  *
  * @author Moritz Schulze
  */
