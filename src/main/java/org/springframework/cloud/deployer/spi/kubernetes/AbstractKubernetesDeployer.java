@@ -205,26 +205,35 @@ public class AbstractKubernetesDeployer {
 		return podSpec.build();
 	}
 
-	private List<Toleration> getTolerations(AppDeploymentRequest request) {
-		List<Toleration> tolerations = new ArrayList<>();
-
-		String tolerationDeploymentProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.tolerations", "");
-		if (!StringUtils.isEmpty(tolerationDeploymentProperty)) {
+	private KubernetesDeployerProperties getDeploymentProperties(AppDeploymentRequest request, String propertyKey, String yamlLabel) {
+		String deploymentProperty = request.getDeploymentProperties()
+				.getOrDefault(propertyKey, "");
+		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
+		if (!StringUtils.isEmpty(deploymentProperty)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ tolerations: " + tolerationDeploymentProperty + " }";
+				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
 				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
 				Properties yaml = properties.getObject();
 				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				KubernetesDeployerProperties deployerProperties = new Binder(source)
+				deployerProperties = new Binder(source)
 						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-				deployerProperties.getTolerations().forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
 			} catch (Exception e) {
 				throw new IllegalArgumentException(
-						String.format("Invalid toleration '%s'", tolerationDeploymentProperty), e);
+						String.format("Invalid deployer spec '%s'", deploymentProperty), e);
 			}
 		}
+		return deployerProperties;
+	}
+
+	private List<Toleration> getTolerations(AppDeploymentRequest request) {
+		List<Toleration> tolerations = new ArrayList<>();
+
+		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.tolerations", "tolerations" );
+
+		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
+
+
 		properties.getTolerations().stream()
 				.filter(toleration -> tolerations.stream()
 						.noneMatch(existing -> existing.getKey().equals(toleration.getKey())))
@@ -252,23 +261,10 @@ public class AbstractKubernetesDeployer {
 	protected List<Volume> getVolumes(AppDeploymentRequest request) {
 		List<Volume> volumes = new ArrayList<>();
 
-		String volumeDeploymentProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.volumes", "");
-		if (!StringUtils.isEmpty(volumeDeploymentProperty)) {
-			try {
-				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ volumes: " + volumeDeploymentProperty + " }";
-				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
-				Properties yaml = properties.getObject();
-				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				KubernetesDeployerProperties deployerProperties = new Binder(source)
-						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-				volumes.addAll(deployerProperties.getVolumes());
-			} catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid volume '%s'", volumeDeploymentProperty), e);
-			}
-		}
+		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.volumes", "volumes");
+
+		volumes.addAll(deployerProperties.getVolumes());
+
 		// only add volumes that have not already been added, based on the volume's name
 		// i.e. allow provided deployment volumes to override deployer defined volumes
 		volumes.addAll(properties.getVolumes().stream()
