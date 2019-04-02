@@ -18,7 +18,18 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodSpecBuilder;
+import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceList;
+import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -208,17 +219,17 @@ public class AbstractKubernetesDeployer {
 				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 				KubernetesDeployerProperties deployerProperties = new Binder(source)
 						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-				tolerations.addAll(deployerProperties.getTolerations());
+				deployerProperties.getTolerations().forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
 			} catch (Exception e) {
 				throw new IllegalArgumentException(
-						String.format("Invalid volume '%s'", tolerationDeploymentProperty), e);
+						String.format("Invalid toleration '%s'", tolerationDeploymentProperty), e);
 			}
 		}
-
-		tolerations.addAll(properties.getTolerations().stream()
+		properties.getTolerations().stream()
 				.filter(toleration -> tolerations.stream()
-						.noneMatch(existing -> existing.getKey().equals(toleration.getKey()) && existing.getValue().equals(toleration.getValue())))
-				.collect(Collectors.toList()));
+						.noneMatch(existing -> existing.getKey().equals(toleration.getKey())))
+				.collect(Collectors.toList())
+				.forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
 
 		return tolerations;
 	}
