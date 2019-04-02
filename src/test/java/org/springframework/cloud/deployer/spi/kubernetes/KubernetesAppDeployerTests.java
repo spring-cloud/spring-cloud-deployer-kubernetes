@@ -240,9 +240,8 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.tolerations.key", "test");
-		props.put("spring.cloud.deployer.kubernetes.tolerations.value", "true");
-		props.put("spring.cloud.deployer.kubernetes.tolerations.operator", "Equal");
+		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
+				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
@@ -250,7 +249,7 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
 
 		assertNotNull(podSpec.getTolerations());
-		assertThat(podSpec.getTolerations().size() == 1);
+		assertThat(podSpec.getTolerations().size() == 2);
 		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"true")));
 	}
 
@@ -259,10 +258,8 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.tolerations.key", "test");
-		props.put("spring.cloud.deployer.kubernetes.tolerations.value", "true");
-		props.put("spring.cloud.deployer.kubernetes.tolerations.operator", "Equal");
-
+		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
+				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
 		KubernetesDeployerProperties.Toleration toleration = new KubernetesDeployerProperties.Toleration();
@@ -276,7 +273,7 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
 
 		assertNotNull(podSpec.getTolerations());
-		assertThat(podSpec.getTolerations().size() == 1);
+		assertThat(podSpec.getTolerations().size() == 2);
 		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"false")));
 	}
 
