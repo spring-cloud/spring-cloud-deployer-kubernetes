@@ -16,7 +16,12 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import io.fabric8.kubernetes.api.model.Toleration;
 import org.junit.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -247,6 +252,32 @@ public class KubernetesAppDeployerTests {
 		assertNotNull(podSpec.getTolerations());
 		assertThat(podSpec.getTolerations().size() == 1);
 		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"true")));
+	}
+
+	@Test
+	public void deployWithTolerationPropertyOverride() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.tolerations.key", "test");
+		props.put("spring.cloud.deployer.kubernetes.tolerations.value", "true");
+		props.put("spring.cloud.deployer.kubernetes.tolerations.operator", "Equal");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties.Toleration toleration = new KubernetesDeployerProperties.Toleration();
+		toleration.setKey("test");
+		toleration.setValue("false");
+		toleration.setOperator("Equal");
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getTolerations().add(toleration);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations().size() == 1);
+		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"false")));
 	}
 
 	@Test(expected = IllegalArgumentException.class)

@@ -19,7 +19,6 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
