@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,18 +66,6 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
 
 		assertThat(podSpec.getVolumes()).isEmpty();
-	}
-
-	@Test
-	public void deployWithTolerations() throws Exception {
-		AppDefinition definition = new AppDefinition("app-test", null);
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
-				new HashMap<>());
-
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
-		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
-
-		assertThat(podSpec.getTolerations()).isNotEmpty();
 	}
 
 	@Test
@@ -236,12 +224,25 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
+	public void deployWithTolerations() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
+				new HashMap<>());
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getTolerations()).isNotEmpty();
+	}
+
+	@Test
 	public void deployWithGlobalTolerations() {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
-				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
+		props.put("spring.cloud.deployer.kubernetes.tolerations",
+				"[{key: 'test', value: 'true', operator: 'Equal', effect: 'NoSchedule', tolerationSeconds: 5}, "
+						+ "{key: 'test2', value: 'false', operator: 'Equal', effect: 'NoSchedule', tolerationSeconds: 5}]");
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
@@ -250,7 +251,8 @@ public class KubernetesAppDeployerTests {
 
 		assertNotNull(podSpec.getTolerations());
 		assertThat(podSpec.getTolerations().size() == 2);
-		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"true")));
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test", "Equal", 5L, "true")));
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
 	}
 
 	@Test
@@ -258,14 +260,19 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.tolerations", "[{key: 'test', value: 'true', operator: 'Equal'}, "
-				+ "{key: 'test2', value: 'false', operator: 'Equal'}]");
+		props.put("spring.cloud.deployer.kubernetes.tolerations",
+				"[{key: 'test', value: 'true', operator: 'Equal', effect: 'NoSchedule', tolerationSeconds: 5}, "
+						+ "{key: 'test2', value: 'false', operator: 'Equal', effect: 'NoSchedule', tolerationSeconds: 5}]");
+
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
 		KubernetesDeployerProperties.Toleration toleration = new KubernetesDeployerProperties.Toleration();
+		toleration.setEffect("NoSchedule");
 		toleration.setKey("test");
-		toleration.setValue("false");
 		toleration.setOperator("Equal");
+		toleration.setTolerationSeconds(5L);
+		toleration.setValue("false");
+
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.getTolerations().add(toleration);
 
@@ -274,7 +281,70 @@ public class KubernetesAppDeployerTests {
 
 		assertNotNull(podSpec.getTolerations());
 		assertThat(podSpec.getTolerations().size() == 2);
-		assertThat(podSpec.getTolerations().contains(new Toleration(null,"test","Equal",null,"false")));
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test", "Equal", 5L, "true")));
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
+	}
+
+	@Test
+	public void deployWithDuplicateTolerationKeyPropertyOverride() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.tolerations",
+				"[{key: 'test', value: 'true', operator: 'Equal', effect: 'NoSchedule', tolerationSeconds: 5}]");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties.Toleration toleration = new KubernetesDeployerProperties.Toleration();
+		toleration.setEffect("NoSchedule");
+		toleration.setKey("test");
+		toleration.setOperator("Equal");
+		toleration.setTolerationSeconds(5L);
+		toleration.setValue("false");
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.getTolerations().add(toleration);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations().size() == 1);
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
+	}
+
+	@Test
+	public void deployWithDuplicateGlobalToleration() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		KubernetesDeployerProperties.Toleration toleration1 = new KubernetesDeployerProperties.Toleration();
+		toleration1.setEffect("NoSchedule");
+		toleration1.setKey("test");
+		toleration1.setOperator("Equal");
+		toleration1.setTolerationSeconds(5L);
+		toleration1.setValue("false");
+
+		kubernetesDeployerProperties.getTolerations().add(toleration1);
+
+		KubernetesDeployerProperties.Toleration toleration2 = new KubernetesDeployerProperties.Toleration();
+		toleration2.setEffect("NoSchedule");
+		toleration2.setKey("test");
+		toleration2.setOperator("Equal");
+		toleration2.setTolerationSeconds(5L);
+		toleration2.setValue("true");
+
+		kubernetesDeployerProperties.getTolerations().add(toleration2);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations().size() == 1);
+		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "true")));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -326,7 +396,8 @@ public class KubernetesAppDeployerTests {
 
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {
 		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-		properties.setResources(new ClassPathResource("dataflow-server.yml"), new ClassPathResource("dataflow-server-tolerations.yml"));
+		properties.setResources(new ClassPathResource("dataflow-server.yml"),
+				new ClassPathResource("dataflow-server-tolerations.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();

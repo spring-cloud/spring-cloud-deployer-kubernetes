@@ -175,12 +175,13 @@ public class AbstractKubernetesDeployer {
 		ImagePullPolicy pullPolicy = deduceImagePullPolicy(request);
 		container.setImagePullPolicy(pullPolicy.name());
 
-		//
 		Map<String, String> nodeSelectors = getNodeSelectors(request.getDeploymentProperties());
 		if (nodeSelectors.size() > 0) {
 			podSpec.withNodeSelector(nodeSelectors);
 		}
+
 		podSpec.withTolerations(getTolerations(request));
+
 		// only add volumes with corresponding volume mounts
 		podSpec.withVolumes(getVolumes(request).stream()
 				.filter(volume -> container.getVolumeMounts().stream()
@@ -205,40 +206,22 @@ public class AbstractKubernetesDeployer {
 		return podSpec.build();
 	}
 
-	private KubernetesDeployerProperties getDeploymentProperties(AppDeploymentRequest request, String propertyKey, String yamlLabel) {
-		String deploymentProperty = request.getDeploymentProperties()
-				.getOrDefault(propertyKey, "");
-		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
-		if (!StringUtils.isEmpty(deploymentProperty)) {
-			try {
-				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
-				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
-				Properties yaml = properties.getObject();
-				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				deployerProperties = new Binder(source)
-						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-			} catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid deployer spec '%s'", deploymentProperty), e);
-			}
-		}
-		return deployerProperties;
-	}
-
 	private List<Toleration> getTolerations(AppDeploymentRequest request) {
 		List<Toleration> tolerations = new ArrayList<>();
 
-		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.tolerations", "tolerations" );
+		KubernetesDeployerProperties deployerProperties = bindProperties(request,
+				"spring.cloud.deployer.kubernetes.tolerations", "tolerations" );
 
-		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
-
+		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(
+				new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(),
+						toleration.getTolerationSeconds(), toleration.getValue())));
 
 		properties.getTolerations().stream()
 				.filter(toleration -> tolerations.stream()
 						.noneMatch(existing -> existing.getKey().equals(toleration.getKey())))
 				.collect(Collectors.toList())
-				.forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
+				.forEach(toleration -> tolerations.add(new Toleration(toleration.getEffect(), toleration.getKey(),
+						toleration.getOperator(), toleration.getTolerationSeconds(), toleration.getValue())));
 
 		return tolerations;
 	}
@@ -261,7 +244,8 @@ public class AbstractKubernetesDeployer {
 	protected List<Volume> getVolumes(AppDeploymentRequest request) {
 		List<Volume> volumes = new ArrayList<>();
 
-		KubernetesDeployerProperties deployerProperties = getDeploymentProperties(request, "spring.cloud.deployer.kubernetes.volumes", "volumes");
+		KubernetesDeployerProperties deployerProperties = bindProperties(request,
+				"spring.cloud.deployer.kubernetes.volumes", "volumes");
 
 		volumes.addAll(deployerProperties.getVolumes());
 
@@ -273,6 +257,30 @@ public class AbstractKubernetesDeployer {
 				.collect(Collectors.toList()));
 
 		return volumes;
+	}
+
+	private KubernetesDeployerProperties bindProperties(AppDeploymentRequest request, String propertyKey,
+														String yamlLabel) {
+		String deploymentProperty = request.getDeploymentProperties().getOrDefault(propertyKey, "");
+
+		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
+
+		if (!StringUtils.isEmpty(deploymentProperty)) {
+			try {
+				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
+				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
+				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
+				Properties yaml = properties.getObject();
+				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
+				deployerProperties = new Binder(source)
+						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
+			} catch (Exception e) {
+				throw new IllegalArgumentException(
+						String.format("Invalid binding property '%s'", deploymentProperty), e);
+			}
+		}
+
+		return deployerProperties;
 	}
 
 	/**
