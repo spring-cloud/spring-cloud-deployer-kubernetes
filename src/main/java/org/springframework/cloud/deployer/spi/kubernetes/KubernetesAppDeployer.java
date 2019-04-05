@@ -109,7 +109,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			int externalPort = configureExternalPort(request);
 			String indexedProperty = request.getDeploymentProperties().get(INDEXED_PROPERTY_KEY);
 			boolean indexed = (indexedProperty != null) ? Boolean.valueOf(indexedProperty) : false;
-
+			logPossibleDownloadResourceMessage(request.getResource());
 			Map<String, String> idMap = createIdMap(appId, request);
 
 			if (indexed) {

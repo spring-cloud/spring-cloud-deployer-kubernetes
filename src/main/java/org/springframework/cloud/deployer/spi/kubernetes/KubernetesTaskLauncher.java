@@ -94,6 +94,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			);
 		}
 
+		logPossibleDownloadResourceMessage(request.getResource());
 		Map<String, String> idMap = createIdMap(appId, request);
 		logger.debug(String.format("Launching pod for task: %s", appId));
 
