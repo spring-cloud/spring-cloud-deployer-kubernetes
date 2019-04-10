@@ -640,7 +640,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 
 		// simulate a pod going into an un-schedulable state
-		KubernetesDeployerProperties.Resources resources = new KubernetesDeployerProperties.Resources();
+		KubernetesDeployerProperties.LimitsResources resources = new KubernetesDeployerProperties.LimitsResources();
 		resources.setCpu("9000000");
 
 		kubernetesDeployerProperties.setLimits(resources);
@@ -704,17 +704,20 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		return new BaseMatcher<String>() {
 			private Map<String, String> instanceAttributes;
 
+			@Override
 			public boolean matches(Object item) {
 				this.instanceAttributes = appDeployer.status(item.toString()).getInstances().get(inst).getAttributes();
 				return mapMatcher.matches(this.instanceAttributes);
 			}
 
+			@Override
 			public void describeMismatch(Object item, Description mismatchDescription) {
 				mismatchDescription.appendText("attributes of instance " + inst + " of ").appendValue(item)
 						.appendText(" ");
 				mapMatcher.describeMismatch(this.instanceAttributes, mismatchDescription);
 			}
 
+			@Override
 			public void describeTo(Description description) {
 				mapMatcher.describeTo(description);
 			}
