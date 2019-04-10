@@ -24,6 +24,7 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 /**
  * @author Florian Rosenberg
@@ -42,8 +43,12 @@ public class KubernetesDeployerProperties {
 	 */
 	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
+	/**
+	 * The maximum concurrent tasks allowed for this platform instance.
+	 */
 	private int maximumConcurrentTasks = 20;
 
+	@NestedConfigurationProperty
 	private Config fabric8 = Config.autoConfigure(null);
 
 	public Config getFabric8() {
@@ -55,18 +60,64 @@ public class KubernetesDeployerProperties {
 	}
 
 	/**
-	 * Encapsulates resources for Kubernetes Container resource requests and limits
+	 * Encapsulates resources for Kubernetes Container resource limits
 	 */
-	public static class Resources {
+	public static class LimitsResources {
 
+		/**
+		 * Container resource cpu limit.
+		 */
 		private String cpu;
 
+		/**
+		 * Container resource memory limit.
+		 */
 		private String memory;
 
-		public Resources() {
+		public LimitsResources() {
 		}
 
-		public Resources(String cpu, String memory) {
+		public LimitsResources(String cpu, String memory) {
+			this.cpu = cpu;
+			this.memory = memory;
+		}
+
+		public String getCpu() {
+			return cpu;
+		}
+
+		public void setCpu(String cpu) {
+			this.cpu = cpu;
+		}
+
+		public String getMemory() {
+			return memory;
+		}
+
+		public void setMemory(String memory) {
+			this.memory = memory;
+		}
+	}
+
+	/**
+	 * Encapsulates resources for Kubernetes Container resource requests
+	 */
+	public static class RequestsResources {
+
+		/**
+		 * Container request limit.
+		 */
+		private String cpu;
+
+		/**
+		 * Container memory limit.
+		 */
+		private String memory;
+
+		public RequestsResources() {
+		}
+
+		public RequestsResources(String cpu, String memory) {
 			this.cpu = cpu;
 			this.memory = memory;
 		}
@@ -102,8 +153,14 @@ public class KubernetesDeployerProperties {
 
 		public static class VolumeClaimTemplate {
 
+			/**
+			 * VolumeClaimTemplate storage.
+			 */
 			private String storage = "10m";
 
+			/**
+			 * VolumeClaimTemplate storage class name.
+			 */
 			private String storageClassName;
 
 			public String getStorage() {
@@ -259,12 +316,12 @@ public class KubernetesDeployerProperties {
 	/**
 	 * Memory and CPU limits (i.e. maximum needed values) to allocate for a Pod.
 	 */
-	private Resources limits = new Resources();
+	private LimitsResources limits = new LimitsResources();
 
 	/**
 	 * Memory and CPU requests (i.e. guaranteed needed values) to allocate for a Pod.
 	 */
-	private Resources requests = new Resources();
+	private RequestsResources requests = new RequestsResources();
 
 	/**
 	 * Tolerations to allocate for a Pod.
@@ -561,19 +618,19 @@ public class KubernetesDeployerProperties {
 		this.imagePullPolicy = imagePullPolicy;
 	}
 
-	public Resources getLimits() {
+	public LimitsResources getLimits() {
 		return limits;
 	}
 
-	public void setLimits(Resources limits) {
+	public void setLimits(LimitsResources limits) {
 		this.limits = limits;
 	}
 
-	public Resources getRequests() {
+	public RequestsResources getRequests() {
 		return requests;
 	}
 
-	public void setRequests(Resources requests) {
+	public void setRequests(RequestsResources requests) {
 		this.requests = requests;
 	}
 
