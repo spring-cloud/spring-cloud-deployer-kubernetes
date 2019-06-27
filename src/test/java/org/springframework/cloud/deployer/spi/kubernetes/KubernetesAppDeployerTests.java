@@ -108,16 +108,46 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
-	public void deployWithNodeSelector() throws Exception {
+	public void deployWithNodeSelectorGlobalProperty() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setNodeSelector("disktype:ssd, os:qnx");
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "qnx"));
+	}
+
+	@Test
+	public void deployWithNodeSelectorDeploymentProperty() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.deployment.nodeSelector", "disktype:ssd, os: linux");
+		props.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "disktype:ssd, os: linux");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
 		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
 
 		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "linux"));
+	}
+
+	@Test
+	public void deployWithNodeSelectorDeploymentPropertyGlobalOverride() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "disktype:ssd, os: openbsd");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setNodeSelector("disktype:ssd, os:qnx");
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "openbsd"));
 	}
 
 	@Test

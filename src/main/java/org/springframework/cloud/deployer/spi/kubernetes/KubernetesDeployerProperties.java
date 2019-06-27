@@ -413,6 +413,11 @@ public class KubernetesDeployerProperties {
 	private boolean createJob = false;
 
 	/**
+	 * The node selector to use in key:value format, comma separated
+	 */
+	private String nodeSelector;
+
+	/**
 	 * Service account name to use for app deployments
 	 */
 	private String deploymentServiceAccountName;
@@ -677,7 +682,16 @@ public class KubernetesDeployerProperties {
 	public int getMaximumConcurrentTasks() {
 		return maximumConcurrentTasks;
 	}
+
 	public void setMaximumConcurrentTasks(int maximumConcurrentTasks) {
 		this.maximumConcurrentTasks = maximumConcurrentTasks;
+	}
+
+	public void setNodeSelector(String nodeSelector) {
+		this.nodeSelector = nodeSelector;
+	}
+
+	public String getNodeSelector() {
+		return nodeSelector;
 	}
 }

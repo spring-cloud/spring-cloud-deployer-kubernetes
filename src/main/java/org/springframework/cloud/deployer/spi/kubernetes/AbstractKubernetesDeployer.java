@@ -413,21 +413,31 @@ public class AbstractKubernetesDeployer {
 	/**
 	 * Get the nodeSelectors setting for the deployment request.
 	 *
-	 * @param properties The deployment request deployment properties.
+	 * @param deploymentProperties The deployment request deployment properties.
 	 * @return map of nodeSelectors
 	 */
-	protected Map<String, String> getNodeSelectors(Map<String, String> properties) {
+	private Map<String, String> getNodeSelectors(Map<String, String> deploymentProperties) {
 		Map<String, String> nodeSelectors = new HashMap<>();
 
-		String nodeSelectorsProperty = properties
+		String nodeSelector = properties.getNodeSelector();
+
+		String nodeSelectorDeploymentProperty = deploymentProperties
 				.getOrDefault(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
 
-		if (StringUtils.hasText(nodeSelectorsProperty)) {
-			String[] nodeSelectorPairs = nodeSelectorsProperty.split(",");
+		boolean hasGlobalNodeSelector = StringUtils.hasText(properties.getNodeSelector());
+		boolean hasDeployerPropertyNodeSelector = StringUtils.hasText(nodeSelectorDeploymentProperty);
+
+		if ((hasGlobalNodeSelector && hasDeployerPropertyNodeSelector) ||
+				(!hasGlobalNodeSelector && hasDeployerPropertyNodeSelector)) {
+			nodeSelector = nodeSelectorDeploymentProperty;
+		}
+
+		if (StringUtils.hasText(nodeSelector)) {
+			String[] nodeSelectorPairs = nodeSelector.split(",");
 			for (String nodeSelectorPair : nodeSelectorPairs) {
-				String[] nodeSelector = nodeSelectorPair.split(":");
-				Assert.isTrue(nodeSelector.length == 2, format("Invalid nodeSelector value: '{}'", nodeSelectorPair));
-				nodeSelectors.put(nodeSelector[0].trim(), nodeSelector[1].trim());
+				String[] selector = nodeSelectorPair.split(":");
+				Assert.isTrue(selector.length == 2, format("Invalid nodeSelector value: '{}'", nodeSelectorPair));
+				nodeSelectors.put(selector[0].trim(), selector[1].trim());
 			}
 		}
 
