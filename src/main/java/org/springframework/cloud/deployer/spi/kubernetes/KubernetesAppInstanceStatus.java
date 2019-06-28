@@ -60,6 +60,14 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 		this.runningPhaseDeploymentStateResolver = new DefaultRunningPhaseDeploymentStateResolver(properties);
 	}
 
+	public KubernetesAppInstanceStatus(Pod pod, Service service, KubernetesDeployerProperties properties, ContainerStatus containerStatus) {
+		this.pod = pod;
+		this.service = service;
+		this.properties = properties;
+		this.containerStatus = containerStatus;
+		this.runningPhaseDeploymentStateResolver = new DefaultRunningPhaseDeploymentStateResolver(properties);
+	}
+
 	/**
 	 * Override the default {@link RunningPhaseDeploymentStateResolver} implementation.
 	 *
