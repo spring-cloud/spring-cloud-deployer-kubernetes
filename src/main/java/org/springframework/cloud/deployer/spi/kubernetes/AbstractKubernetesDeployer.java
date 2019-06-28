@@ -20,9 +20,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
@@ -125,14 +127,29 @@ public class AbstractKubernetesDeployer {
 		Service service = null;
 		if (podList != null && podList.getItems() != null) {
 			for (Pod pod : podList.getItems()) {
+				String deploymentKey = pod.getMetadata().getLabels().get(SPRING_DEPLOYMENT_KEY);
 				for (Service svc : services.getItems()) {
-					if (svc.getMetadata().getName()
-							.equals(pod.getMetadata().getLabels().get(SPRING_DEPLOYMENT_KEY))) {
+					if (svc.getMetadata().getName().equals(deploymentKey)) {
 						service = svc;
 						break;
 					}
 				}
-				statusBuilder.with(new KubernetesAppInstanceStatus(pod, service, properties));
+				//find the container with the correct env var
+				for(Container container : pod.getSpec().getContainers()) {
+					if(container.getEnv().stream().anyMatch(envVar -> "SPRING_CLOUD_APPLICATION_GROUP".equals(envVar.getName()))) {
+						//find container status for this container
+						Optional<ContainerStatus> containerStatusOptional =
+							pod.getStatus().getContainerStatuses()
+							   .stream().filter(containerStatus -> container.getName().equals(containerStatus.getName()))
+							   .findFirst();
+
+						if(containerStatusOptional.isPresent()) {
+							statusBuilder.with(new KubernetesAppInstanceStatus(pod, service, properties, containerStatusOptional.get()));
+						}
+
+						break;
+					}
+				}
 			}
 		}
 		return statusBuilder.build();
