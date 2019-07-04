@@ -181,6 +181,31 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		return executionCount.get();
 	}
 
+	@Override
+	public String getLog(String id) {
+		if(properties.isCreateJob()){
+			Job job = getJob(id);
+			Map<String, String> selector = new HashMap<>();
+			selector.put(SPRING_APP_KEY, id);
+			selector.put("job-name", job.getMetadata().getName());
+			PodList podList = client.pods().withLabels(selector).list();
+			StringBuilder logAppender = new StringBuilder();
+			for (Pod pod : podList.getItems()) {
+				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).getLog());
+			}
+			return logAppender.toString();
+		} else {
+			Map<String, String> selector = new HashMap<>();
+			selector.put(SPRING_APP_KEY, id);
+			PodList podList = client.pods().withLabels(selector).list();
+			StringBuilder logAppender = new StringBuilder();
+			for (Pod pod : podList.getItems()) {
+				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).getLog());
+			}
+			return logAppender.toString();
+		}
+	}
+
 	private boolean maxConcurrentExecutionsReached() {
 		return this.getRunningTaskExecutionCount() >= this.getMaximumConcurrentTasks();
 	}
