@@ -16,6 +16,12 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
@@ -47,6 +53,7 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
@@ -55,12 +62,6 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -209,6 +210,18 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		logger.debug(String.format("Status for app: %s is %s", appId, status));
 
 		return status;
+	}
+
+	@Override
+	public String getLog(String appId) {
+		Map<String, String> selector = new HashMap<>();
+		selector.put(SPRING_APP_KEY, appId);
+		PodList podList = client.pods().withLabels(selector).list();
+		StringBuilder logAppender = new StringBuilder();
+		for (Pod pod : podList.getItems()) {
+			logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).getLog());
+		}
+		return logAppender.toString();
 	}
 
 	@Override
