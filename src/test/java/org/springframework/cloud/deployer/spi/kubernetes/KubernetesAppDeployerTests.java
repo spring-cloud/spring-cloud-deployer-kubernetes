@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.Toleration;
 import org.junit.Test;
@@ -33,8 +34,10 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -420,6 +423,161 @@ public class KubernetesAppDeployerTests {
 		assertEquals("Invalid value for 'label2'", "value2", deploymentLabels.get("label2"));
 	}
 
+	@Test
+	public void testSecretKeyRef() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretKeyRefs",
+				"[{envVarName: 'SECRET_PASSWORD', secretName: 'mySecret', dataKey: 'password'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 2, envVars.size());
+
+		EnvVar secretKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+	}
+
+	@Test
+	public void testSecretKeyRefMultiple() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretKeyRefs",
+				"[{envVarName: 'SECRET_PASSWORD', secretName: 'mySecret', dataKey: 'password'}," +
+						"{envVarName: 'SECRET_USERNAME', secretName: 'mySecret2', dataKey: 'username'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 3, envVars.size());
+
+		EnvVar secretKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+
+		secretKeyRefEnvVar = envVars.get(1);
+		assertEquals("Unexpected env var name", "SECRET_USERNAME", secretKeyRefEnvVar.getName());
+		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret2", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "username", secretKeySelector.getKey());
+	}
+
+	@Test
+	public void testSecretKeyRefGlobal() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		KubernetesDeployerProperties.SecretKeyRef secretKeyRef = new KubernetesDeployerProperties.SecretKeyRef();
+		secretKeyRef.setEnvVarName("SECRET_PASSWORD_GLOBAL");
+		secretKeyRef.setSecretName("mySecretGlobal");
+		secretKeyRef.setDataKey("passwordGlobal");
+		kubernetesDeployerProperties.setSecretKeyRefs(Collections.singletonList(secretKeyRef));
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 2, envVars.size());
+
+		EnvVar secretKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "SECRET_PASSWORD_GLOBAL", secretKeyRefEnvVar.getName());
+		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecretGlobal", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "passwordGlobal", secretKeySelector.getKey());
+	}
+
+	@Test
+	public void testSecretKeyRefPropertyOverride() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretKeyRefs",
+				"[{envVarName: 'SECRET_PASSWORD_GLOBAL', secretName: 'mySecret', dataKey: 'password'}," +
+						"{envVarName: 'SECRET_USERNAME', secretName: 'mySecret2', dataKey: 'username'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		List<KubernetesDeployerProperties.SecretKeyRef> globalSecretKeyRefs = new ArrayList<>();
+		KubernetesDeployerProperties.SecretKeyRef globalSecretKeyRef1 = new KubernetesDeployerProperties.SecretKeyRef();
+		globalSecretKeyRef1.setEnvVarName("SECRET_PASSWORD_GLOBAL");
+		globalSecretKeyRef1.setSecretName("mySecretGlobal");
+		globalSecretKeyRef1.setDataKey("passwordGlobal");
+
+		KubernetesDeployerProperties.SecretKeyRef globalSecretKeyRef2 = new KubernetesDeployerProperties.SecretKeyRef();
+		globalSecretKeyRef2.setEnvVarName("SECRET_USERNAME_GLOBAL");
+		globalSecretKeyRef2.setSecretName("mySecretGlobal");
+		globalSecretKeyRef2.setDataKey("usernameGlobal");
+
+		globalSecretKeyRefs.add(globalSecretKeyRef1);
+		globalSecretKeyRefs.add(globalSecretKeyRef2);
+
+		kubernetesDeployerProperties.setSecretKeyRefs(globalSecretKeyRefs);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 4, envVars.size());
+
+		// deploy prop overrides global
+		EnvVar secretKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "SECRET_PASSWORD_GLOBAL", secretKeyRefEnvVar.getName());
+		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+
+		// unique deploy prop
+		secretKeyRefEnvVar = envVars.get(1);
+		assertEquals("Unexpected env var name", "SECRET_USERNAME", secretKeyRefEnvVar.getName());
+		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret2", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "username", secretKeySelector.getKey());
+
+		// unique, non-overridden global prop
+		secretKeyRefEnvVar = envVars.get(2);
+		assertEquals("Unexpected env var name", "SECRET_USERNAME_GLOBAL", secretKeyRefEnvVar.getName());
+		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecretGlobal", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "usernameGlobal", secretKeySelector.getKey());
+	}
+
+	@Test
+	public void testSecretKeyRefGlobalFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 2, envVars.size());
+
+		EnvVar secretKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
+		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
+		assertEquals("Unexpected secret data key", "myPassword", secretKeySelector.getKey());
+	}
+
 	private Resource getResource() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}
@@ -427,7 +585,8 @@ public class KubernetesAppDeployerTests {
 	private KubernetesDeployerProperties bindDeployerProperties() throws Exception {
 		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
 		properties.setResources(new ClassPathResource("dataflow-server.yml"),
-				new ClassPathResource("dataflow-server-tolerations.yml"));
+				new ClassPathResource("dataflow-server-tolerations.yml"),
+				new ClassPathResource("dataflow-server-secretKeyRef.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();

@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 import io.fabric8.kubernetes.api.model.Container;
@@ -39,17 +38,12 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
 import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -211,7 +205,7 @@ public class AbstractKubernetesDeployer {
 	private List<Toleration> getTolerations(AppDeploymentRequest request) {
 		List<Toleration> tolerations = new ArrayList<>();
 
-		KubernetesDeployerProperties deployerProperties = bindProperties(request,
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
 				"spring.cloud.deployer.kubernetes.tolerations", "tolerations" );
 
 		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(
@@ -246,7 +240,7 @@ public class AbstractKubernetesDeployer {
 	protected List<Volume> getVolumes(AppDeploymentRequest request) {
 		List<Volume> volumes = new ArrayList<>();
 
-		KubernetesDeployerProperties deployerProperties = bindProperties(request,
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
 				"spring.cloud.deployer.kubernetes.volumes", "volumes");
 
 		volumes.addAll(deployerProperties.getVolumes());
@@ -259,30 +253,6 @@ public class AbstractKubernetesDeployer {
 				.collect(Collectors.toList()));
 
 		return volumes;
-	}
-
-	private KubernetesDeployerProperties bindProperties(AppDeploymentRequest request, String propertyKey,
-														String yamlLabel) {
-		String deploymentProperty = request.getDeploymentProperties().getOrDefault(propertyKey, "");
-
-		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
-
-		if (!StringUtils.isEmpty(deploymentProperty)) {
-			try {
-				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
-				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
-				Properties yaml = properties.getObject();
-				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				deployerProperties = new Binder(source)
-						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-			} catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid binding property '%s'", deploymentProperty), e);
-			}
-		}
-
-		return deployerProperties;
 	}
 
 	/**

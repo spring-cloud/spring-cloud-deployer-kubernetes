@@ -234,6 +234,36 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+	public static class SecretKeyRef {
+		private String envVarName;
+		private String secretName;
+		private String dataKey;
+
+		public void setEnvVarName(String envVarName) {
+			this.envVarName = envVarName;
+		}
+
+		public String getEnvVarName() {
+			return envVarName;
+		}
+
+		public void setSecretName(String secretName) {
+			this.secretName = secretName;
+		}
+
+		public String getSecretName() {
+			return secretName;
+		}
+
+		public void setDataKey(String dataKey) {
+			this.dataKey = dataKey;
+		}
+
+		public String getDataKey() {
+			return dataKey;
+		}
+	}
+
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**
@@ -327,6 +357,11 @@ public class KubernetesDeployerProperties {
 	 * Tolerations to allocate for a Pod.
 	 */
 	private List<Toleration> tolerations = new ArrayList<>();
+
+	/**
+	 * Secret key references to be added to the Pod environment.
+	 */
+	private List<SecretKeyRef> secretKeyRefs = new ArrayList<>();
 
 	/**
 	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
@@ -541,6 +576,14 @@ public class KubernetesDeployerProperties {
 
 	public void setTolerations(List<Toleration> tolerations) {
 		this.tolerations = tolerations;
+	}
+
+	public List<SecretKeyRef> getSecretKeyRefs() {
+		return secretKeyRefs;
+	}
+
+	public void setSecretKeyRefs(List<SecretKeyRef> secretKeyRefs) {
+		this.secretKeyRefs = secretKeyRefs;
 	}
 
 	public String[] getEnvironmentVariables() {

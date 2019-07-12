@@ -24,6 +24,7 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Probe;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -136,6 +137,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
 
+		envVars.addAll(getSecretKeyRefs(request));
 		envVars.add(getGUIDEnvVar());
 
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
@@ -366,5 +368,38 @@ public class DefaultContainerFactory implements ContainerFactory {
 			entryPointStyle = properties.getEntryPointStyle();
 		}
 		return entryPointStyle;
+	}
+
+	private List<EnvVar> getSecretKeyRefs(AppDeploymentRequest request) {
+		List<EnvVar> secretKeyRefs = new ArrayList<>();
+
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
+				"spring.cloud.deployer.kubernetes.secretKeyRefs", "secretKeyRefs" );
+
+		deployerProperties.getSecretKeyRefs().forEach(secretKeyRef ->
+				secretKeyRefs.add(buildSecretKeyRefEnvVar(secretKeyRef)));
+
+		properties.getSecretKeyRefs().stream()
+				.filter(secretKeyRef -> secretKeyRefs.stream()
+						.noneMatch(existing -> existing.getName().equals(secretKeyRef.getEnvVarName())))
+				.collect(Collectors.toList())
+				.forEach(secretKeyRef -> secretKeyRefs.add(buildSecretKeyRefEnvVar(secretKeyRef)));
+
+		return secretKeyRefs;
+	}
+
+	private EnvVar buildSecretKeyRefEnvVar(KubernetesDeployerProperties.SecretKeyRef secretKeyRef) {
+		SecretKeySelector secretKeySelector = new SecretKeySelector();
+
+		EnvVarSource envVarSource = new EnvVarSource();
+		envVarSource.setSecretKeyRef(secretKeySelector);
+
+		EnvVar secretKeyEnvRefVar = new EnvVar();
+		secretKeyEnvRefVar.setValueFrom(envVarSource);
+		secretKeySelector.setName(secretKeyRef.getSecretName());
+		secretKeySelector.setKey(secretKeyRef.getDataKey());
+		secretKeyEnvRefVar.setName(secretKeyRef.getEnvVarName());
+
+		return secretKeyEnvRefVar;
 	}
 }
