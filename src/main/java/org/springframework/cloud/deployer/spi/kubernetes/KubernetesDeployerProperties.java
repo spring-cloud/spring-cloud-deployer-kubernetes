@@ -234,9 +234,8 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
-	public static class SecretKeyRef {
+	static class KeyRef {
 		private String envVarName;
-		private String secretName;
 		private String dataKey;
 
 		public void setEnvVarName(String envVarName) {
@@ -247,6 +246,18 @@ public class KubernetesDeployerProperties {
 			return envVarName;
 		}
 
+		public void setDataKey(String dataKey) {
+			this.dataKey = dataKey;
+		}
+
+		public String getDataKey() {
+			return dataKey;
+		}
+	}
+
+	public static class SecretKeyRef extends KeyRef {
+		private String secretName;
+
 		public void setSecretName(String secretName) {
 			this.secretName = secretName;
 		}
@@ -254,13 +265,17 @@ public class KubernetesDeployerProperties {
 		public String getSecretName() {
 			return secretName;
 		}
+	}
 
-		public void setDataKey(String dataKey) {
-			this.dataKey = dataKey;
+	public static class ConfigMapKeyRef extends KeyRef {
+		private String configMapName;
+
+		public void setConfigMapName(String configMapName) {
+			this.configMapName = configMapName;
 		}
 
-		public String getDataKey() {
-			return dataKey;
+		public String getConfigMapName() {
+			return configMapName;
 		}
 	}
 
@@ -362,6 +377,11 @@ public class KubernetesDeployerProperties {
 	 * Secret key references to be added to the Pod environment.
 	 */
 	private List<SecretKeyRef> secretKeyRefs = new ArrayList<>();
+
+	/**
+	 * ConfigMap key references to be added to the Pod environment.
+	 */
+	private List<ConfigMapKeyRef> configMapKeyRefs = new ArrayList<>();
 
 	/**
 	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
@@ -584,6 +604,14 @@ public class KubernetesDeployerProperties {
 
 	public void setSecretKeyRefs(List<SecretKeyRef> secretKeyRefs) {
 		this.secretKeyRefs = secretKeyRefs;
+	}
+
+	public List<ConfigMapKeyRef> getConfigMapKeyRefs() {
+		return configMapKeyRefs;
+	}
+
+	public void setConfigMapKeyRefs(List<ConfigMapKeyRef> configMapKeyRefs) {
+		this.configMapKeyRefs = configMapKeyRefs;
 	}
 
 	public String[] getEnvironmentVariables() {

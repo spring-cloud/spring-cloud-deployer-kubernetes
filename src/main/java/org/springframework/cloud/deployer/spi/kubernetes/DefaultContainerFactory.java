@@ -18,6 +18,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -138,6 +139,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		envVars.addAll(getSecretKeyRefs(request));
+		envVars.addAll(getConfigMapKeyRefs(request));
 		envVars.add(getGUIDEnvVar());
 
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
@@ -401,5 +403,38 @@ public class DefaultContainerFactory implements ContainerFactory {
 		secretKeyEnvRefVar.setName(secretKeyRef.getEnvVarName());
 
 		return secretKeyEnvRefVar;
+	}
+
+	private List<EnvVar> getConfigMapKeyRefs(AppDeploymentRequest request) {
+		List<EnvVar> configMapKeyRefs = new ArrayList<>();
+
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
+				"spring.cloud.deployer.kubernetes.configMapKeyRefs", "configMapKeyRefs");
+
+		deployerProperties.getConfigMapKeyRefs().forEach(configMapKeyRef ->
+				configMapKeyRefs.add(buildConfigMapKeyRefEnvVar(configMapKeyRef)));
+
+		properties.getConfigMapKeyRefs().stream()
+				.filter(configMapKeyRef -> configMapKeyRefs.stream()
+						.noneMatch(existing -> existing.getName().equals(configMapKeyRef.getEnvVarName())))
+				.collect(Collectors.toList())
+				.forEach(configMapKeyRef -> configMapKeyRefs.add(buildConfigMapKeyRefEnvVar(configMapKeyRef)));
+
+		return configMapKeyRefs;
+	}
+
+	private EnvVar buildConfigMapKeyRefEnvVar(KubernetesDeployerProperties.ConfigMapKeyRef configMapKeyRef) {
+		ConfigMapKeySelector configMapKeySelector = new ConfigMapKeySelector();
+
+		EnvVarSource envVarSource = new EnvVarSource();
+		envVarSource.setConfigMapKeyRef(configMapKeySelector);
+
+		EnvVar configMapKeyEnvRefVar = new EnvVar();
+		configMapKeyEnvRefVar.setValueFrom(envVarSource);
+		configMapKeySelector.setName(configMapKeyRef.getConfigMapName());
+		configMapKeySelector.setKey(configMapKeyRef.getDataKey());
+		configMapKeyEnvRefVar.setName(configMapKeyRef.getEnvVarName());
+
+		return configMapKeyEnvRefVar;
 	}
 }

@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
@@ -569,13 +570,168 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 2, envVars.size());
+		assertEquals("Invalid number of env vars", 3, envVars.size());
 
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
 		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
 		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
 		assertEquals("Unexpected secret data key", "myPassword", secretKeySelector.getKey());
+	}
+
+	@Test
+	public void testConfigMapKeyRef() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapKeyRefs",
+				"[{envVarName: 'MY_ENV', configMapName: 'myConfigMap', dataKey: 'envName'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 2, envVars.size());
+
+		EnvVar configMapKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+	}
+
+	@Test
+	public void testConfigMapKeyRefMultiple() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapKeyRefs",
+				"[{envVarName: 'MY_ENV', configMapName: 'myConfigMap', dataKey: 'envName'}," +
+						"{envVarName: 'ENV_VALUES', configMapName: 'myOtherConfigMap', dataKey: 'diskType'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 3, envVars.size());
+
+		EnvVar configMapKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+
+		configMapKeyRefEnvVar = envVars.get(1);
+		assertEquals("Unexpected env var name", "ENV_VALUES", configMapKeyRefEnvVar.getName());
+		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myOtherConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "diskType", configMapKeySelector.getKey());
+	}
+
+	@Test
+	public void testConfigMapKeyRefGlobal() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		KubernetesDeployerProperties.ConfigMapKeyRef configMapKeyRef = new KubernetesDeployerProperties.ConfigMapKeyRef();
+		configMapKeyRef.setEnvVarName("MY_ENV_GLOBAL");
+		configMapKeyRef.setConfigMapName("myConfigMapGlobal");
+		configMapKeyRef.setDataKey("envGlobal");
+		kubernetesDeployerProperties.setConfigMapKeyRefs(Collections.singletonList(configMapKeyRef));
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 2, envVars.size());
+
+		EnvVar configMapKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "MY_ENV_GLOBAL", configMapKeyRefEnvVar.getName());
+		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myConfigMapGlobal", configMapKeySelector.getName());
+		assertEquals("Unexpected config data key", "envGlobal", configMapKeySelector.getKey());
+	}
+
+	@Test
+	public void testConfigMapKeyRefPropertyOverride() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapKeyRefs",
+				"[{envVarName: 'MY_ENV', configMapName: 'myConfigMap', dataKey: 'envName'}," +
+						"{envVarName: 'ENV_VALUES', configMapName: 'myOtherConfigMap', dataKey: 'diskType'}]");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		List<KubernetesDeployerProperties.ConfigMapKeyRef> globalConfigMapKeyRefs = new ArrayList<>();
+		KubernetesDeployerProperties.ConfigMapKeyRef globalConfigMapKeyRef1 = new KubernetesDeployerProperties.ConfigMapKeyRef();
+		globalConfigMapKeyRef1.setEnvVarName("MY_ENV");
+		globalConfigMapKeyRef1.setConfigMapName("myEnvGlobal");
+		globalConfigMapKeyRef1.setDataKey("envGlobal");
+
+		KubernetesDeployerProperties.ConfigMapKeyRef globalConfigMapKeyRef2 = new KubernetesDeployerProperties.ConfigMapKeyRef();
+		globalConfigMapKeyRef2.setEnvVarName("MY_VALS_GLOBAL");
+		globalConfigMapKeyRef2.setConfigMapName("myValsGlobal");
+		globalConfigMapKeyRef2.setDataKey("valsGlobal");
+
+		globalConfigMapKeyRefs.add(globalConfigMapKeyRef1);
+		globalConfigMapKeyRefs.add(globalConfigMapKeyRef2);
+
+		kubernetesDeployerProperties.setConfigMapKeyRefs(globalConfigMapKeyRefs);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 4, envVars.size());
+
+		// deploy prop overrides global
+		EnvVar configMapKeyRefEnvVar = envVars.get(0);
+		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+
+		// unique deploy prop
+		configMapKeyRefEnvVar = envVars.get(1);
+		assertEquals("Unexpected env var name", "ENV_VALUES", configMapKeyRefEnvVar.getName());
+		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myOtherConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "diskType", configMapKeySelector.getKey());
+
+		// unique, non-overridden global prop
+		configMapKeyRefEnvVar = envVars.get(2);
+		assertEquals("Unexpected env var name", "MY_VALS_GLOBAL", configMapKeyRefEnvVar.getName());
+		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myValsGlobal", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "valsGlobal", configMapKeySelector.getKey());
+	}
+
+	@Test
+	public void testConfigMapKeyRefGlobalFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
+
+		assertEquals("Invalid number of env vars", 3, envVars.size());
+
+		EnvVar configMapKeyRefEnvVar = envVars.get(1);
+		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
+		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
+		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
 	}
 
 	private Resource getResource() {
@@ -586,7 +742,8 @@ public class KubernetesAppDeployerTests {
 		YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
 		properties.setResources(new ClassPathResource("dataflow-server.yml"),
 				new ClassPathResource("dataflow-server-tolerations.yml"),
-				new ClassPathResource("dataflow-server-secretKeyRef.yml"));
+				new ClassPathResource("dataflow-server-secretKeyRef.yml"),
+				new ClassPathResource("dataflow-server-configMapKeyRef.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
