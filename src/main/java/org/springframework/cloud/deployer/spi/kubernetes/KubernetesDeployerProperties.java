@@ -279,6 +279,27 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+	public static class PodSecurityContext {
+		private Long runAsUser;
+		private Long fsGroup;
+
+		public void setRunAsUser(Long runAsUser) {
+			this.runAsUser = runAsUser;
+		}
+
+		public Long getRunAsUser() {
+			return this.runAsUser;
+		}
+
+		public void setFsGroup(Long fsGroup) {
+			this.fsGroup = fsGroup;
+		}
+
+		public Long getFsGroup() {
+			return fsGroup;
+		}
+	}
+
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**
@@ -476,6 +497,11 @@ public class KubernetesDeployerProperties {
 	 * Service account name to use for app deployments
 	 */
 	private String deploymentServiceAccountName;
+
+	/**
+	 * The security context to apply to created pod's.
+	 */
+	private PodSecurityContext podSecurityContext;
 
 	public String getNamespace() {
 		return namespace;
@@ -764,5 +790,13 @@ public class KubernetesDeployerProperties {
 
 	public String getNodeSelector() {
 		return nodeSelector;
+	}
+
+	public void setPodSecurityContext(PodSecurityContext podSecurityContext) {
+		this.podSecurityContext = podSecurityContext;
+	}
+
+	public PodSecurityContext getPodSecurityContext() {
+		return podSecurityContext;
 	}
 }

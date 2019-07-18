@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.PodSecurityContext;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
@@ -46,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -734,6 +736,130 @@ public class KubernetesAppDeployerTests {
 		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
 	}
 
+	@Test
+	public void testPodSecurityContextProperty() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
+		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testPodSecurityContextGlobalProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
+		securityContext.setFsGroup(65534L);
+		securityContext.setRunAsUser(65534L);
+
+		kubernetesDeployerProperties.setPodSecurityContext(securityContext);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
+		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testPodSecurityContextFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
+		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testPodSecurityContextUIDOnly() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
+		assertNull("Unexpected fs group", podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testPodSecurityContextFsGroupOnly() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{fsGroup: 65534}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertNull("Unexpected run as user", podSecurityContext.getRunAsUser());
+		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testPodSecurityContextPropertyOverrideGlobal() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
+		securityContext.setFsGroup(1000L);
+		securityContext.setRunAsUser(1000L);
+
+		kubernetesDeployerProperties.setPodSecurityContext(securityContext);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+		assertNotNull("Pod security context should not be null", podSecurityContext);
+
+		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
+		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
 	private Resource getResource() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}
@@ -743,7 +869,8 @@ public class KubernetesAppDeployerTests {
 		properties.setResources(new ClassPathResource("dataflow-server.yml"),
 				new ClassPathResource("dataflow-server-tolerations.yml"),
 				new ClassPathResource("dataflow-server-secretKeyRef.yml"),
-				new ClassPathResource("dataflow-server-configMapKeyRef.yml"));
+				new ClassPathResource("dataflow-server-configMapKeyRef.yml"),
+				new ClassPathResource("dataflow-server-podsecuritycontext.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();

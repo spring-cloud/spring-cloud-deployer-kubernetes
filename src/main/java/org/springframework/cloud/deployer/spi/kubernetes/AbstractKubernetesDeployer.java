@@ -25,11 +25,15 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSecurityContext;
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecurityContext;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.Toleration;
@@ -198,6 +202,8 @@ public class AbstractKubernetesDeployer {
 		if (deploymentServiceAcccountName != null) {
 			podSpec.withServiceAccountName(deploymentServiceAcccountName);
 		}
+
+		setPodSecurityContext(request, podSpec);
 
 		return podSpec.build();
 	}
@@ -453,5 +459,31 @@ public class AbstractKubernetesDeployer {
 		}
 
 		return secret;
+	}
+
+	private void setPodSecurityContext(AppDeploymentRequest request, PodSpecBuilder podSpecBuilder) {
+		PodSecurityContext podSecurityContext = null;
+
+		String podSecurityDeploymentPropertyKey = "spring.cloud.deployer.kubernetes.podSecurityContext";
+		String podSecurityDeploymentProperty = request.getDeploymentProperties().get(podSecurityDeploymentPropertyKey);
+
+		if (properties.getPodSecurityContext() != null && !StringUtils.hasText(podSecurityDeploymentProperty)) {
+			podSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(properties.getPodSecurityContext().getRunAsUser())
+					.withFsGroup(properties.getPodSecurityContext().getFsGroup())
+					.build();
+		} else if (StringUtils.hasText(podSecurityDeploymentProperty)) {
+			KubernetesDeployerProperties kubernetesDeployerProperties = PropertyParserUtils.bindProperties(request,
+					podSecurityDeploymentPropertyKey, "podSecurityContext");
+
+			podSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(kubernetesDeployerProperties.getPodSecurityContext().getRunAsUser())
+					.withFsGroup(kubernetesDeployerProperties.getPodSecurityContext().getFsGroup())
+					.build();
+		}
+
+		if (podSecurityContext != null) {
+			podSpecBuilder.withSecurityContext(podSecurityContext);
+		}
 	}
 }
