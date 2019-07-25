@@ -191,7 +191,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			PodList podList = client.pods().withLabels(selector).list();
 			StringBuilder logAppender = new StringBuilder();
 			for (Pod pod : podList.getItems()) {
-				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).getLog());
+				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
 			}
 			return logAppender.toString();
 		} else {
@@ -200,7 +200,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			PodList podList = client.pods().withLabels(selector).list();
 			StringBuilder logAppender = new StringBuilder();
 			for (Pod pod : podList.getItems()) {
-				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).getLog());
+				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
 			}
 			return logAppender.toString();
 		}
