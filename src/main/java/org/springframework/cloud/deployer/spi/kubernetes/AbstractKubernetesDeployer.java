@@ -136,7 +136,7 @@ public class AbstractKubernetesDeployer {
 				}
 				//find the container with the correct env var
 				for(Container container : pod.getSpec().getContainers()) {
-					if(container.getEnv().stream().anyMatch(envVar -> "SPRING_CLOUD_APPLICATION_GROUP".equals(envVar.getName()))) {
+					if(container.getEnv().stream().anyMatch(envVar -> "SPRING_CLOUD_APPLICATION_GUID".equals(envVar.getName()))) {
 						//find container status for this container
 						Optional<ContainerStatus> containerStatusOptional =
 							pod.getStatus().getContainerStatuses()
