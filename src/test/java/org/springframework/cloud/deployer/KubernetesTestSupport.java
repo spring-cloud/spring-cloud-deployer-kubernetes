@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.spi.kubernetes;
+package org.springframework.cloud.deployer;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesClientFactory;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties;
 import org.springframework.cloud.deployer.spi.test.junit.AbstractExternalResourceTestSupport;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
  * JUnit {@link org.junit.Rule} that detects the fact that a Kubernetes installation is available.
@@ -39,17 +41,17 @@ public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<K
 	private ConfigurableApplicationContext context;
 
 
-	protected KubernetesTestSupport() {
+	public KubernetesTestSupport() {
 		super("KUBERNETES");
 	}
 
 	@Override
-	protected void cleanupResource() throws Exception {
+	public void cleanupResource() throws Exception {
 		context.close();
 	}
 
 	@Override
-	protected void obtainResource() throws Exception {
+	public void obtainResource() throws Exception {
 		context = new SpringApplicationBuilder(Config.class).web(WebApplicationType.NONE).run();
 		resource = context.getBean(KubernetesClient.class);
 		resource.namespaces().list();
