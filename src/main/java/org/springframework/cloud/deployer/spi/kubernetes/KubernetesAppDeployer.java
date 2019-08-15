@@ -75,6 +75,7 @@ import static java.lang.String.format;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
+ * @author Enrique Medina Montenegro
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
