@@ -19,9 +19,12 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.api.model.NodeAffinity;
+import io.fabric8.kubernetes.api.model.PodAffinity;
+import io.fabric8.kubernetes.api.model.PodAntiAffinity;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-import io.fabric8.kubernetes.client.Config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
@@ -34,6 +37,7 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  * @author Leonardo Diniz
  * @author Chris Schaefer
  * @author David Turanski
+ * @author Enrique Medina Montenegro
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesDeployerProperties {
@@ -503,9 +507,16 @@ public class KubernetesDeployerProperties {
 	 */
 	private PodSecurityContext podSecurityContext;
 
+	/**
+	 * The affinity rules for both node and pod/anti.
+	 */
+	private NodeAffinity nodeAffinity;
+	private PodAffinity podAffinity;
+	private PodAntiAffinity podAntiAffinity;
+
 	public String getNamespace() {
-		return namespace;
-	}
+        return namespace;
+    }
 
 	public void setNamespace(String namespace) {
 		this.namespace = namespace;
@@ -796,7 +807,32 @@ public class KubernetesDeployerProperties {
 		this.podSecurityContext = podSecurityContext;
 	}
 
-	public PodSecurityContext getPodSecurityContext() {
+ 	public PodSecurityContext getPodSecurityContext() {
 		return podSecurityContext;
 	}
+
+	public NodeAffinity getNodeAffinity() {
+        return nodeAffinity;
+    }
+
+	public void setNodeAffinity(NodeAffinity nodeAffinity) {
+        this.nodeAffinity = nodeAffinity;
+    }
+
+	public PodAffinity getPodAffinity() {
+        return podAffinity;
+    }
+
+	public void setPodAffinity(PodAffinity podAffinity) {
+        this.podAffinity = podAffinity;
+    }
+
+	public PodAntiAffinity getPodAntiAffinity() {
+        return podAntiAffinity;
+    }
+
+	public void setPodAntiAffinity(PodAntiAffinity podAntiAffinity) {
+        this.podAntiAffinity = podAntiAffinity;
+    }
+
 }
