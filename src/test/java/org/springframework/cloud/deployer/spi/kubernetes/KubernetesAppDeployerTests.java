@@ -781,11 +781,11 @@ public class KubernetesAppDeployerTests {
                 "{ requiredDuringSchedulingIgnoredDuringExecution:" +
                         "  { labelSelector:" +
                         "    [ { matchExpressions:" +
-                        "        [ { key: 'security', " +
+                        "        [ { key: 'app', " +
                         "            operator: 'In'," +
                         "            values:" +
-                        "            [ 'S1']}]}], " +
-                        "     topologyKey: 'failure-domain.beta.kubernetes.io/zone'}, " +
+                        "            [ 'store']}]}], " +
+                        "     topologyKey: 'kubernetes.io/hostname'}, " +
                         "  preferredDuringSchedulingIgnoredDuringExecution:" +
                         "  [ { weight: 1," +
                         "      podAffinityTerm:" +
@@ -820,7 +820,7 @@ public class KubernetesAppDeployerTests {
                         "            operator: 'In'," +
                         "            values:" +
                         "            [ 'store']}]}], " +
-                        "     topologyKey: 'kubernetes.io/hostnam'}, " +
+                        "     topologyKey: 'kubernetes.io/hostname'}, " +
                         "  preferredDuringSchedulingIgnoredDuringExecution:" +
                         "  [ { weight: 1," +
                         "      podAffinityTerm:" +
