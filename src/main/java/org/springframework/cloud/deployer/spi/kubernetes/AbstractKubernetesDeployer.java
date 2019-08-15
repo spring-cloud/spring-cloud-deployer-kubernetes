@@ -516,7 +516,7 @@ public class AbstractKubernetesDeployer {
                     .buildPodAntiAffinity());
         } else if (StringUtils.hasText(podAntiAffinityProperty)) {
             KubernetesDeployerProperties podAntiAffinityProperties = PropertyParserUtils.bindProperties(request,
-                    "spring.cloud.deployer.kubernetes.affinity.odAntiAffinity", "odAntiAffinity");
+                    "spring.cloud.deployer.kubernetes.affinity.podAntiAffinity", "podAntiAffinity");
 
             affinity.setPodAntiAffinity(new AffinityBuilder()
                     .withPodAntiAffinity(podAntiAffinityProperties.getPodAntiAffinity())
