@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
+import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
@@ -42,6 +43,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys.CRON_EXPRESSION;
+
 
 /**
  * Tests for {@link ContainerCreator}.

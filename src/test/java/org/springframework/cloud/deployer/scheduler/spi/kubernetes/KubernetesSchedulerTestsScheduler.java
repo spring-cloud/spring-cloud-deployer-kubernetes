@@ -55,6 +55,8 @@ import org.springframework.cloud.deployer.scheduler.spi.core.Scheduler;
 import org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys;
 import org.springframework.cloud.deployer.scheduler.spi.test.AbstractSchedulerIntegrationTests;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
+import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
+import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;

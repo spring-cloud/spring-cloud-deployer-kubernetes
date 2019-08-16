@@ -23,6 +23,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
+import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 

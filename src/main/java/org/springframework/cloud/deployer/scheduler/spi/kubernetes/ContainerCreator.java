@@ -32,6 +32,7 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.batch.CronJob;
 
 import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
 import org.springframework.util.Assert;
 
 /**

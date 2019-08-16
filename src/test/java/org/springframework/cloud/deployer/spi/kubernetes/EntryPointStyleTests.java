@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.kubernetes;
 
 import org.junit.Test;
 
@@ -27,19 +27,22 @@ import static org.junit.Assert.assertEquals;
 public class EntryPointStyleTests {
 	@Test
 	public void testInvalidEntryPointStyleDefaulting() {
-		EntryPointStyle entryPointStyle = EntryPointStyle.relaxedValueOf("unknown");
+		EntryPointStyle entryPointStyle = EntryPointStyle
+				.relaxedValueOf("unknown");
 		assertEquals(EntryPointStyle.exec, entryPointStyle);
 	}
 
 	@Test
 	public void testMatchEntryPointStyle() {
-		EntryPointStyle entryPointStyle = EntryPointStyle.relaxedValueOf("shell");
+		EntryPointStyle entryPointStyle = EntryPointStyle
+				.relaxedValueOf("shell");
 		assertEquals(EntryPointStyle.shell, entryPointStyle);
 	}
 
 	@Test
 	public void testMixedCaseEntryPointStyle() {
-		EntryPointStyle entryPointStyle = EntryPointStyle.relaxedValueOf("bOOt");
+		EntryPointStyle entryPointStyle = EntryPointStyle
+				.relaxedValueOf("bOOt");
 		assertEquals(EntryPointStyle.boot, entryPointStyle);
 	}
 }

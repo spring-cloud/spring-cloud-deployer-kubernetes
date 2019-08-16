@@ -23,6 +23,8 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
+import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
 import org.springframework.util.StringUtils;
 
 import static org.junit.Assert.assertEquals;
