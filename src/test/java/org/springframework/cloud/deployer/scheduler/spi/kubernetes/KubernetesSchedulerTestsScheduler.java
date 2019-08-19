@@ -148,6 +148,16 @@ public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrat
 		fail();
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testInvalidNameSchedule() {
+		AppDefinition appDefinition = new AppDefinition("AAAAAA", null);
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, null, testApplication());
+
+		scheduler.schedule(scheduleRequest);
+
+		fail();
+	}
+
 	@Test(expected = CreateScheduleException.class)
 	public void testInvalidCronSyntax() {
 		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "1 2 3 4");

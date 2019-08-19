@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import io.fabric8.kubernetes.api.model.Container;
@@ -67,6 +68,9 @@ public class KubernetesScheduler implements Scheduler {
 
 	@Override
 	public void schedule(ScheduleRequest scheduleRequest) {
+		if(scheduleRequest != null) {
+			validateScheduleName(scheduleRequest);
+		}
 		try {
 			createCronJob(scheduleRequest);
 		}
@@ -79,6 +83,16 @@ public class KubernetesScheduler implements Scheduler {
 
 			throw new CreateScheduleException("Failed to create schedule " + scheduleRequest.getScheduleName(), e);
 		}
+	}
+
+	public void validateScheduleName(ScheduleRequest request) {
+		if(request.getScheduleName() == null) {
+			throw new IllegalArgumentException("The name for the schedule request is null");
+		}
+		if(!Pattern.matches("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", request.getScheduleName())) {
+			throw new IllegalArgumentException("Invalid Format for Schedule Name.   Name can only contain lowercase letters, numbers 0-9 and hyphens.");
+		}
+
 	}
 
 	@Override
