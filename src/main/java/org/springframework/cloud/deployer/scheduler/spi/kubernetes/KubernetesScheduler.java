@@ -87,10 +87,10 @@ public class KubernetesScheduler implements Scheduler {
 
 	public void validateScheduleName(ScheduleRequest request) {
 		if(request.getScheduleName() == null) {
-			throw new IllegalArgumentException("The name for the schedule request is null");
+			throw new CreateScheduleException("The name for the schedule request is null", null);
 		}
 		if(!Pattern.matches("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", request.getScheduleName())) {
-			throw new IllegalArgumentException("Invalid Format for Schedule Name.   Name can only contain lowercase letters, numbers 0-9 and hyphens.");
+			throw new CreateScheduleException("Invalid Format for Schedule Name.   Name can only contain lowercase letters, numbers 0-9 and hyphens.", null);
 		}
 
 	}

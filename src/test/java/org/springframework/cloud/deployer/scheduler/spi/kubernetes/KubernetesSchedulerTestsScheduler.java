@@ -148,10 +148,10 @@ public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrat
 		fail();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = CreateScheduleException.class)
 	public void testInvalidNameSchedule() {
 		AppDefinition appDefinition = new AppDefinition("AAAAAA", null);
-		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, null, testApplication());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, "AAAAA", testApplication());
 
 		scheduler.schedule(scheduleRequest);
 
