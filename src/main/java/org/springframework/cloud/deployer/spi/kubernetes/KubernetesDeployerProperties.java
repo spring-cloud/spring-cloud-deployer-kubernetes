@@ -508,15 +508,23 @@ public class KubernetesDeployerProperties {
 	private PodSecurityContext podSecurityContext;
 
 	/**
-	 * The affinity rules for both node and pod/anti.
+	 * The node affinity rules to apply.
 	 */
 	private NodeAffinity nodeAffinity;
+
+	/**
+	 * The pod affinity rules to apply
+	 */
 	private PodAffinity podAffinity;
+
+	/**
+	 * The pod anti-affinity rules to apply
+	 */
 	private PodAntiAffinity podAntiAffinity;
 
 	public String getNamespace() {
-        return namespace;
-    }
+		return namespace;
+	}
 
 	public void setNamespace(String namespace) {
 		this.namespace = namespace;
@@ -807,32 +815,31 @@ public class KubernetesDeployerProperties {
 		this.podSecurityContext = podSecurityContext;
 	}
 
- 	public PodSecurityContext getPodSecurityContext() {
+	public PodSecurityContext getPodSecurityContext() {
 		return podSecurityContext;
 	}
 
 	public NodeAffinity getNodeAffinity() {
-        return nodeAffinity;
-    }
+		return nodeAffinity;
+	}
 
 	public void setNodeAffinity(NodeAffinity nodeAffinity) {
-        this.nodeAffinity = nodeAffinity;
-    }
+		this.nodeAffinity = nodeAffinity;
+	}
 
 	public PodAffinity getPodAffinity() {
-        return podAffinity;
-    }
+		return podAffinity;
+	}
 
 	public void setPodAffinity(PodAffinity podAffinity) {
-        this.podAffinity = podAffinity;
-    }
+		this.podAffinity = podAffinity;
+	}
 
 	public PodAntiAffinity getPodAntiAffinity() {
-        return podAntiAffinity;
-    }
+		return podAntiAffinity;
+	}
 
 	public void setPodAntiAffinity(PodAntiAffinity podAntiAffinity) {
-        this.podAntiAffinity = podAntiAffinity;
-    }
-
+		this.podAntiAffinity = podAntiAffinity;
+	}
 }

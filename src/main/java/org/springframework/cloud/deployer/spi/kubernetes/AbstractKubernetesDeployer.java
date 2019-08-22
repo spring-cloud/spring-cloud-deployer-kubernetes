@@ -16,14 +16,14 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import io.fabric8.kubernetes.api.model.Affinity;
-import io.fabric8.kubernetes.api.model.AffinityBuilder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.fabric8.kubernetes.api.model.Affinity;
+import io.fabric8.kubernetes.api.model.AffinityBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -206,11 +206,10 @@ public class AbstractKubernetesDeployer {
 
 		setPodSecurityContext(request, podSpec);
 
-        // Support for affinity rules, both for node and pod/anti.
-        setAffinityRules(request, podSpec);
+		setAffinityRules(request, podSpec);
 
-        return podSpec.build();
-    }
+		return podSpec.build();
+	}
 
 	private List<Toleration> getTolerations(AppDeploymentRequest request) {
 		List<Toleration> tolerations = new ArrayList<>();
@@ -486,66 +485,66 @@ public class AbstractKubernetesDeployer {
 					.build();
 		}
 
-        if (podSecurityContext != null) {
-            podSpecBuilder.withSecurityContext(podSecurityContext);
-        }
-    }
+		if (podSecurityContext != null) {
+			podSpecBuilder.withSecurityContext(podSecurityContext);
+		}
+	}
 
-    private void setAffinityRules(AppDeploymentRequest request, PodSpecBuilder podSpecBuilder) {
-        Affinity affinity = new Affinity();
+	private void setAffinityRules(AppDeploymentRequest request, PodSpecBuilder podSpecBuilder) {
+		Affinity affinity = new Affinity();
 
-        String nodeAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.nodeAffinity";
-        String podAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAffinity";
-        String podAntiAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAntiAffinity";
-        String nodeAffinityProperty = request.getDeploymentProperties().get(nodeAffinityPropertyKey);
-        String podAffinityProperty = request.getDeploymentProperties().get(podAffinityPropertyKey);
-        String podAntiAffinityProperty = request.getDeploymentProperties().get(podAntiAffinityPropertyKey);
+		String nodeAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.nodeAffinity";
+		String podAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAffinity";
+		String podAntiAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAntiAffinity";
 
-        if (properties.getNodeAffinity() != null && !StringUtils.hasText(nodeAffinityProperty)) {
-            affinity.setNodeAffinity(new AffinityBuilder()
-                    .withNodeAffinity(properties.getNodeAffinity())
-                    .buildNodeAffinity());
-        } else if (StringUtils.hasText(nodeAffinityProperty)) {
-            KubernetesDeployerProperties nodeAffinityProperties = PropertyParserUtils.bindProperties(request,
-                    "spring.cloud.deployer.kubernetes.affinity.nodeAffinity", "nodeAffinity");
+		String nodeAffinityProperty = request.getDeploymentProperties().get(nodeAffinityPropertyKey);
+		String podAffinityProperty = request.getDeploymentProperties().get(podAffinityPropertyKey);
+		String podAntiAffinityProperty = request.getDeploymentProperties().get(podAntiAffinityPropertyKey);
 
-            affinity.setNodeAffinity(new AffinityBuilder()
-                    .withNodeAffinity(nodeAffinityProperties.getNodeAffinity())
-                    .buildNodeAffinity());
-        }
+		if (properties.getNodeAffinity() != null && !StringUtils.hasText(nodeAffinityProperty)) {
+			affinity.setNodeAffinity(new AffinityBuilder()
+					.withNodeAffinity(properties.getNodeAffinity())
+					.buildNodeAffinity());
+		} else if (StringUtils.hasText(nodeAffinityProperty)) {
+			KubernetesDeployerProperties nodeAffinityProperties = PropertyParserUtils.bindProperties(request,
+					nodeAffinityPropertyKey, "nodeAffinity");
 
-        if (properties.getPodAffinity() != null && !StringUtils.hasText(podAffinityProperty)) {
-            affinity.setPodAffinity(new AffinityBuilder()
-                    .withPodAffinity(properties.getPodAffinity())
-                    .buildPodAffinity());
-        } else if (StringUtils.hasText(podAffinityProperty)) {
-            KubernetesDeployerProperties podAffinityProperties = PropertyParserUtils.bindProperties(request,
-                    "spring.cloud.deployer.kubernetes.affinity.podAffinity", "podAffinity");
+			affinity.setNodeAffinity(new AffinityBuilder()
+					.withNodeAffinity(nodeAffinityProperties.getNodeAffinity())
+					.buildNodeAffinity());
+		}
 
-            affinity.setPodAffinity(new AffinityBuilder()
-                    .withPodAffinity(podAffinityProperties.getPodAffinity())
-                    .buildPodAffinity());
-        }
+		if (properties.getPodAffinity() != null && !StringUtils.hasText(podAffinityProperty)) {
+			affinity.setPodAffinity(new AffinityBuilder()
+					.withPodAffinity(properties.getPodAffinity())
+					.buildPodAffinity());
+		} else if (StringUtils.hasText(podAffinityProperty)) {
+			KubernetesDeployerProperties podAffinityProperties = PropertyParserUtils.bindProperties(request,
+					podAffinityPropertyKey, "podAffinity");
 
-        if (properties.getPodAntiAffinity() != null && !StringUtils.hasText(podAntiAffinityProperty)) {
-            affinity.setPodAntiAffinity(new AffinityBuilder()
-                    .withPodAntiAffinity(properties.getPodAntiAffinity())
-                    .buildPodAntiAffinity());
-        } else if (StringUtils.hasText(podAntiAffinityProperty)) {
-            KubernetesDeployerProperties podAntiAffinityProperties = PropertyParserUtils.bindProperties(request,
-                    "spring.cloud.deployer.kubernetes.affinity.podAntiAffinity", "podAntiAffinity");
+			affinity.setPodAffinity(new AffinityBuilder()
+					.withPodAffinity(podAffinityProperties.getPodAffinity())
+					.buildPodAffinity());
+		}
 
-            affinity.setPodAntiAffinity(new AffinityBuilder()
-                    .withPodAntiAffinity(podAntiAffinityProperties.getPodAntiAffinity())
-                    .buildPodAntiAffinity());
-        }
+		if (properties.getPodAntiAffinity() != null && !StringUtils.hasText(podAntiAffinityProperty)) {
+			affinity.setPodAntiAffinity(new AffinityBuilder()
+					.withPodAntiAffinity(properties.getPodAntiAffinity())
+					.buildPodAntiAffinity());
+		} else if (StringUtils.hasText(podAntiAffinityProperty)) {
+			KubernetesDeployerProperties podAntiAffinityProperties = PropertyParserUtils.bindProperties(request,
+					podAntiAffinityPropertyKey, "podAntiAffinity");
 
-        // Make sure there is at least some rule.
-        if (affinity.getNodeAffinity() != null
-                || affinity.getPodAffinity() != null
-                || affinity.getPodAntiAffinity() != null) {
-            podSpecBuilder.withAffinity(affinity);
-        }
-    }
+			affinity.setPodAntiAffinity(new AffinityBuilder()
+					.withPodAntiAffinity(podAntiAffinityProperties.getPodAntiAffinity())
+					.buildPodAntiAffinity());
+		}
 
+		// Make sure there is at least some rule.
+		if (affinity.getNodeAffinity() != null
+				|| affinity.getPodAffinity() != null
+				|| affinity.getPodAntiAffinity() != null) {
+			podSpecBuilder.withAffinity(affinity);
+		}
+	}
 }
