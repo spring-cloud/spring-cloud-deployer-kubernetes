@@ -16,15 +16,27 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import io.fabric8.kubernetes.api.model.AffinityBuilder;
 import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.LabelSelector;
+import io.fabric8.kubernetes.api.model.LabelSelectorRequirementBuilder;
+import io.fabric8.kubernetes.api.model.NodeAffinity;
+import io.fabric8.kubernetes.api.model.NodeSelectorRequirementBuilder;
+import io.fabric8.kubernetes.api.model.NodeSelectorTerm;
+import io.fabric8.kubernetes.api.model.PodAffinity;
+import io.fabric8.kubernetes.api.model.PodAffinityTerm;
+import io.fabric8.kubernetes.api.model.PodAntiAffinity;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PreferredSchedulingTerm;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.WeightedPodAffinityTerm;
+
 import org.junit.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -36,6 +48,7 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,6 +70,7 @@ import static org.junit.Assert.assertTrue;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
+ * @author Enrique Medina Montenegro
  */
 public class KubernetesAppDeployerTests {
 
@@ -756,6 +770,108 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
+	public void testNodeAffinityProperty() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.nodeAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { nodeSelectorTerms:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'kubernetes.io/e2e-az-name', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'e2e-az1', 'e2e-az2']}]}]}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      preference:" +
+						"      { matchExpressions:" +
+						"        [ { key: 'another-node-label-key'," +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'another-node-label-value' ]}]}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
+		assertNotNull("Node affinity should not be null", nodeAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAffinityProperty() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.podAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { labelSelector:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'app', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'store']}]}], " +
+						"     topologyKey: 'kubernetes.io/hostname'}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      podAffinityTerm:" +
+						"      { labelSelector:" +
+						"        { matchExpressions:" +
+						"          [ { key: 'security'," +
+						"              operator: 'In'," +
+						"              values:" +
+						"              [ 'S2' ]}]}, " +
+						"        topologyKey: 'failure-domain.beta.kubernetes.io/zone'}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
+		assertNotNull("Pod affinity should not be null", podAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAntiAffinityProperty() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.podAntiAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { labelSelector:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'app', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'store']}]}], " +
+						"     topologyKey: 'kubernetes.io/hostname'}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      podAffinityTerm:" +
+						"      { labelSelector:" +
+						"        { matchExpressions:" +
+						"          [ { key: 'security'," +
+						"              operator: 'In'," +
+						"              values:" +
+						"              [ 'S2' ]}]}, " +
+						"        topologyKey: 'failure-domain.beta.kubernetes.io/zone'}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
+		assertNotNull("Pod anti-affinity should not be null", podAntiAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
 	public void testPodSecurityContextGlobalProperty() {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
@@ -780,6 +896,126 @@ public class KubernetesAppDeployerTests {
 	}
 
 	@Test
+	public void testNodeAffinityGlobalProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		NodeSelectorTerm nodeSelectorTerm = new NodeSelectorTerm();
+		nodeSelectorTerm.setMatchExpressions(Arrays.asList(new NodeSelectorRequirementBuilder()
+				.withKey("kubernetes.io/e2e-az-name")
+				.withOperator("In")
+				.withValues("e2e-az1", "e2e-az2")
+				.build()));
+		NodeSelectorTerm nodeSelectorTerm2 = new NodeSelectorTerm();
+		nodeSelectorTerm2.setMatchExpressions(Arrays.asList(new NodeSelectorRequirementBuilder()
+				.withKey("another-node-label-key")
+				.withOperator("In")
+				.withValues("another-node-label-value2")
+				.build()));
+		PreferredSchedulingTerm preferredSchedulingTerm = new PreferredSchedulingTerm(nodeSelectorTerm2, 1);
+		NodeAffinity nodeAffinity = new AffinityBuilder()
+				.withNewNodeAffinity()
+				.withNewRequiredDuringSchedulingIgnoredDuringExecution()
+				.withNodeSelectorTerms(nodeSelectorTerm)
+				.endRequiredDuringSchedulingIgnoredDuringExecution()
+				.withPreferredDuringSchedulingIgnoredDuringExecution(preferredSchedulingTerm)
+				.endNodeAffinity()
+				.buildNodeAffinity();
+
+		kubernetesDeployerProperties.setNodeAffinity(nodeAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
+		assertNotNull("Node affinity should not be null", nodeAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAffinityGlobalProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		LabelSelector labelSelector = new LabelSelector();
+		labelSelector.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("security")
+				.withOperator("In")
+				.withValues("S1")
+				.build()));
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "failure-domain.beta.kubernetes.io/zone");
+		LabelSelector labelSelector2 = new LabelSelector();
+		labelSelector2.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("security")
+				.withOperator("In")
+				.withValues("s2")
+				.build()));
+		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, "failure-domain.beta.kubernetes.io/zone");
+		WeightedPodAffinityTerm weightedPodAffinityTerm = new WeightedPodAffinityTerm(podAffinityTerm2, 100);
+		PodAffinity podAffinity = new AffinityBuilder()
+				.withNewPodAffinity()
+				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
+				.withPreferredDuringSchedulingIgnoredDuringExecution(weightedPodAffinityTerm)
+				.endPodAffinity()
+				.buildPodAffinity();
+
+		kubernetesDeployerProperties.setPodAffinity(podAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
+		assertNotNull("Pod affinity should not be null", podAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAntiAffinityGlobalProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		LabelSelector labelSelector = new LabelSelector();
+		labelSelector.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("app")
+				.withOperator("In")
+				.withValues("store")
+				.build()));
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "kubernetes.io/hostname");
+		LabelSelector labelSelector2 = new LabelSelector();
+		labelSelector2.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("security")
+				.withOperator("In")
+				.withValues("s2")
+				.build()));
+		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, "failure-domain.beta.kubernetes.io/zone");
+		WeightedPodAffinityTerm weightedPodAffinityTerm = new WeightedPodAffinityTerm(podAffinityTerm2, 100);
+		PodAntiAffinity podAntiAffinity = new AffinityBuilder()
+				.withNewPodAntiAffinity()
+				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
+				.withPreferredDuringSchedulingIgnoredDuringExecution(weightedPodAffinityTerm)
+				.endPodAntiAffinity()
+				.buildPodAntiAffinity();
+
+		kubernetesDeployerProperties.setPodAntiAffinity(podAntiAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
+		assertNotNull("Pod anti-affinity should not be null", podAntiAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
 	public void testPodSecurityContextFromYaml() throws Exception {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
@@ -793,6 +1029,48 @@ public class KubernetesAppDeployerTests {
 
 		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
 		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+	}
+
+	@Test
+	public void testNodeAffinityFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
+		assertNotNull("Node affinity should not be null", nodeAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAffinityFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
+		assertNotNull("Pod affinity should not be null", podAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAntiAffinityFromYaml() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
+		assertNotNull("Pod anti-affinity should not be null", podAntiAffinity);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
 	}
 
 	@Test
@@ -860,6 +1138,160 @@ public class KubernetesAppDeployerTests {
 		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
 	}
 
+	@Test
+	public void testNodeAffinityPropertyOverrideGlobal() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.nodeAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { nodeSelectorTerms:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'kubernetes.io/e2e-az-name', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'e2e-az1', 'e2e-az2']}]}]}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      preference:" +
+						"      { matchExpressions:" +
+						"        [ { key: 'another-node-label-key'," +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'another-node-label-value' ]}]}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		NodeSelectorTerm nodeSelectorTerm = new NodeSelectorTerm();
+		nodeSelectorTerm.setMatchExpressions(Arrays.asList(new NodeSelectorRequirementBuilder()
+				.withKey("kubernetes.io/e2e-az-name")
+				.withOperator("In")
+				.withValues("e2e-az1", "e2e-az2")
+				.build()));
+		NodeAffinity nodeAffinity = new AffinityBuilder()
+				.withNewNodeAffinity()
+				.withNewRequiredDuringSchedulingIgnoredDuringExecution()
+				.withNodeSelectorTerms(nodeSelectorTerm)
+				.endRequiredDuringSchedulingIgnoredDuringExecution()
+				.endNodeAffinity()
+				.buildNodeAffinity();
+
+		kubernetesDeployerProperties.setNodeAffinity(nodeAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
+		assertNotNull("Node affinity should not be null", nodeAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAffinityPropertyOverrideGlobal() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.podAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { labelSelector:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'security', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'S1']}]}], " +
+						"     topologyKey: 'failure-domain.beta.kubernetes.io/zone'}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      podAffinityTerm:" +
+						"      { labelSelector:" +
+						"        { matchExpressions:" +
+						"          [ { key: 'security'," +
+						"              operator: 'In'," +
+						"              values:" +
+						"              [ 'S2' ]}]}, " +
+						"        topologyKey: 'failure-domain.beta.kubernetes.io/zone'}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		LabelSelector labelSelector = new LabelSelector();
+		labelSelector.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("tolerance")
+				.withOperator("In")
+				.withValues("Reliable")
+				.build()));
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "failure-domain.beta.kubernetes.io/zone");
+		PodAffinity podAffinity = new AffinityBuilder()
+				.withNewPodAffinity()
+				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
+				.endPodAffinity()
+				.buildPodAffinity();
+
+		kubernetesDeployerProperties.setPodAffinity(podAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
+		assertNotNull("Pod affinity should not be null", podAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testPodAntiAffinityPropertyOverrideGlobal() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.affinity.podAntiAffinity",
+				"{ requiredDuringSchedulingIgnoredDuringExecution:" +
+						"  { labelSelector:" +
+						"    [ { matchExpressions:" +
+						"        [ { key: 'app', " +
+						"            operator: 'In'," +
+						"            values:" +
+						"            [ 'store']}]}], " +
+						"     topologyKey: 'kubernetes.io/hostnam'}, " +
+						"  preferredDuringSchedulingIgnoredDuringExecution:" +
+						"  [ { weight: 1," +
+						"      podAffinityTerm:" +
+						"      { labelSelector:" +
+						"        { matchExpressions:" +
+						"          [ { key: 'security'," +
+						"              operator: 'In'," +
+						"              values:" +
+						"              [ 'S2' ]}]}, " +
+						"        topologyKey: 'failure-domain.beta.kubernetes.io/zone'}}]}");
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+
+		LabelSelector labelSelector = new LabelSelector();
+		labelSelector.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
+				.withKey("version")
+				.withOperator("Equals")
+				.withValues("v1")
+				.build()));
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "kubernetes.io/hostnam");
+		PodAntiAffinity podAntiAffinity = new AffinityBuilder()
+				.withNewPodAntiAffinity()
+				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
+				.endPodAntiAffinity()
+				.buildPodAntiAffinity();
+
+		kubernetesDeployerProperties.setPodAntiAffinity(podAntiAffinity);
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec("app-test", appDeploymentRequest, null, false);
+
+		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
+		assertNotNull("Pod anti-affinity should not be null", podAntiAffinityTest);
+		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
+		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
 	private Resource getResource() {
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:latest");
 	}
@@ -870,7 +1302,10 @@ public class KubernetesAppDeployerTests {
 				new ClassPathResource("dataflow-server-tolerations.yml"),
 				new ClassPathResource("dataflow-server-secretKeyRef.yml"),
 				new ClassPathResource("dataflow-server-configMapKeyRef.yml"),
-				new ClassPathResource("dataflow-server-podsecuritycontext.yml"));
+				new ClassPathResource("dataflow-server-podsecuritycontext.yml"),
+				new ClassPathResource("dataflow-server-nodeAffinity.yml"),
+				new ClassPathResource("dataflow-server-podAffinity.yml"),
+				new ClassPathResource("dataflow-server-podAntiAffinity.yml"));
 		Properties yaml = properties.getObject();
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
