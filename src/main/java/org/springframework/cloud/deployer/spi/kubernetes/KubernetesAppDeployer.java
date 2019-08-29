@@ -16,11 +16,13 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -332,6 +334,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			.get("spring.cloud.deployer.kubernetes.createLoadBalancer");
 		String createNodePort = request.getDeploymentProperties()
 			.get("spring.cloud.deployer.kubernetes.createNodePort");
+		String multiPort = request.getDeploymentProperties()
+				.get("spring.cloud.deployer.kubernetes.servicePorts");
 
 		if (createLoadBalancer != null && createNodePort != null) {
 			throw new IllegalArgumentException("Cannot create NodePort and LoadBalancer at the same time.");
@@ -352,6 +356,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		ServicePort servicePort = new ServicePort();
 		servicePort.setPort(externalPort);
+		servicePort.setName("app"+externalPort);
 
 		if (createNodePort != null) {
 			spec.withType("NodePort");
@@ -367,13 +372,31 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			}
 		}
 
-		spec.withSelector(idMap).addNewPortLike(servicePort).endPort();
+		final ServiceSpecBuilder serviceSpecBuilder = spec.withSelector(idMap).addNewPortLike(servicePort).endPort();
+
+		if (multiPort != null) {
+			createExtraServicePorts(multiPort, serviceSpecBuilder);
+		}
 
 		Map<String, String> annotations = getServiceAnnotations(request);
 
 		client.services().createNew().withNewMetadata().withName(appId)
 			.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(spec.build()).done();
+	}
+
+	private void createExtraServicePorts(final String multiPort,
+										 final ServiceSpecBuilder serviceSpecBuilder) {
+		String[] servicePortSplit = multiPort.split(",");
+		for (String sPort : servicePortSplit) {
+			logger.trace("Adding service port: " + sPort);
+			Integer port = Integer.parseInt(sPort.trim());
+			ServicePort extraServicePort = new ServicePort();
+			extraServicePort.setPort(port);
+			extraServicePort.setName("app"+port);
+
+			serviceSpecBuilder.addNewPortLike(extraServicePort);
+		}
 	}
 
 	private Map<String, String> getPodAnnotations(AppDeploymentRequest request) {
