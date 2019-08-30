@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,8 +31,8 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.batch.CronJob;
 
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.Assert;
 
 /**

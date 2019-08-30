@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 /**
  * Defines restart policies that are available.

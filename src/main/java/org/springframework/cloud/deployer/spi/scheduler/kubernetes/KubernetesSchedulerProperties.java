@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;

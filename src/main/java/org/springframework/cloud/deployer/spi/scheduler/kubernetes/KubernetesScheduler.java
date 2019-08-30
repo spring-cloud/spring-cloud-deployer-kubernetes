@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,12 +33,12 @@ import io.fabric8.kubernetes.api.model.batch.CronJobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 
-import org.springframework.cloud.deployer.scheduler.spi.core.CreateScheduleException;
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleInfo;
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
-import org.springframework.cloud.deployer.scheduler.spi.core.Scheduler;
-import org.springframework.cloud.deployer.scheduler.spi.core.SchedulerException;
-import org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys;
+import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleInfo;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
+import org.springframework.cloud.deployer.spi.scheduler.Scheduler;
+import org.springframework.cloud.deployer.spi.scheduler.SchedulerException;
+import org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;

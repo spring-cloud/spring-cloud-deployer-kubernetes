@@ -16,9 +16,12 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.springframework.cloud.deployer.scheduler.spi.kubernetes.support.RelaxedNames;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 /**
  * Defines container entry point styles that are available. The selected entry point style
@@ -45,26 +48,24 @@ public enum EntryPointStyle {
 	boot;
 
 	/**
-	 * Converts the string of the provided entry point style to the appropriate enum value
-	 * using {@link RelaxedNames}. Defaults to {@link EntryPointStyle#exec} if no matching
+	 * Converts the string of the provided entry point style to the appropriate enum value.
+	 * Defaults to {@link EntryPointStyle#exec} if no matching
 	 * entry point style is found.
 	 *
 	 * @param entryPointStyle the entry point style to use
 	 * @return the converted {@link EntryPointStyle}
 	 */
 	public static EntryPointStyle relaxedValueOf(String entryPointStyle) {
-		for (EntryPointStyle candidate : EnumSet.allOf(EntryPointStyle.class)) {
-			for (String relaxedName : new RelaxedNames(candidate.name())) {
-				if (relaxedName.equals(entryPointStyle)) {
-					return candidate;
-				}
-			}
-
-			if (candidate.name().equalsIgnoreCase(entryPointStyle)) {
-				return candidate;
-			}
+		// 'value' is just a dummy key as you can't bind a single value to an enum
+		Map<String, String> props = new HashMap<>();
+		props.put("value", entryPointStyle);
+		MapConfigurationPropertySource source = new MapConfigurationPropertySource(props);
+		Binder binder = new Binder(source);
+		try {
+			return binder.bind("value", Bindable.of(EntryPointStyle.class)).get();
+		} catch (Exception e) {
+			// error means we couldn't bind, caller seem to handle null
 		}
-
 		return exec;
 	}
 }

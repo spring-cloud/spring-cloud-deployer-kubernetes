@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -32,9 +32,9 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import org.junit.Test;
 
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys.CRON_EXPRESSION;
+import static org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys.CRON_EXPRESSION;
 
 
 /**
@@ -195,7 +195,7 @@ public class ContainerCreatorTests {
 	}
 
 	private Resource testApplication() {
-		return new DockerResource("springcloud/spring-cloud-scheduler-spi-test-app:latest");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-scheduler-test-app:latest");
 	}
 
 	private String randomName() {
