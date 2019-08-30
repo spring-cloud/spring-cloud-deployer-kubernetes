@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes;
+package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,15 +48,15 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.scheduler.spi.core.CreateScheduleException;
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleInfo;
-import org.springframework.cloud.deployer.scheduler.spi.core.ScheduleRequest;
-import org.springframework.cloud.deployer.scheduler.spi.core.Scheduler;
-import org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys;
-import org.springframework.cloud.deployer.scheduler.spi.test.AbstractSchedulerIntegrationTests;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
 import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
+import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleInfo;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
+import org.springframework.cloud.deployer.spi.scheduler.Scheduler;
+import org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys;
+import org.springframework.cloud.deployer.spi.scheduler.test.AbstractSchedulerIntegrationTests;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -70,7 +70,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE;
-import static org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPropertyKeys.CRON_EXPRESSION;
+import static org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys.CRON_EXPRESSION;
 
 /**
  * Tests for Kubernetes {@link Scheduler} implementation.
@@ -79,8 +79,8 @@ import static org.springframework.cloud.deployer.scheduler.spi.core.SchedulerPro
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = NONE)
-@ContextConfiguration(classes = { KubernetesSchedulerTestsScheduler.Config.class })
-public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrationTests {
+@ContextConfiguration(classes = { KubernetesSchedulerTests.Config.class })
+public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests {
 	@ClassRule
 	public static KubernetesTestSupport kubernetesTestSupport = new KubernetesTestSupport();
 
@@ -135,10 +135,10 @@ public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrat
 	}
 
 	protected Resource testApplication() {
-		return new DockerResource("springcloud/spring-cloud-scheduler-spi-test-app:latest");
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-scheduler-test-app:latest");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = CreateScheduleException.class)
 	public void testMissingSchedule() {
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, null, testApplication());
