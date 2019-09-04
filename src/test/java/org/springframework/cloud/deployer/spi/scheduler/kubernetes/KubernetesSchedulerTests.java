@@ -79,8 +79,8 @@ import static org.springframework.cloud.deployer.spi.scheduler.SchedulerProperty
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = NONE)
-@ContextConfiguration(classes = { KubernetesSchedulerTestsScheduler.Config.class })
-public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrationTests {
+@ContextConfiguration(classes = { KubernetesSchedulerTests.Config.class })
+public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests {
 	@ClassRule
 	public static KubernetesTestSupport kubernetesTestSupport = new KubernetesTestSupport();
 
@@ -138,7 +138,7 @@ public class KubernetesSchedulerTestsScheduler extends AbstractSchedulerIntegrat
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-scheduler-test-app:latest");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = CreateScheduleException.class)
 	public void testMissingSchedule() {
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, null, testApplication());
