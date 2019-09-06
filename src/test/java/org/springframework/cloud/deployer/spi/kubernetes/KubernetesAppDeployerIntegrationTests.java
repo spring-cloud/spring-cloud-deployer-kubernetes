@@ -38,6 +38,7 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceAccount;
 import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
+import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -720,6 +721,99 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Timeout timeout = deploymentTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDefaultServicePort() {
+		log.info("Testing {}...", "DefaultServicePort");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		List<ServicePort> servicePorts = kubernetesClient.services().withName(request.getDefinition().getName()).get()
+				.getSpec().getPorts();
+
+		assertThat(servicePorts, is(notNullValue()));
+		assertThat(servicePorts.size(), is(1));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getPort().equals(8080)));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-8080")));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testDefaultServicePortOverride() {
+		log.info("Testing {}...", "DefaultServicePortOverride");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("server.port", "9090"));
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		List<ServicePort> servicePorts = kubernetesClient.services().withName(request.getDefinition().getName()).get()
+				.getSpec().getPorts();
+
+		assertThat(servicePorts, is(notNullValue()));
+		assertThat(servicePorts.size(), is(1));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getPort().equals(9090)));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-9090")));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testServiceWithMultiplePorts() {
+		log.info("Testing {}...", "ServiceWithMultiplePorts");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.servicePorts", "8080,9090"));
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		List<ServicePort> servicePorts = kubernetesClient.services().withName(request.getDefinition().getName()).get()
+				.getSpec().getPorts();
+
+		assertThat(servicePorts, is(notNullValue()));
+		assertThat(servicePorts.size(), is(2));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getPort().equals(8080)));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-8080")));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getPort().equals(9090)));
+		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-9090")));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();

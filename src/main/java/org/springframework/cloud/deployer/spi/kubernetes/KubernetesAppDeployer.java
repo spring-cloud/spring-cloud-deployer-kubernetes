@@ -16,13 +16,13 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceConfigurationError;
+import java.util.Set;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -334,7 +334,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			.get("spring.cloud.deployer.kubernetes.createLoadBalancer");
 		String createNodePort = request.getDeploymentProperties()
 			.get("spring.cloud.deployer.kubernetes.createNodePort");
-		String multiPort = request.getDeploymentProperties()
+		String additionalServicePorts = request.getDeploymentProperties()
 				.get("spring.cloud.deployer.kubernetes.servicePorts");
 
 		if (createLoadBalancer != null && createNodePort != null) {
@@ -356,7 +356,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		ServicePort servicePort = new ServicePort();
 		servicePort.setPort(externalPort);
-		servicePort.setName("app"+externalPort);
+		servicePort.setName("port-" + externalPort);
 
 		if (createNodePort != null) {
 			spec.withType("NodePort");
@@ -372,11 +372,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			}
 		}
 
-		final ServiceSpecBuilder serviceSpecBuilder = spec.withSelector(idMap).addNewPortLike(servicePort).endPort();
+		Set<ServicePort> servicePorts = new HashSet<>();
+		servicePorts.add(servicePort);
 
-		if (multiPort != null) {
-			createExtraServicePorts(multiPort, serviceSpecBuilder);
+		if (StringUtils.hasText(additionalServicePorts)) {
+			servicePorts.addAll(addAdditionalServicePorts(additionalServicePorts));
 		}
+
+		spec.withSelector(idMap).addAllToPorts(servicePorts);
 
 		Map<String, String> annotations = getServiceAnnotations(request);
 
@@ -385,18 +388,20 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			.endMetadata().withSpec(spec.build()).done();
 	}
 
-	private void createExtraServicePorts(final String multiPort,
-										 final ServiceSpecBuilder serviceSpecBuilder) {
-		String[] servicePortSplit = multiPort.split(",");
-		for (String sPort : servicePortSplit) {
-			logger.trace("Adding service port: " + sPort);
-			Integer port = Integer.parseInt(sPort.trim());
+	private Set<ServicePort> addAdditionalServicePorts(String additionalServicePorts) {
+		Set<ServicePort> ports = new HashSet<>();
+
+		String[] servicePorts = additionalServicePorts.split(",");
+		for (String servicePort : servicePorts) {
+			Integer port = Integer.parseInt(servicePort.trim());
 			ServicePort extraServicePort = new ServicePort();
 			extraServicePort.setPort(port);
-			extraServicePort.setName("app"+port);
+			extraServicePort.setName("port-" + port);
 
-			serviceSpecBuilder.addNewPortLike(extraServicePort);
+			ports.add(extraServicePort);
 		}
+
+		return ports;
 	}
 
 	private Map<String, String> getPodAnnotations(AppDeploymentRequest request) {
