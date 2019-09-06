@@ -715,17 +715,16 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			return podSpec;
 		}).when(kubernetesAppDeployer).createPodSpec(anyString(), Mockito.any(AppDeploymentRequest.class), anyInt(), anyBoolean());
 
+		log.info("Deploying {}...", request.getDefinition().getName());
+
 		String deploymentId = kubernetesAppDeployer.deploy(request);
-
 		Timeout timeout = deploymentTimeout();
-
 		assertThat(deploymentId, eventually(hasStatusThat(
-				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
 
 		log.info("Undeploying {}...", deploymentId);
-
+		timeout = undeploymentTimeout();
 		kubernetesAppDeployer.undeploy(deploymentId);
-
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
