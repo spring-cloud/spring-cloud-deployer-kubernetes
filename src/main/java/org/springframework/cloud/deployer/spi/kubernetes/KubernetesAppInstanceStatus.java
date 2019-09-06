@@ -46,6 +46,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 	private ContainerStatus containerStatus;
 	private RunningPhaseDeploymentStateResolver runningPhaseDeploymentStateResolver;
 
+	@Deprecated
 	public KubernetesAppInstanceStatus(Pod pod, Service service, KubernetesDeployerProperties properties) {
 		this.pod = pod;
 		this.service = service;
