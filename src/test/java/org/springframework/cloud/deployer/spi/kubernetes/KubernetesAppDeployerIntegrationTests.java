@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
@@ -52,6 +53,8 @@ import org.hamcrest.Matchers;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -76,6 +79,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
@@ -677,6 +684,46 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
 
 		appDeployer.undeploy(deploymentId);
+
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testMultipleContainersInPod() {
+		log.info("Testing {}...", "MultipleContainersInPod");
+
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+
+		KubernetesAppDeployer kubernetesAppDeployer = Mockito.spy(new KubernetesAppDeployer(deployProperties,
+				kubernetesClient, new DefaultContainerFactory(deployProperties)));
+
+		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("server.port", "9090"));
+		Resource resource = testApplication();
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		doAnswer((Answer<PodSpec>) invocationOnMock -> {
+			PodSpec podSpec = (PodSpec) invocationOnMock.callRealMethod();
+
+			Container container = new ContainerBuilder().withName("asecondcontainer")
+					.withImage(resource.getURI().getSchemeSpecificPart()).build();
+
+			podSpec.getContainers().add(container);
+
+			return podSpec;
+		}).when(kubernetesAppDeployer).createPodSpec(anyString(), Mockito.any(AppDeploymentRequest.class), anyInt(), anyBoolean());
+
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+
+		kubernetesAppDeployer.undeploy(deploymentId);
 
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
