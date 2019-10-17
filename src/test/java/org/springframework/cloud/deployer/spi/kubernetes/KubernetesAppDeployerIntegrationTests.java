@@ -61,6 +61,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -98,6 +99,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  * @author Donovan Muller
  * @Author David Turanski
  * @author Chris Schaefer
+ * @author Christian Tzolov
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
 		"logging.level.org.springframework.cloud.deployer.spi=INFO",
@@ -120,6 +122,94 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Override
 	protected AppDeployer provideAppDeployer() {
 		return appDeployer;
+	}
+
+	@Test
+	public void testScaleStatefulSet() {
+		log.info("Testing {}...", "ScaleStatefulSet");
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+				containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		Timeout timeout = deploymentTimeout();
+		String deploymentId = appDeployer.deploy(request);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(3))));
+
+		// Ensure that a StatefulSet is deployed
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
+		assertNotNull(statefulSets);
+		assertTrue(statefulSets.size() == 1);
+		StatefulSet statefulSet = statefulSets.get(0);
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
+		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(3);
+		Assertions.assertThat(statefulSetSpec.getServiceName()).isEqualTo(deploymentId);
+		Assertions.assertThat(statefulSet.getMetadata().getName()).isEqualTo(deploymentId);
+
+		log.info("Scale Down {}...", request.getDefinition().getName());
+		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
+
+		statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
+		assertTrue(statefulSets.size() == 1);
+		statefulSetSpec = statefulSets.get(0).getSpec();
+		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(1);
+		Assertions.assertThat(statefulSetSpec.getServiceName()).isEqualTo(deploymentId);
+		Assertions.assertThat(statefulSet.getMetadata().getName()).isEqualTo(deploymentId);
+
+		appDeployer.undeploy(deploymentId);
+	}
+
+	@Test
+	public void testScaleDeployment() {
+		log.info("Testing {}...", "ScaleDeployment");
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+				containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, Collections.emptyMap());
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		Timeout timeout = deploymentTimeout();
+		String deploymentId = appDeployer.deploy(request);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1))));
+
+		log.info("Scale Up {}...", request.getDefinition().getName());
+		appDeployer.scale(new AppScaleRequest(deploymentId, 3));
+		assertThat(deploymentId, eventually(appInstanceCount(is(3)), timeout.maxAttempts, timeout.pause));
+
+		log.info("Scale Down {}...", request.getDefinition().getName());
+		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
+
+		appDeployer.undeploy(deploymentId);
+	}
+
+	@Test(expected = IllegalStateException.class)
+	public void testScaleWithNonExistingApps() {
+		appDeployer.scale(new AppScaleRequest("Fake App", 10));
 	}
 
 	@Test

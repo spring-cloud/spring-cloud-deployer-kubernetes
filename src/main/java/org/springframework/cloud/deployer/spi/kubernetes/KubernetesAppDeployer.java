@@ -53,11 +53,13 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.ScalableResource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -77,6 +79,7 @@ import static java.lang.String.format;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
+ * @author Christian Tzolov
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -225,6 +228,21 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
 		}
 		return logAppender.toString();
+	}
+
+	@Override
+	public void scale(AppScaleRequest appScaleRequest) {
+		String deploymentId = appScaleRequest.getDeploymentId();
+		logger.debug(String.format("Scale app: %s to: %s", deploymentId, appScaleRequest.getCount()));
+
+		ScalableResource scalableResource = this.client.apps().deployments().withName(deploymentId);
+		if (scalableResource.get() == null) {
+			scalableResource = this.client.apps().statefulSets().withName(deploymentId);
+		}
+		if (scalableResource.get() == null) {
+			throw new IllegalStateException(String.format("App '%s' is not deployed", deploymentId));
+		}
+		scalableResource.scale(appScaleRequest.getCount(), true);
 	}
 
 	@Override
