@@ -77,6 +77,7 @@ import static java.lang.String.format;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
+ * @author Christian Tzolov
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -225,6 +226,21 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
 		}
 		return logAppender.toString();
+	}
+
+	@Override
+	public void scale(String appId, int desiredCount) {
+		if (this.client.apps().statefulSets().withName(appId).get() != null) {
+			logger.debug(String.format("Scale a stateful app: %s to: %s", appId, desiredCount));
+			this.client.apps().statefulSets().withName(appId).scale(desiredCount, true);
+		}
+		else if (this.client.apps().deployments().withName(appId).get() != null) {
+			logger.debug(String.format("Scale a stateless app: %s to: %s", appId, desiredCount));
+			this.client.apps().deployments().withName(appId).scale(desiredCount, true);
+		}
+		else {
+			throw new IllegalStateException(String.format("Neither Deployment nor StatefulSet App '%s' is found deployed", appId));
+		}
 	}
 
 	@Override
