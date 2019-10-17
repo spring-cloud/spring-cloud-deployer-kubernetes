@@ -124,7 +124,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
-	public void testScaleStatefulApps() {
+	public void testScaleStatefulSet() {
 		log.info("Testing {}...", "ScaleWithStatefulApp");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
@@ -175,7 +175,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
-	public void testScaleWithStatelessApps() {
+	public void testScaleDeployment() {
 		log.info("Testing {}...", "ScaleWithStatelessApp");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
@@ -186,8 +186,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
 
-		Map<String, String> props = new HashMap<>();
-		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, Collections.emptyMap());
 
 		log.info("Deploying {}...", request.getDefinition().getName());
 		Timeout timeout = deploymentTimeout();

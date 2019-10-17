@@ -53,6 +53,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.ScalableResource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -230,16 +231,17 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	@Override
 	public void scale(String appId, int desiredCount) {
-		if (this.client.apps().statefulSets().withName(appId).get() != null) {
-			logger.debug(String.format("Scale a stateful app: %s to: %s", appId, desiredCount));
-			this.client.apps().statefulSets().withName(appId).scale(desiredCount, true);
-		}
-		else if (this.client.apps().deployments().withName(appId).get() != null) {
-			logger.debug(String.format("Scale a stateless app: %s to: %s", appId, desiredCount));
-			this.client.apps().deployments().withName(appId).scale(desiredCount, true);
+		logger.debug(String.format("Scale app: %s to: %s", appId, desiredCount));
+		ScalableResource scalableResource =
+				(this.client.apps().statefulSets().withName(appId).get() != null) ?
+						this.client.apps().statefulSets().withName(appId) :
+						this.client.apps().deployments().withName(appId);
+
+		if (scalableResource.get() != null) {
+			scalableResource.scale(desiredCount, true);
 		}
 		else {
-			throw new IllegalStateException(String.format("Neither Deployment nor StatefulSet App '%s' is found deployed", appId));
+			throw new IllegalStateException(String.format("App '%s' is not deployed", appId));
 		}
 	}
 
