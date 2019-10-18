@@ -59,6 +59,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -230,18 +231,21 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	@Override
-	public void scale(String appId, int desiredCount) {
-		logger.debug(String.format("Scale app: %s to: %s", appId, desiredCount));
+	public void scale(AppScaleRequest appScaleRequest) {
+		logger.debug(String.format("Scale app: %s to: %s",
+				appScaleRequest.getDeploymentId(), appScaleRequest.getCount()));
+
 		ScalableResource scalableResource =
-				(this.client.apps().statefulSets().withName(appId).get() != null) ?
-						this.client.apps().statefulSets().withName(appId) :
-						this.client.apps().deployments().withName(appId);
+				(this.client.apps().statefulSets().withName(appScaleRequest.getDeploymentId()).get() != null) ?
+						this.client.apps().statefulSets().withName(appScaleRequest.getDeploymentId()) :
+						this.client.apps().deployments().withName(appScaleRequest.getDeploymentId());
 
 		if (scalableResource.get() != null) {
-			scalableResource.scale(desiredCount, true);
+			scalableResource.scale(appScaleRequest.getCount(), true);
 		}
 		else {
-			throw new IllegalStateException(String.format("App '%s' is not deployed", appId));
+			throw new IllegalStateException(
+					String.format("App '%s' is not deployed", appScaleRequest.getDeploymentId()));
 		}
 	}
 

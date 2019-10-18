@@ -61,6 +61,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
@@ -161,7 +162,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Assertions.assertThat(statefulSet.getMetadata().getName()).isEqualTo(deploymentId);
 
 		log.info("Scale Down {}...", request.getDefinition().getName());
-		appDeployer.scale(deploymentId, 1);
+		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
 		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
 
 		statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
@@ -196,11 +197,11 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1))));
 
 		log.info("Scale Up {}...", request.getDefinition().getName());
-		appDeployer.scale(deploymentId, 3);
+		appDeployer.scale(new AppScaleRequest(deploymentId, 3));
 		assertThat(deploymentId, eventually(hasAppInstanceCount(is(3)), timeout.maxAttempts, timeout.pause));
 
 		log.info("Scale Down {}...", request.getDefinition().getName());
-		appDeployer.scale(deploymentId, 1);
+		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
 		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
 
 		appDeployer.undeploy(deploymentId);
@@ -208,7 +209,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Test(expected = IllegalStateException.class)
 	public void testScaleWithNonExistingApps() {
-		appDeployer.scale("Fake App", 10);
+		appDeployer.scale(new AppScaleRequest("Fake App", 10));
 	}
 
 	protected Matcher<String> hasAppInstanceCount(final Matcher<Integer> countMatcher) {
