@@ -126,7 +126,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Test
 	public void testScaleStatefulSet() {
-		log.info("Testing {}...", "ScaleWithStatefulApp");
+		log.info("Testing {}...", "ScaleStatefulSet");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
@@ -177,7 +177,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Test
 	public void testScaleDeployment() {
-		log.info("Testing {}...", "ScaleWithStatelessApp");
+		log.info("Testing {}...", "ScaleDeployment9");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
