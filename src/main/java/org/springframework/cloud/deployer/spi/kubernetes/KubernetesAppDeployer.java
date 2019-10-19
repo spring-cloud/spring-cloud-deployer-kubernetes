@@ -232,21 +232,17 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	@Override
 	public void scale(AppScaleRequest appScaleRequest) {
-		logger.debug(String.format("Scale app: %s to: %s",
-				appScaleRequest.getDeploymentId(), appScaleRequest.getCount()));
+		String deploymentId = appScaleRequest.getDeploymentId();
+		logger.debug(String.format("Scale app: %s to: %s", deploymentId, appScaleRequest.getCount()));
 
-		ScalableResource scalableResource =
-				(this.client.apps().statefulSets().withName(appScaleRequest.getDeploymentId()).get() != null) ?
-						this.client.apps().statefulSets().withName(appScaleRequest.getDeploymentId()) :
-						this.client.apps().deployments().withName(appScaleRequest.getDeploymentId());
-
-		if (scalableResource.get() != null) {
-			scalableResource.scale(appScaleRequest.getCount(), true);
+		ScalableResource scalableResource = this.client.apps().deployments().withName(deploymentId);
+		if (scalableResource.get() == null) {
+			scalableResource = this.client.apps().statefulSets().withName(deploymentId);
 		}
-		else {
-			throw new IllegalStateException(
-					String.format("App '%s' is not deployed", appScaleRequest.getDeploymentId()));
+		if (scalableResource.get() == null) {
+			throw new IllegalStateException(String.format("App '%s' is not deployed", deploymentId));
 		}
+		scalableResource.scale(appScaleRequest.getCount(), true);
 	}
 
 	@Override
