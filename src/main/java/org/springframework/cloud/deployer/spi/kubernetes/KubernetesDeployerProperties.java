@@ -522,6 +522,11 @@ public class KubernetesDeployerProperties {
 	 */
 	private PodAntiAffinity podAntiAffinity;
 
+	/**
+	 * A custom init container image name to use when creating a StatefulSet
+	 */
+	private String statefulSetInitContainerImageName;
+
 	public String getNamespace() {
 		return namespace;
 	}
@@ -841,5 +846,13 @@ public class KubernetesDeployerProperties {
 
 	public void setPodAntiAffinity(PodAntiAffinity podAntiAffinity) {
 		this.podAntiAffinity = podAntiAffinity;
+	}
+
+	public String getStatefulSetInitContainerImageName() {
+		return statefulSetInitContainerImageName;
+	}
+
+	public void setStatefulSetInitContainerImageName(String statefulSetInitContainerImageName) {
+		this.statefulSetInitContainerImageName = statefulSetInitContainerImageName;
 	}
 }
