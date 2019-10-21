@@ -475,7 +475,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
-	public void createStatefulSet() throws Exception {
+	public void testCreateStatefulSet() throws Exception {
 		Map<String, String> props = new HashMap<>();
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
 		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
@@ -499,11 +499,16 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 
 		assertNotNull(statefulSets);
-		assertTrue(statefulSets.size() == 1);
+		assertEquals(1, statefulSets.size());
 
 		StatefulSet statefulSet = statefulSets.get(0);
 
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+
+		List<Container> statefulSetInitContainers = statefulSetSpec.getTemplate().getSpec().getInitContainers();
+		assertEquals(1, statefulSetInitContainers.size());
+		Container statefulSetInitContainer = statefulSetInitContainers.get(0);
+		assertEquals(KubernetesAppDeployer.STATEFUL_SET_IMAGE_NAME, statefulSetInitContainer.getImage());
 
 		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
 		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(3);
@@ -534,6 +539,98 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Assertions.assertThat(pvcSpec.getStorageClassName()).isNull();
 		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getAmount()).isEqualTo("10Mi");
 		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getAmount()).isEqualTo("10Mi");
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testCreateStatefulSetInitContainerImageNamePropOverride() throws Exception {
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+
+		String imageName = testApplication().getURI().getSchemeSpecificPart();
+
+		props.put("spring.cloud.deployer.kubernetes.statefulSetInitContainerImageName", imageName);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+
+		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
+
+		assertNotNull(statefulSets);
+		assertEquals(1, statefulSets.size());
+
+		StatefulSet statefulSet = statefulSets.get(0);
+
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+
+		List<Container> statefulSetInitContainers = statefulSetSpec.getTemplate().getSpec().getInitContainers();
+		assertEquals(1, statefulSetInitContainers.size());
+		Container statefulSetInitContainer = statefulSetInitContainers.get(0);
+		assertEquals(imageName, statefulSetInitContainer.getImage());
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void createStatefulSetInitContainerImageNameGlobalOverride() throws Exception {
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
+
+		String imageName = testApplication().getURI().getSchemeSpecificPart();
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setStatefulSetInitContainerImageName(imageName);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+
+		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
+
+		assertNotNull(statefulSets);
+		assertEquals(1, statefulSets.size());
+
+		StatefulSet statefulSet = statefulSets.get(0);
+
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+
+		List<Container> statefulSetInitContainers = statefulSetSpec.getTemplate().getSpec().getInitContainers();
+		assertEquals(1, statefulSetInitContainers.size());
+		Container statefulSetInitContainer = statefulSetInitContainers.get(0);
+		assertEquals(imageName, statefulSetInitContainer.getImage());
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();

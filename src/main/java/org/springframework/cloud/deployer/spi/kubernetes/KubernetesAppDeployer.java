@@ -81,6 +81,7 @@ import static java.lang.String.format;
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
 	private static final String SERVER_PORT_KEY = "server.port";
+	protected static final String STATEFUL_SET_IMAGE_NAME = "busybox";
 
 	protected final Log logger = LogFactory.getLog(getClass().getName());
 
@@ -311,7 +312,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		podSpec.getContainers().get(0).getVolumeMounts()
 			.add(new VolumeMountBuilder().withName("config").withMountPath("/config").build());
 
-		podSpec.getInitContainers().add(createInitContainer());
+		String statefulSetInitContainerImageName = getStatefulSetInitContainerImageName(request, properties);
+
+		podSpec.getInitContainers().add(createStatefulSetInitContainer(statefulSetInitContainerImageName));
 
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
 				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
@@ -453,9 +456,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	 *
 	 * Since 1.8 the annotation method has been removed, and the initContainer API is supported since 1.6
 	 *
+	 * @param imageName the image name to use in the init container
 	 * @return a container definition with the above mentioned configuration
 	 */
-	private Container createInitContainer() {
+	private Container createStatefulSetInitContainer(String imageName) {
 		List<String> command = new LinkedList<>();
 
 		String commandString = String
@@ -465,7 +469,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		command.add("-c");
 		command.add(commandString);
 		return new ContainerBuilder().withName("index-provider")
-				.withImage("busybox")
+				.withImage(imageName)
 				.withImagePullPolicy("IfNotPresent")
 				.withCommand(command)
 				.withVolumeMounts(new VolumeMountBuilder().withName("config").withMountPath("/config").build())
@@ -550,5 +554,23 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			boolean pvcsDeleted = pvcsToDelete.delete();
 			logger.debug(String.format("PVC deleted for: %s - %b", labels, pvcsDeleted));
 		}
+	}
+
+	private String getStatefulSetInitContainerImageName(AppDeploymentRequest request, KubernetesDeployerProperties
+														  kubernetesDeployerProperties) {
+		String statefulSetInitContainerImageName = request.getDeploymentProperties()
+				.getOrDefault("spring.cloud.deployer.kubernetes.statefulSetInitContainerImageName", "");
+
+		if (StringUtils.hasText(statefulSetInitContainerImageName)) {
+			return statefulSetInitContainerImageName;
+		}
+
+		statefulSetInitContainerImageName = kubernetesDeployerProperties.getStatefulSetInitContainerImageName();
+
+		if (StringUtils.hasText(statefulSetInitContainerImageName)) {
+			return statefulSetInitContainerImageName;
+		}
+
+		return STATEFUL_SET_IMAGE_NAME;
 	}
 }
