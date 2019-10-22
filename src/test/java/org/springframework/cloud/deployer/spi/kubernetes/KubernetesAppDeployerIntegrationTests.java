@@ -177,7 +177,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Test
 	public void testScaleDeployment() {
-		log.info("Testing {}...", "ScaleDeployment9");
+		log.info("Testing {}...", "ScaleDeployment");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
