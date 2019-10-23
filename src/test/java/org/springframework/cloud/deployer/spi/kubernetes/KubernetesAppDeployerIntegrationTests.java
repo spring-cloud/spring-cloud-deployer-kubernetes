@@ -147,7 +147,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		String deploymentId = appDeployer.deploy(request);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
-		assertThat(deploymentId, eventually(hasAppInstanceCount(is(3))));
+		assertThat(deploymentId, eventually(appInstanceCount(is(3))));
 
 		// Ensure that a StatefulSet is deployed
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
@@ -163,7 +163,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		log.info("Scale Down {}...", request.getDefinition().getName());
 		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
-		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
 
 		statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 		assertTrue(statefulSets.size() == 1);
@@ -194,15 +194,15 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		String deploymentId = appDeployer.deploy(request);
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
-		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1))));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1))));
 
 		log.info("Scale Up {}...", request.getDefinition().getName());
 		appDeployer.scale(new AppScaleRequest(deploymentId, 3));
-		assertThat(deploymentId, eventually(hasAppInstanceCount(is(3)), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(3)), timeout.maxAttempts, timeout.pause));
 
 		log.info("Scale Down {}...", request.getDefinition().getName());
 		appDeployer.scale(new AppScaleRequest(deploymentId, 1));
-		assertThat(deploymentId, eventually(hasAppInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
 
 		appDeployer.undeploy(deploymentId);
 	}
@@ -210,31 +210,6 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Test(expected = IllegalStateException.class)
 	public void testScaleWithNonExistingApps() {
 		appDeployer.scale(new AppScaleRequest("Fake App", 10));
-	}
-
-	protected Matcher<String> hasAppInstanceCount(final Matcher<Integer> countMatcher) {
-
-		return new BaseMatcher<String>() {
-
-			private Integer appInstanceCount;
-
-			@Override
-			public boolean matches(Object item) {
-				appInstanceCount = appDeployer.status((String) item).getInstances().size();
-				return countMatcher.matches(appInstanceCount);
-			}
-
-			@Override
-			public void describeMismatch(Object item, Description mismatchDescription) {
-				mismatchDescription.appendText("App instance count of ").appendValue(item).appendText(" ");
-				countMatcher.describeMismatch(appInstanceCount, mismatchDescription);
-			}
-
-			@Override
-			public void describeTo(Description description) {
-				countMatcher.describeTo(description);
-			}
-		};
 	}
 
 	@Test
