@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Container;
@@ -1002,6 +1003,50 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-8080")));
 		assertTrue(servicePorts.stream().anyMatch(o -> o.getPort().equals(9090)));
 		assertTrue(servicePorts.stream().anyMatch(o -> o.getName().equals("port-9090")));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testCreateInitContainer() {
+		log.info("Testing {}...", "CreateInitContainer");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.initContainer",
+				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication(), props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Deployment deployment = kubernetesClient.apps().deployments().withName(request.getDefinition().getName()).get();
+		List<Container> initContainers = deployment.getSpec().getTemplate().getSpec().getInitContainers();
+
+		Optional<Container> initContainer = initContainers.stream().filter(i -> i.getName().equals("test")).findFirst();
+		assertTrue("Init container not found", initContainer.isPresent());
+
+		Container testInitContainer = initContainer.get();
+
+		assertEquals("Unexpected init container name", testInitContainer.getName(), "test");
+		assertEquals("Unexpected init container image", testInitContainer.getImage(), "busybox:latest");
+
+		List<String> commands = testInitContainer.getCommand();
+
+		assertTrue("Init container commands missing", commands != null && !commands.isEmpty());
+		assertTrue("Invalid number of init container commands", commands.size() == 3);
+		assertEquals("sh", commands.get(0));
+		assertEquals("-c", commands.get(1));
+		assertEquals("echo hello", commands.get(2));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();

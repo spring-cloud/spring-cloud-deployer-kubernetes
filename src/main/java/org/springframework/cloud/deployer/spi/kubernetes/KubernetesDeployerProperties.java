@@ -304,6 +304,36 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+	public static class InitContainer {
+		private String imageName;
+		private String containerName;
+		private List<String> commands;
+
+		public String getImageName() {
+			return imageName;
+		}
+
+		public void setImageName(String imageName) {
+			this.imageName = imageName;
+		}
+
+		public String getContainerName() {
+			return containerName;
+		}
+
+		public void setContainerName(String containerName) {
+			this.containerName = containerName;
+		}
+
+		public List<String> getCommands() {
+			return commands;
+		}
+
+		public void setCommands(List<String> commands) {
+			this.commands = commands;
+		}
+	}
+
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**
@@ -526,6 +556,11 @@ public class KubernetesDeployerProperties {
 	 * A custom init container image name to use when creating a StatefulSet
 	 */
 	private String statefulSetInitContainerImageName;
+
+	/**
+	 * A custom init container to apply.
+	 */
+	private InitContainer initContainer;
 
 	public String getNamespace() {
 		return namespace;
@@ -854,5 +889,13 @@ public class KubernetesDeployerProperties {
 
 	public void setStatefulSetInitContainerImageName(String statefulSetInitContainerImageName) {
 		this.statefulSetInitContainerImageName = statefulSetInitContainerImageName;
+	}
+
+	public InitContainer getInitContainer() {
+		return initContainer;
+	}
+
+	public void setInitContainer(InitContainer initContainer) {
+		this.initContainer = initContainer;
 	}
 }

@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.AffinityBuilder;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -224,6 +225,8 @@ public class AbstractKubernetesDeployer {
 		setPodSecurityContext(request, podSpec);
 
 		setAffinityRules(request, podSpec);
+
+		setInitContainer(request, podSpec);
 
 		return podSpec.build();
 	}
@@ -562,6 +565,23 @@ public class AbstractKubernetesDeployer {
 				|| affinity.getPodAffinity() != null
 				|| affinity.getPodAntiAffinity() != null) {
 			podSpecBuilder.withAffinity(affinity);
+		}
+	}
+
+	private void setInitContainer(AppDeploymentRequest request, PodSpecBuilder podSpec) {
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
+				"spring.cloud.deployer.kubernetes.initContainer", "initContainer");
+
+		KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
+
+		if (initContainer != null) {
+			Container container = new ContainerBuilder()
+					.withName(initContainer.getContainerName())
+					.withImage(initContainer.getImageName())
+					.withCommand(initContainer.getCommands())
+					.build();
+
+			podSpec.addToInitContainers(container);
 		}
 	}
 }
