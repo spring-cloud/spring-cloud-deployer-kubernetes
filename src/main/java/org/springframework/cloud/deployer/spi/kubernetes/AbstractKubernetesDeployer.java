@@ -67,6 +67,7 @@ import static java.lang.String.format;
  * @author David Turanski
  * @author Chris Schaefer
  * @author Enrique Medina Montenegro
+ * @author Ilayaperumal Gopinathan
  */
 public class AbstractKubernetesDeployer {
 
@@ -295,13 +296,15 @@ public class AbstractKubernetesDeployer {
 	 * @return the resource limits to use
 	 */
 	protected Map<String, Quantity> deduceResourceLimits(AppDeploymentRequest request) {
-		String memory = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.memory");
+		String memory = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.limits.memory");
 
 		if (StringUtils.isEmpty(memory)) {
 			memory = properties.getLimits().getMemory();
 		}
 
-		String cpu = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.limits.cpu");
+		String cpu = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.limits.cpu");
 
 		if (StringUtils.isEmpty(cpu)) {
 			cpu = properties.getLimits().getCpu();
@@ -325,7 +328,8 @@ public class AbstractKubernetesDeployer {
 	 */
 	protected ImagePullPolicy deduceImagePullPolicy(AppDeploymentRequest request) {
 		String pullPolicyOverride =
-				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.imagePullPolicy");
+				PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+						"spring.cloud.deployer.kubernetes.imagePullPolicy");
 
 		ImagePullPolicy pullPolicy;
 		if (pullPolicyOverride == null) {
@@ -350,12 +354,15 @@ public class AbstractKubernetesDeployer {
 	 * @return the resource requests to use
 	 */
 	protected Map<String, Quantity> deduceResourceRequests(AppDeploymentRequest request) {
-		String memOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.memory");
+		String memOverride = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.requests.memory");
 		if (memOverride == null) {
 			memOverride = properties.getRequests().getMemory();
 		}
 
-		String cpuOverride = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.requests.cpu");
+
+		String cpuOverride = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.requests.cpu");
 		if (cpuOverride == null) {
 			cpuOverride = properties.getRequests().getCpu();
 		}
@@ -373,7 +380,8 @@ public class AbstractKubernetesDeployer {
 	}
 
 	protected String getStatefulSetStorageClassName(AppDeploymentRequest request) {
-		String storageClassName = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName");
+		String storageClassName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storageClassName");
 		if (storageClassName == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
 			storageClassName = properties.getStatefulSet().getVolumeClaimTemplate().getStorageClassName();
 		}
@@ -381,7 +389,8 @@ public class AbstractKubernetesDeployer {
 	}
 
 	protected String getStatefulSetStorage(AppDeploymentRequest request) {
-		String storage = request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage");
+		String storage = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage");;
 		if (storage == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
 			storage = properties.getStatefulSet().getVolumeClaimTemplate().getStorage();
 		}
@@ -397,7 +406,8 @@ public class AbstractKubernetesDeployer {
 	 */
 	protected boolean getHostNetwork(AppDeploymentRequest request) {
 		String hostNetworkOverride =
-				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.hostNetwork");
+				PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+						"spring.cloud.deployer.kubernetes.hostNetwork");
 		boolean hostNetwork;
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
 			hostNetwork = properties.isHostNetwork();
@@ -451,8 +461,8 @@ public class AbstractKubernetesDeployer {
 	}
 
 	private String getImagePullSecret(AppDeploymentRequest request) {
-		String imagePullSecret = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.imagePullSecret", "");
+		String imagePullSecret = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.imagePullSecret", "");
 
 		if(StringUtils.isEmpty(imagePullSecret)) {
 			imagePullSecret = properties.getImagePullSecret();
@@ -462,8 +472,8 @@ public class AbstractKubernetesDeployer {
 	}
 
 	private String getDeploymentServiceAccountName(AppDeploymentRequest request) {
-		String deploymentServiceAccountName =
-				request.getDeploymentProperties().get("spring.cloud.deployer.kubernetes.deploymentServiceAccountName");
+		String deploymentServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.deploymentServiceAccountName");
 
 		if (StringUtils.isEmpty(deploymentServiceAccountName)) {
 			deploymentServiceAccountName = properties.getDeploymentServiceAccountName();
@@ -473,36 +483,45 @@ public class AbstractKubernetesDeployer {
 	}
 
 	private Secret getProbeCredentialsSecret(AppDeploymentRequest request) {
-		Secret secret = null;
-		String probeCredentialsSecret = "spring.cloud.deployer.kubernetes.probeCredentialsSecret";
+		String secretName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.probeCredentialsSecret");
 
-		if (request.getDeploymentProperties().containsKey(probeCredentialsSecret)) {
-			String secretName = request.getDeploymentProperties().get(probeCredentialsSecret);
-			secret = client.secrets().withName(secretName).get();
+		if (!StringUtils.isEmpty(secretName)) {
+			return client.secrets().withName(secretName).get();
 		}
 
-		return secret;
+		return null;
 	}
 
 	private void setPodSecurityContext(AppDeploymentRequest request, PodSpecBuilder podSpecBuilder) {
 		PodSecurityContext podSecurityContext = null;
 
-		String podSecurityDeploymentPropertyKey = "spring.cloud.deployer.kubernetes.podSecurityContext";
-		String podSecurityDeploymentProperty = request.getDeploymentProperties().get(podSecurityDeploymentPropertyKey);
+		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
+				"spring.cloud.deployer.kubernetes.podSecurityContext", "podSecurityContext");
 
-		if (properties.getPodSecurityContext() != null && !StringUtils.hasText(podSecurityDeploymentProperty)) {
+		if (deployerProperties.getPodSecurityContext() != null) {
 			podSecurityContext = new PodSecurityContextBuilder()
-					.withRunAsUser(properties.getPodSecurityContext().getRunAsUser())
-					.withFsGroup(properties.getPodSecurityContext().getFsGroup())
+					.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
+					.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
 					.build();
-		} else if (StringUtils.hasText(podSecurityDeploymentProperty)) {
-			KubernetesDeployerProperties kubernetesDeployerProperties = PropertyParserUtils.bindProperties(request,
-					podSecurityDeploymentPropertyKey, "podSecurityContext");
-
-			podSecurityContext = new PodSecurityContextBuilder()
-					.withRunAsUser(kubernetesDeployerProperties.getPodSecurityContext().getRunAsUser())
-					.withFsGroup(kubernetesDeployerProperties.getPodSecurityContext().getFsGroup())
-					.build();
+		}
+		else {
+			String runAsUser = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+					"spring.cloud.deployer.kubernetes.podSecurityContext.runAsUser");
+			String fsGroup = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+					"spring.cloud.deployer.kubernetes.podSecurityContext.fsGroup");
+			if (!StringUtils.isEmpty(runAsUser) && !StringUtils.isEmpty(fsGroup)) {
+				podSecurityContext = new PodSecurityContextBuilder()
+						.withRunAsUser(Long.valueOf(runAsUser))
+						.withFsGroup(Long.valueOf(fsGroup))
+						.build();
+			}
+			else if (this.properties.getPodSecurityContext() != null) {
+				podSecurityContext = new PodSecurityContextBuilder()
+						.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
+						.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
+						.build();
+			}
 		}
 
 		if (podSecurityContext != null) {
@@ -517,15 +536,18 @@ public class AbstractKubernetesDeployer {
 		String podAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAffinity";
 		String podAntiAffinityPropertyKey = "spring.cloud.deployer.kubernetes.affinity.podAntiAffinity";
 
-		String nodeAffinityProperty = request.getDeploymentProperties().get(nodeAffinityPropertyKey);
-		String podAffinityProperty = request.getDeploymentProperties().get(podAffinityPropertyKey);
-		String podAntiAffinityProperty = request.getDeploymentProperties().get(podAntiAffinityPropertyKey);
+		String nodeAffinityValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				nodeAffinityPropertyKey);
+		String podAffinityValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				podAffinityPropertyKey);
+		String podAntiAffinityValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				podAntiAffinityPropertyKey);
 
-		if (properties.getNodeAffinity() != null && !StringUtils.hasText(nodeAffinityProperty)) {
+		if (properties.getNodeAffinity() != null && !StringUtils.hasText(nodeAffinityValue)) {
 			affinity.setNodeAffinity(new AffinityBuilder()
 					.withNodeAffinity(properties.getNodeAffinity())
 					.buildNodeAffinity());
-		} else if (StringUtils.hasText(nodeAffinityProperty)) {
+		} else if (StringUtils.hasText(nodeAffinityValue)) {
 			KubernetesDeployerProperties nodeAffinityProperties = PropertyParserUtils.bindProperties(request,
 					nodeAffinityPropertyKey, "nodeAffinity");
 
@@ -534,11 +556,11 @@ public class AbstractKubernetesDeployer {
 					.buildNodeAffinity());
 		}
 
-		if (properties.getPodAffinity() != null && !StringUtils.hasText(podAffinityProperty)) {
+		if (properties.getPodAffinity() != null && !StringUtils.hasText(podAffinityValue)) {
 			affinity.setPodAffinity(new AffinityBuilder()
 					.withPodAffinity(properties.getPodAffinity())
 					.buildPodAffinity());
-		} else if (StringUtils.hasText(podAffinityProperty)) {
+		} else if (StringUtils.hasText(podAffinityValue)) {
 			KubernetesDeployerProperties podAffinityProperties = PropertyParserUtils.bindProperties(request,
 					podAffinityPropertyKey, "podAffinity");
 
@@ -547,11 +569,11 @@ public class AbstractKubernetesDeployer {
 					.buildPodAffinity());
 		}
 
-		if (properties.getPodAntiAffinity() != null && !StringUtils.hasText(podAntiAffinityProperty)) {
+		if (properties.getPodAntiAffinity() != null && !StringUtils.hasText(podAntiAffinityValue)) {
 			affinity.setPodAntiAffinity(new AffinityBuilder()
 					.withPodAntiAffinity(properties.getPodAntiAffinity())
 					.buildPodAntiAffinity());
-		} else if (StringUtils.hasText(podAntiAffinityProperty)) {
+		} else if (StringUtils.hasText(podAntiAffinityValue)) {
 			KubernetesDeployerProperties podAntiAffinityProperties = PropertyParserUtils.bindProperties(request,
 					podAntiAffinityPropertyKey, "podAntiAffinity");
 
@@ -571,17 +593,29 @@ public class AbstractKubernetesDeployer {
 	private void setInitContainer(AppDeploymentRequest request, PodSpecBuilder podSpec) {
 		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
 				"spring.cloud.deployer.kubernetes.initContainer", "initContainer");
-
-		KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
-
-		if (initContainer != null) {
-			Container container = new ContainerBuilder()
-					.withName(initContainer.getContainerName())
-					.withImage(initContainer.getImageName())
-					.withCommand(initContainer.getCommands())
-					.build();
-
-			podSpec.addToInitContainers(container);
+		if (deployerProperties.getInitContainer() == null) {
+			String containerName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(), "spring.cloud.deployer.kubernetes.initContainer.containerName");
+			String imageName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(), "spring.cloud.deployer.kubernetes.initContainer.imageName");
+			String commands = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(), "spring.cloud.deployer.kubernetes.initContainer.commands");
+			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
+				Container container = new ContainerBuilder()
+						.withName(containerName)
+						.withImage(imageName)
+						.withCommand(commands)
+						.build();
+				podSpec.addToInitContainers(container);
+			}
+		}
+		else {
+			KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
+			if (initContainer != null) {
+				Container container = new ContainerBuilder()
+						.withName(initContainer.getContainerName())
+						.withImage(initContainer.getImageName())
+						.withCommand(initContainer.getCommands())
+						.build();
+				podSpec.addToInitContainers(container);
+			}
 		}
 	}
 }

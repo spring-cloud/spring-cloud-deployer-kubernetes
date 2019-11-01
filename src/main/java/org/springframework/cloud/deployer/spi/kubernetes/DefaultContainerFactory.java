@@ -258,8 +258,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	protected List<VolumeMount> getVolumeMounts(AppDeploymentRequest request) {
 		List<VolumeMount> volumeMounts = new ArrayList<>();
 
-		String volumeMountDeploymentProperty = request.getDeploymentProperties()
-			.getOrDefault("spring.cloud.deployer.kubernetes.volumeMounts", "");
+		String volumeMountDeploymentProperty = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.volumeMounts");
 		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
@@ -292,8 +292,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * @return a list of strings that represents the command and any arguments for that command
 	 */
 	private List<String> getContainerCommand(AppDeploymentRequest request) {
-		String containerCommand = request.getDeploymentProperties()
-			.getOrDefault("spring.cloud.deployer.kubernetes.containerCommand", "");
+		String containerCommand = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.containerCommand", "");
 		return new CommandLineTokenizer(containerCommand).getArgs();
 	}
 
@@ -303,8 +303,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	private List<Integer> getContainerPorts(AppDeploymentRequest request) {
 		List<Integer> containerPortList = new ArrayList<>();
-		String containerPorts = request.getDeploymentProperties()
-			.get("spring.cloud.deployer.kubernetes.containerPorts");
+		String containerPorts = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.containerPorts", null);
 		if (containerPorts != null) {
 			String[] containerPortSplit = containerPorts.split(",");
 			for (String containerPort : containerPortSplit) {
@@ -323,8 +323,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	private Map<String, String> getAppEnvironmentVariables(AppDeploymentRequest request) {
 		Map<String, String> appEnvVarMap = new HashMap<>();
-		String appEnvVar = request.getDeploymentProperties()
-			.get("spring.cloud.deployer.kubernetes.environmentVariables");
+		String appEnvVar = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.environmentVariables", null);
 		if (appEnvVar != null) {
 			String[] appEnvVars = nestedCommaDelimitedVariableParser.parse(appEnvVar);
 			for (String envVar : appEnvVars) {
@@ -357,11 +357,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 	private EntryPointStyle determineEntryPointStyle(KubernetesDeployerProperties properties,
 		AppDeploymentRequest request) {
 		EntryPointStyle entryPointStyle = null;
-		String deployProperty = request.getDeploymentProperties()
-			.get("spring.cloud.deployer.kubernetes.entryPointStyle");
-		if (deployProperty != null) {
+		String deployerPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.entryPointStyle", null);
+		if (deployerPropertyValue != null) {
 			try {
-				entryPointStyle = EntryPointStyle.valueOf(deployProperty.toLowerCase());
+				entryPointStyle = EntryPointStyle.valueOf(deployerPropertyValue.toLowerCase());
 			}
 			catch (IllegalArgumentException ignore) {
 			}

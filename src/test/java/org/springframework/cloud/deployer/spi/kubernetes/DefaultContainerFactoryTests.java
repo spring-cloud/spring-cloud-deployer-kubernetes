@@ -71,7 +71,7 @@ public class DefaultContainerFactoryTests {
 		Resource resource = getResource();
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.limits.memory", "128Mi");
-		props.put("spring.cloud.deployer.kubernetes.environmentVariables",
+		props.put("spring.cloud.deployer.kubernetes.environment-variables",
 				"JAVA_OPTIONS=-Xmx64m,KUBERNETES_NAMESPACE=test-space");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
@@ -323,7 +323,7 @@ public class DefaultContainerFactoryTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.livenessProbePort", Integer.toString(livenessPort));
+		props.put("spring.cloud.deployer.kubernetes.liveness-probe-port", Integer.toString(livenessPort));
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
@@ -473,7 +473,7 @@ public class DefaultContainerFactoryTests {
 				kubernetesDeployerProperties);
 
 		Map<String,String> appProperties = new HashMap<>();
-		appProperties.put("spring.cloud.deployer.kubernetes.bootMajorVersion", "1");
+		appProperties.put("spring.cloud.deployer.kubernetes.boot-major-version", "1");
 
 		AppDefinition definition = new AppDefinition("app-test", appProperties);
 		Resource resource = getResource();
