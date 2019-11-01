@@ -351,12 +351,12 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		int externalPort) {
 		ServiceSpecBuilder spec = new ServiceSpecBuilder();
 		boolean isCreateLoadBalancer = false;
-		String createLoadBalancer = request.getDeploymentProperties()
-			.get("spring.cloud.deployer.kubernetes.createLoadBalancer");
-		String createNodePort = request.getDeploymentProperties()
-			.get("spring.cloud.deployer.kubernetes.createNodePort");
-		String additionalServicePorts = request.getDeploymentProperties()
-				.get("spring.cloud.deployer.kubernetes.servicePorts");
+		String createLoadBalancer = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.createLoadBalancer");
+		String createNodePort = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+			"spring.cloud.deployer.kubernetes.createNodePort");
+		String additionalServicePorts = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.servicePorts");
 
 		if (createLoadBalancer != null && createNodePort != null) {
 			throw new IllegalArgumentException("Cannot create NodePort and LoadBalancer at the same time.");
@@ -426,19 +426,17 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private Map<String, String> getPodAnnotations(AppDeploymentRequest request) {
-		String annotationsProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.podAnnotations", "");
-
-		if (StringUtils.isEmpty(annotationsProperty)) {
-			annotationsProperty = properties.getPodAnnotations();
+		String annotationsValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.podAnnotations", "");
+		if (StringUtils.isEmpty(annotationsValue)) {
+			annotationsValue = properties.getPodAnnotations();
 		}
-
-		return PropertyParserUtils.getAnnotations(annotationsProperty);
+		return PropertyParserUtils.getAnnotations(annotationsValue);
 	}
 
 	private Map<String, String> getServiceAnnotations(AppDeploymentRequest request) {
-		String annotationsProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.serviceAnnotations", "");
+		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.serviceAnnotations", "");
 
 		if (StringUtils.isEmpty(annotationsProperty)) {
 			annotationsProperty = properties.getServiceAnnotations();
@@ -450,8 +448,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	protected Map<String, String> getDeploymentLabels(AppDeploymentRequest request) {
 		Map<String, String> labels = new HashMap<>();
 
-		String deploymentLabels = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.deploymentLabels", "");
+		String deploymentLabels = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.deploymentLabels", "");
 
 		if (StringUtils.hasText(deploymentLabels)) {
 			String[] deploymentLabel = deploymentLabels.split(",");
@@ -576,8 +574,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	private String getStatefulSetInitContainerImageName(AppDeploymentRequest request, KubernetesDeployerProperties
 														  kubernetesDeployerProperties) {
-		String statefulSetInitContainerImageName = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.statefulSetInitContainerImageName", "");
+		String statefulSetInitContainerImageName = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.statefulSetInitContainerImageName", "");
 
 		if (StringUtils.hasText(statefulSetInitContainerImageName)) {
 			return statefulSetInitContainerImageName;

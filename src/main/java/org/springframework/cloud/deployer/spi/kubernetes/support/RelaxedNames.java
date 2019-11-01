@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.scheduler.spi.kubernetes.support;
+package org.springframework.cloud.deployer.spi.kubernetes.support;
 
 import java.util.Iterator;
 import java.util.LinkedHashSet;

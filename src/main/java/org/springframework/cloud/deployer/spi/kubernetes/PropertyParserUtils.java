@@ -20,12 +20,14 @@ import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.cloud.deployer.spi.kubernetes.support.RelaxedNames;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
@@ -35,6 +37,7 @@ import static java.lang.String.format;
  * Utility methods for formatting and parsing properties
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 class PropertyParserUtils {
 	/**
@@ -67,14 +70,14 @@ class PropertyParserUtils {
 	 * @return a {@link KubernetesDeployerProperties} with the bound property data
 	 */
 	static KubernetesDeployerProperties bindProperties(AppDeploymentRequest request, String propertyKey, String yamlLabel) {
-		String deploymentProperty = request.getDeploymentProperties().getOrDefault(propertyKey, "");
+		String deploymentPropertyValue = request.getDeploymentProperties().getOrDefault(propertyKey, "");
 
 		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
 
-		if (!StringUtils.isEmpty(deploymentProperty)) {
+		if (!StringUtils.isEmpty(deploymentPropertyValue)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ " + yamlLabel + ": " + deploymentProperty + " }";
+				String tmpYaml = "{ " + yamlLabel + ": " + deploymentPropertyValue + " }";
 				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
 				Properties yaml = properties.getObject();
 				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
@@ -82,10 +85,26 @@ class PropertyParserUtils {
 						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
 			} catch (Exception e) {
 				throw new IllegalArgumentException(
-						String.format("Invalid binding property '%s'", deploymentProperty), e);
+						String.format("Invalid binding property '%s'", deploymentPropertyValue), e);
 			}
 		}
 
 		return deployerProperties;
+	}
+
+	static String getDeploymentPropertyValue(Map<String, String> deploymentProperties, String propertyName) {
+		return getDeploymentPropertyValue(deploymentProperties, propertyName, null);
+	}
+
+	static String getDeploymentPropertyValue(Map<String, String> deploymentProperties, String propertyName,
+			String defaultValue) {
+		RelaxedNames relaxedNames = new RelaxedNames(propertyName);
+		for (Iterator<String> itr = relaxedNames.iterator(); itr.hasNext();) {
+			String relaxedName = itr.next();
+			if (deploymentProperties.containsKey(relaxedName)) {
+				return deploymentProperties.get(relaxedName);
+			}
+		}
+		return defaultValue;
 	}
 }
