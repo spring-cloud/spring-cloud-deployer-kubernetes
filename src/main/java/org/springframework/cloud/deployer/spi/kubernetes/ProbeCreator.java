@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.Map;
  * Base class for creating Probe's
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 abstract class ProbeCreator {
 	protected static final String KUBERNETES_DEPLOYER_PREFIX = "spring.cloud.deployer.kubernetes";
@@ -89,15 +91,21 @@ abstract class ProbeCreator {
 		return containerConfiguration.getAppDeploymentRequest().getDeploymentProperties();
 	}
 
+	protected String getDeploymentPropertyValue(String propertyName) {
+		return PropertyParserUtils.getDeploymentPropertyValue(this.containerConfiguration.getAppDeploymentRequest().getDeploymentProperties(),
+				propertyName, null);
+	}
+
 	protected Integer getDefaultPort() {
 		return containerConfiguration.getExternalPort();
 	}
 
 	protected boolean useBoot1ProbePath() {
 		String bootMajorVersionProperty = KUBERNETES_DEPLOYER_PREFIX + ".bootMajorVersion";
+		String bootMajorVersionValue = getDeploymentPropertyValue(bootMajorVersionProperty);
 
-		if (getDeploymentProperties().containsKey(bootMajorVersionProperty)) {
-			Integer bootMajorVersion = Integer.valueOf(getDeploymentProperties().get(bootMajorVersionProperty));
+		if (StringUtils.hasText(bootMajorVersionValue)) {
+			Integer bootMajorVersion = Integer.valueOf(bootMajorVersionValue);
 
 			if (bootMajorVersion == BOOT_1_MAJOR_VERSION) {
 				return true;

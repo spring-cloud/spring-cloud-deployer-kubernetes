@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Test;
@@ -27,8 +28,10 @@ import org.junit.Test;
  * Tests for PropertyParserUtils
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 public class PropertyParserUtilsTests {
+
 	@Test
 	public void testAnnotationParseSingle() {
 		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation:value");
@@ -67,5 +70,21 @@ public class PropertyParserUtilsTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testAnnotationParseInvalidValue() {
 		PropertyParserUtils.getAnnotations("annotation1:value1,annotation2,annotation3:value3");
+	}
+
+	@Test
+	public void testDeploymentPropertyParsing() {
+		Map<String, String> deploymentProps = new HashMap<>();
+		deploymentProps.put("SPRING_CLOUD_DEPLOYER_KUBERNETES_IMAGEPULLPOLICY", "Never");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.pod-annotations", "key1:value1,key2:value2");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.serviceAnnotations", "key3:value3,key4:value4");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.image-name", "springcloud/openjdk");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.initContainer.containerName", "test");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.commands", "['sh','echo hello']");
+		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.podAnnotations").equals("key1:value1,key2:value2"));
+		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.serviceAnnotations").equals("key3:value3,key4:value4"));
+		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk"));
+		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk"));
+		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.imagePullPolicy").equals("Never"));
 	}
 }

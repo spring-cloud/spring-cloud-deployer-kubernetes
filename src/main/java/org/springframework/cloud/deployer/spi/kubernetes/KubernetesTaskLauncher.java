@@ -292,8 +292,8 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	private Map<String, String> getJobAnnotations(AppDeploymentRequest request) {
-		String annotationsProperty = request.getDeploymentProperties()
-				.getOrDefault("spring.cloud.deployer.kubernetes.jobAnnotations", "");
+		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.jobAnnotations", "");
 
 		if (StringUtils.isEmpty(annotationsProperty)) {
 			annotationsProperty = properties.getJobAnnotations();
