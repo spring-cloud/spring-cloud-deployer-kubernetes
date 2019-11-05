@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import org.springframework.util.StringUtils;
+
 /**
  * Creates a Liveness Probe.
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 class LivenessProbeCreator extends ProbeCreator {
 	private static final String PROBE_PROPERTY_PREFIX = KUBERNETES_DEPLOYER_PREFIX + ".liveness";
@@ -32,9 +35,10 @@ class LivenessProbeCreator extends ProbeCreator {
 	@Override
 	public Integer getPort() {
 		String probePortKey = PROBE_PROPERTY_PREFIX + "ProbePort";
+		String probePortValue = getDeploymentPropertyValue(probePortKey);
 
-		if (getDeploymentProperties().containsKey(probePortKey)) {
-			return Integer.parseInt(getDeploymentProperties().get(probePortKey));
+		if (StringUtils.hasText(probePortValue)) {
+			return Integer.parseInt(probePortValue);
 		}
 
 		if (getKubernetesDeployerProperties().getLivenessProbePort() != null) {
@@ -51,9 +55,10 @@ class LivenessProbeCreator extends ProbeCreator {
 	@Override
 	protected String getProbePath() {
 		String probePathKey = PROBE_PROPERTY_PREFIX + "ProbePath";
+		String probePathValue =  getDeploymentPropertyValue(probePathKey);
 
-		if (getDeploymentProperties().containsKey(probePathKey)) {
-			return getDeploymentProperties().get(probePathKey);
+		if (StringUtils.hasText(probePathValue)) {
+			return probePathValue;
 		}
 
 		if (getKubernetesDeployerProperties().getLivenessProbePath() != null) {
@@ -70,9 +75,10 @@ class LivenessProbeCreator extends ProbeCreator {
 	@Override
 	protected int getTimeout() {
 		String probeTimeoutKey = PROBE_PROPERTY_PREFIX + "ProbeTimeout";
+		String probeTimeoutValue = getDeploymentPropertyValue(probeTimeoutKey);
 
-		if (getDeploymentProperties().containsKey(probeTimeoutKey)) {
-			return Integer.valueOf(getDeploymentProperties().get(probeTimeoutKey));
+		if (StringUtils.hasText(probeTimeoutValue)) {
+			return Integer.valueOf(probeTimeoutValue);
 		}
 
 		return getKubernetesDeployerProperties().getLivenessProbeTimeout();
@@ -81,9 +87,10 @@ class LivenessProbeCreator extends ProbeCreator {
 	@Override
 	protected int getInitialDelay() {
 		String probeDelayKey = PROBE_PROPERTY_PREFIX + "ProbeDelay";
+		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
 
-		if (getDeploymentProperties().containsKey(probeDelayKey)) {
-			return Integer.valueOf(getDeploymentProperties().get(probeDelayKey));
+		if (StringUtils.hasText(probeDelayValue)) {
+			return Integer.valueOf(probeDelayValue);
 		}
 
 		return getKubernetesDeployerProperties().getLivenessProbeDelay();
@@ -92,9 +99,10 @@ class LivenessProbeCreator extends ProbeCreator {
 	@Override
 	protected int getPeriod() {
 		String probePeriodKey = PROBE_PROPERTY_PREFIX + "ProbePeriod";
+		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
 
-		if (getDeploymentProperties().containsKey(probePeriodKey)) {
-			return Integer.valueOf(getDeploymentProperties().get(probePeriodKey));
+		if (StringUtils.hasText(probePeriodValue)) {
+			return Integer.valueOf(probePeriodValue);
 		}
 
 		return getKubernetesDeployerProperties().getLivenessProbePeriod();
