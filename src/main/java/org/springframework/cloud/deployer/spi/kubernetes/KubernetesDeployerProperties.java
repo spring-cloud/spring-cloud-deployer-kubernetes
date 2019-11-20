@@ -459,6 +459,11 @@ public class KubernetesDeployerProperties {
 	private boolean createLoadBalancer = false;
 
 	/**
+	 *  Sets a fixed ip address to the LoadBalancer service. Only works when createLoadBalancer is true.
+	 */
+	private String loadBalancerIP;
+
+	/**
 	 * Service annotations to set for the service created for each app.
 	 */
 	private String serviceAnnotations = null;
@@ -721,6 +726,14 @@ public class KubernetesDeployerProperties {
 
 	public void setCreateLoadBalancer(boolean createLoadBalancer) {
 		this.createLoadBalancer = createLoadBalancer;
+	}
+
+	public String getLoadBalancerIP() {
+		return loadBalancerIP;
+	}
+
+	public void setLoadBalancerIP(String loadBalancerIP){
+		this.loadBalancerIP = loadBalancerIP;
 	}
 
 	public String getServiceAnnotations() {

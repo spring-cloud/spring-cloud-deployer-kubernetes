@@ -373,6 +373,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (isCreateLoadBalancer) {
 			spec.withType("LoadBalancer");
+			if(properties.getLoadBalancerIP() != null){
+				spec.withLoadBalancerIP(properties.getLoadBalancerIP());
+			}
 		}
 
 		ServicePort servicePort = new ServicePort();
