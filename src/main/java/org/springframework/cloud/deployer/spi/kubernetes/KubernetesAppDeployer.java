@@ -75,6 +75,7 @@ import static java.lang.String.format;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
+ * @author Omar Gonzalez
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -219,8 +220,25 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		PodList podList = client.pods().withLabels(selector).list();
 		StringBuilder logAppender = new StringBuilder();
 		for (Pod pod : podList.getItems()) {
-			logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
+
+			if(pod.getSpec().getContainers().size() > 1){
+				for(Container container : pod.getSpec().getContainers()) {
+					if(container.getEnv().stream().anyMatch(envVar -> "SPRING_CLOUD_APPLICATION_GUID".equals(envVar.getName()))) {
+						//find log for this container
+						logAppender.append(this.client.pods()
+												   .withName(pod.getMetadata().getName())
+												   .inContainer(container.getName())
+												   .tailingLines(500).getLog());
+						break;
+					}
+
+				}
+			}
+			else{
+				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
+			}
 		}
+
 		return logAppender.toString();
 	}
 
