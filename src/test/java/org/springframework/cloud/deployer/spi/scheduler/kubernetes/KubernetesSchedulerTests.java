@@ -18,6 +18,7 @@ package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -29,11 +30,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.api.model.StatusCause;
 import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.batch.CronJob;
+import io.fabric8.kubernetes.api.model.batch.CronJobList;
 import io.fabric8.kubernetes.api.model.batch.CronJobSpec;
+import io.fabric8.kubernetes.api.model.batch.JobSpec;
+import io.fabric8.kubernetes.api.model.batch.JobTemplateSpec;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -76,6 +83,7 @@ import static org.springframework.cloud.deployer.spi.scheduler.SchedulerProperty
  * Tests for Kubernetes {@link Scheduler} implementation.
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = NONE)
@@ -86,6 +94,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 	@Autowired
 	private Scheduler scheduler;
+
+	@Autowired
+	private KubernetesClient kubernetesClient;
 
 	@Override
 	protected Scheduler provideScheduler() {
@@ -156,6 +167,52 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		scheduler.schedule(scheduleRequest);
 
 		fail();
+	}
+
+	@Test
+	public void listScheduleWithExternalCronJobs() {
+		CronJobList cronJobList = new CronJobList();
+		CronJobSpec cronJobSpec = new CronJobSpec();
+		JobTemplateSpec jobTemplateSpec = new JobTemplateSpec();
+		JobSpec jobSpec = new JobSpec();
+		PodTemplateSpec podTemplateSpec = new PodTemplateSpec();
+		PodSpec podSpec = new PodSpec();
+		Container container = new Container();
+		container.setName("test");
+		container.setImage("busybox");
+		podSpec.setContainers(Arrays.asList(container));
+		podSpec.setRestartPolicy("OnFailure");
+		podTemplateSpec.setSpec(podSpec);
+		jobSpec.setTemplate(podTemplateSpec);
+		jobTemplateSpec.setSpec(jobSpec);
+		cronJobSpec.setJobTemplate(jobTemplateSpec);
+		cronJobSpec.setSchedule("0/10 * * * *");
+
+		CronJob cronJob1 = new CronJob();
+		ObjectMeta objectMeta1 = new ObjectMeta();
+		Map<String, String> labels = new HashMap<>();
+		labels.put("spring-cronjob-id", "test");
+		objectMeta1.setLabels(labels);
+		objectMeta1.setName("job1");
+		cronJob1.setMetadata(objectMeta1);
+		cronJob1.setSpec(cronJobSpec);
+		ObjectMeta objectMeta2 = new ObjectMeta();
+		objectMeta2.setName("job2");
+		CronJob cronJob2 = new CronJob();
+		cronJob2.setSpec(cronJobSpec);
+		cronJob2.setMetadata(objectMeta2);
+		ObjectMeta objectMeta3 = new ObjectMeta();
+		objectMeta3.setName("job3");
+		CronJob cronJob3 = new CronJob();
+		cronJob3.setSpec(cronJobSpec);
+		cronJob3.setMetadata(objectMeta3);
+		cronJobList.setItems(Arrays.asList(cronJob1, cronJob2, cronJob3));
+		this.kubernetesClient.batch().cronjobs().create(cronJob1);
+		this.kubernetesClient.batch().cronjobs().create(cronJob2);
+		this.kubernetesClient.batch().cronjobs().create(cronJob3);
+		List<ScheduleInfo> scheduleInfos = this.scheduler.list();
+		assertThat(scheduleInfos.size() == 1);
+		assertThat(scheduleInfos.get(0).getScheduleName().equals("job1"));
 	}
 
 	@Test(expected = CreateScheduleException.class)
@@ -640,6 +697,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		for (ScheduleInfo scheduleInfo : scheduleInfos) {
 			kubernetesScheduler.unschedule(scheduleInfo.getScheduleName());
 		}
+		// Cleanup the schedules that aren't part of the list() - created from listScheduleWithExternalCronJobs test
+		kubernetesScheduler.unschedule("job2");
+		kubernetesScheduler.unschedule("job3");
 	}
 
 	@Configuration
@@ -649,11 +709,14 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		private KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 
 		@Bean
-		public Scheduler scheduler() {
-			KubernetesClient kubernetesClient = new DefaultKubernetesClient()
-					.inNamespace(kubernetesSchedulerProperties.getNamespace());
-
+		public Scheduler scheduler(KubernetesClient kubernetesClient) {
 			return new KubernetesScheduler(kubernetesClient, kubernetesSchedulerProperties);
+		}
+
+		@Bean
+		public KubernetesClient kubernetesClient() {
+			return new DefaultKubernetesClient()
+					.inNamespace(kubernetesSchedulerProperties.getNamespace());
 		}
 	}
 }

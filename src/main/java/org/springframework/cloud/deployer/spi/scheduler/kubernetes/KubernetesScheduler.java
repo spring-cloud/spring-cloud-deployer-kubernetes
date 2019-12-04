@@ -47,6 +47,7 @@ import org.springframework.util.StringUtils;
  * Kubernetes implementation of the {@link Scheduler} SPI.
  *
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 public class KubernetesScheduler implements Scheduler {
 	private static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
@@ -120,15 +121,18 @@ public class KubernetesScheduler implements Scheduler {
 		List<ScheduleInfo> scheduleInfos = new ArrayList<>();
 
 		for (CronJob cronJob : cronJobs) {
-			Map<String, String> properties = new HashMap<>();
-			properties.put(SchedulerPropertyKeys.CRON_EXPRESSION, cronJob.getSpec().getSchedule());
+			if (cronJob.getMetadata() != null && cronJob.getMetadata().getLabels() != null &&
+					StringUtils.hasText(cronJob.getMetadata().getLabels().get(SPRING_CRONJOB_ID_KEY))) {
+				Map<String, String> properties = new HashMap<>();
+				properties.put(SchedulerPropertyKeys.CRON_EXPRESSION, cronJob.getSpec().getSchedule());
 
-			ScheduleInfo scheduleInfo = new ScheduleInfo();
-			scheduleInfo.setScheduleName(cronJob.getMetadata().getName());
-			scheduleInfo.setTaskDefinitionName(cronJob.getMetadata().getLabels().get(SPRING_CRONJOB_ID_KEY));
-			scheduleInfo.setScheduleProperties(properties);
+				ScheduleInfo scheduleInfo = new ScheduleInfo();
+				scheduleInfo.setScheduleName(cronJob.getMetadata().getName());
+				scheduleInfo.setTaskDefinitionName(cronJob.getMetadata().getLabels().get(SPRING_CRONJOB_ID_KEY));
+				scheduleInfo.setScheduleProperties(properties);
 
-			scheduleInfos.add(scheduleInfo);
+				scheduleInfos.add(scheduleInfo);
+			}
 		}
 
 		return scheduleInfos;
