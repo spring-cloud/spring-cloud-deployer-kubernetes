@@ -229,6 +229,30 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	}
 
 	@Test
+	public void testNameTooLong() {
+		final String baseScheduleName = "tencharlng-scdf-itcouldbesaidthatthisislongtoowaytoo";
+		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "0/10 * * * *");
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), null);
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
+				baseScheduleName, testApplication());
+
+		//verify no validation fired.
+		scheduler.schedule(scheduleRequest);
+
+		scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
+				baseScheduleName + "1", testApplication());
+		try {
+			scheduler.schedule(scheduleRequest);
+		}
+		catch (CreateScheduleException createScheduleException) {
+			assertThat(createScheduleException.getMessage()).isEqualTo(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
+			return;
+		}
+		fail();
+	}
+
+	@Test
 	public void testWithExecEntryPoint() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 		kubernetesSchedulerProperties.setEntryPointStyle(EntryPointStyle.exec);
