@@ -32,6 +32,7 @@ import io.fabric8.kubernetes.api.model.batch.CronJobBuilder;
 import io.fabric8.kubernetes.api.model.batch.CronJobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import javax.validation.ConstraintViolationException;
 
 import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleInfo;
@@ -53,6 +54,8 @@ public class KubernetesScheduler implements Scheduler {
 	private static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
+
+	private static final String SCHEDULE_METADATA_FIELD_NAME = "metadata.name";
 
 	private final KubernetesClient kubernetesClient;
 
@@ -79,6 +82,11 @@ public class KubernetesScheduler implements Scheduler {
 			String invalidCronExceptionMessage = getExceptionMessageForField(e, SCHEDULE_EXPRESSION_FIELD_NAME);
 
 			if (StringUtils.hasText(invalidCronExceptionMessage)) {
+				throw new CreateScheduleException(invalidCronExceptionMessage, e);
+			}
+
+			invalidCronExceptionMessage = getExceptionMessageForField(e, SCHEDULE_METADATA_FIELD_NAME);
+			if (isScheduleNameTooLong(invalidCronExceptionMessage)) {
 				throw new CreateScheduleException(invalidCronExceptionMessage, e);
 			}
 
@@ -145,7 +153,19 @@ public class KubernetesScheduler implements Scheduler {
 		String schedule = scheduleRequest.getSchedulerProperties().get(SchedulerPropertyKeys.CRON_EXPRESSION);
 		Assert.hasText(schedule, "The property: " + SchedulerPropertyKeys.CRON_EXPRESSION + " must be defined");
 
-		Container container = new ContainerCreator(this.kubernetesSchedulerProperties, scheduleRequest).build();
+		Container container;
+		try {
+			container = new ContainerCreator(this.kubernetesSchedulerProperties, scheduleRequest).build();
+		}
+		catch (ConstraintViolationException constraintViolationException) {
+			if (constraintViolationException.getMessage().contains("size must be between")) {
+				throw new CreateScheduleException(String.format("'%s' because the number of characters for the " +
+								"schedule name exceeds the Kubernetes maximum number of characters allowed for this field.",
+						scheduleRequest.getScheduleName()), constraintViolationException);
+			}
+			else
+				throw constraintViolationException;
+		}
 
 		String taskServiceAccountName = KubernetesSchedulerPropertyResolver.getTaskServiceAccountName(scheduleRequest,
 				this.kubernetesSchedulerProperties);
@@ -189,5 +209,13 @@ public class KubernetesScheduler implements Scheduler {
 			cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getImagePullSecrets()
 					.add(localObjectReference);
 		}
+	}
+
+	private boolean isScheduleNameTooLong(String message ) {
+		boolean result = false;
+		if(StringUtils.hasText(message) && message.contains("must be no more than") && message.endsWith("characters")) {
+			result = true;
+		}
+		return result;
 	}
 }
