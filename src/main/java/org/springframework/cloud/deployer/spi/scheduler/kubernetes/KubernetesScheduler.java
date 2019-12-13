@@ -86,7 +86,7 @@ public class KubernetesScheduler implements Scheduler {
 			}
 
 			invalidCronExceptionMessage = getExceptionMessageForField(e, SCHEDULE_METADATA_FIELD_NAME);
-			if (isScheduleNameTooLong(invalidCronExceptionMessage)) {
+			if (validationScheduleNameLength(invalidCronExceptionMessage)) {
 				throw new CreateScheduleException(invalidCronExceptionMessage, e);
 			}
 
@@ -211,11 +211,7 @@ public class KubernetesScheduler implements Scheduler {
 		}
 	}
 
-	private boolean isScheduleNameTooLong(String message ) {
-		boolean result = false;
-		if(StringUtils.hasText(message) && message.contains("must be no more than") && message.endsWith("characters")) {
-			result = true;
-		}
-		return result;
+	private boolean validationScheduleNameLength(String message ) {
+		return (StringUtils.hasText(message) && message.contains("must be no more than") && message.endsWith("characters"));
 	}
 }
