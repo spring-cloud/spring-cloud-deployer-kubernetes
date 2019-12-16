@@ -44,6 +44,7 @@ import io.fabric8.kubernetes.api.model.batch.JobTemplateSpec;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import javax.validation.ConstraintViolationException;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -230,20 +231,25 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 	@Test
 	public void testNameTooLong() {
+		final String baseScheduleName = "tencharlng-scdf-itcouldbesaidthatthisislongtoowaytoo";
 		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "0/10 * * * *");
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
-				"tencharlng-scdf-itcouldbesaidthatthisislongtoowaytoo-oops", testApplication());
+				baseScheduleName, testApplication());
 
+		//verify no validation fired.
+		scheduler.schedule(scheduleRequest);
+
+		scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
+				baseScheduleName + "1", testApplication());
 		try {
 			scheduler.schedule(scheduleRequest);
 		}
 		catch (CreateScheduleException createScheduleException) {
-			assertThat(createScheduleException.getMessage()).contains("must be no more than");
+			assertThat(createScheduleException.getMessage()).isEqualTo(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
 			return;
 		}
-
 		fail();
 	}
 
