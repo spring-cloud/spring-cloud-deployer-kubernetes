@@ -334,6 +334,12 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+
+	/**
+	 * Name of the environment variable that can define the Kubernetes namespace to use.
+	 */
+	public static final String ENV_KEY_KUBERNETES_NAMESPACE = "KUBERNETES_NAMESPACE";
+
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 
 	/**

@@ -540,7 +540,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		ServiceAccount deploymentServiceAccount = new ServiceAccountBuilder().withNewMetadata().withName("appsa")
 				.endMetadata().build();
 
-		kubernetesClient.serviceAccounts().create(deploymentServiceAccount);
+		this.kubernetesClient.serviceAccounts().create(deploymentServiceAccount);
 
 		String serviceAccountName = deploymentServiceAccount.getMetadata().getName();
 
@@ -603,7 +603,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		List<Container> statefulSetInitContainers = statefulSetSpec.getTemplate().getSpec().getInitContainers();
 		assertEquals(1, statefulSetInitContainers.size());
 		Container statefulSetInitContainer = statefulSetInitContainers.get(0);
-		assertEquals(KubernetesAppDeployer.STATEFUL_SET_IMAGE_NAME, statefulSetInitContainer.getImage());
+		assertEquals(DeploymentPropertiesResolver.STATEFUL_SET_IMAGE_NAME, statefulSetInitContainer.getImage());
 
 		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
 		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(3);
@@ -968,7 +968,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			podSpec.getContainers().add(container);
 
 			return podSpec;
-		}).when(kubernetesAppDeployer).createPodSpec(anyString(), Mockito.any(AppDeploymentRequest.class), anyInt(), anyBoolean());
+		}).when(kubernetesAppDeployer).createPodSpec(Mockito.any(AppDeploymentRequest.class));
 
 		log.info("Deploying {}...", request.getDefinition().getName());
 

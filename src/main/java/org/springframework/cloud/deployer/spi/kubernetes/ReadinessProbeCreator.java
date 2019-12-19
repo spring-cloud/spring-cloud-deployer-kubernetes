@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.StringUtils;
 
 /**
@@ -25,16 +26,19 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 class ReadinessProbeCreator extends ProbeCreator {
-	private static final String PROBE_PROPERTY_PREFIX = KUBERNETES_DEPLOYER_PREFIX + ".readiness";
+
+	private final String probPropertyPrefix;
 
 	public ReadinessProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
 			ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
+		this.probPropertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
+				"spring.cloud.scheduler.kubernetes.readiness" : "spring.cloud.deployer.kubernetes.readiness";
 	}
 
 	@Override
 	public Integer getPort() {
-		String probePortKey = PROBE_PROPERTY_PREFIX + "ProbePort";
+		String probePortKey = this.probPropertyPrefix + "ProbePort";
 		String probePortValue = getDeploymentPropertyValue(probePortKey);
 
 		if (StringUtils.hasText(probePortValue)) {
@@ -54,7 +58,7 @@ class ReadinessProbeCreator extends ProbeCreator {
 
 	@Override
 	protected String getProbePath() {
-		String probePathKey = PROBE_PROPERTY_PREFIX + "ProbePath";
+		String probePathKey = this.probPropertyPrefix + "ProbePath";
 		String probePathValue = getDeploymentPropertyValue(probePathKey);
 
 		if (StringUtils.hasText(probePathValue)) {
@@ -74,7 +78,7 @@ class ReadinessProbeCreator extends ProbeCreator {
 
 	@Override
 	protected int getTimeout() {
-		String probeTimeoutKey = PROBE_PROPERTY_PREFIX + "ProbeTimeout";
+		String probeTimeoutKey = this.probPropertyPrefix + "ProbeTimeout";
 		String probeTimeoutValue = getDeploymentPropertyValue(probeTimeoutKey);
 
 		if (StringUtils.hasText(probeTimeoutValue)) {
@@ -86,7 +90,7 @@ class ReadinessProbeCreator extends ProbeCreator {
 
 	@Override
 	protected int getInitialDelay() {
-		String probeDelayKey = PROBE_PROPERTY_PREFIX + "ProbeDelay";
+		String probeDelayKey = this.probPropertyPrefix + "ProbeDelay";
 		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
 
 		if (StringUtils.hasText(probeDelayValue)) {
@@ -98,7 +102,7 @@ class ReadinessProbeCreator extends ProbeCreator {
 
 	@Override
 	protected int getPeriod() {
-		String probePeriodKey = PROBE_PROPERTY_PREFIX + "ProbePeriod";
+		String probePeriodKey = this.probPropertyPrefix + "ProbePeriod";
 		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
 
 		if (StringUtils.hasText(probePeriodValue)) {

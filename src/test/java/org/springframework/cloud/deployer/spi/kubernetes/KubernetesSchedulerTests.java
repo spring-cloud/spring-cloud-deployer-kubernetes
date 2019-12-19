@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
+package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,8 +56,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
-import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
-import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
 import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleInfo;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
@@ -106,8 +104,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Override
 	protected List<String> getCommandLineArgs() {
 		List<String> commandLineArguments = new ArrayList<>();
-		commandLineArguments.add("arg1");
-		commandLineArguments.add("arg2");
+		commandLineArguments.add("arg1=value1");
+		commandLineArguments.add("arg2=value2");
 
 		return commandLineArguments;
 	}
@@ -255,6 +253,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testWithExecEntryPoint() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		kubernetesSchedulerProperties.setEntryPointStyle(EntryPointStyle.exec);
 
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
@@ -273,10 +274,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
 		assertNotNull("Command line arguments should not be null", container.getArgs());
-		assertEquals("Invalid number of command line arguments", 4, container.getArgs().size());
-
 		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertTrue("Found environment variables when there should be none", container.getEnv().isEmpty());
+		assertTrue("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID", container.getEnv().size() == 1);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -284,6 +283,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testWithShellEntryPoint() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		kubernetesSchedulerProperties.setEntryPointStyle(EntryPointStyle.shell);
 
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
@@ -305,7 +307,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		assertEquals("Invalid number of command line arguments", 0, container.getArgs().size());
 
 		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertEquals("Invalid number of environment variables", 2, container.getEnv().size());
+		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -314,7 +316,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	public void testWithBootEntryPoint() throws IOException {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 		kubernetesSchedulerProperties.setEntryPointStyle(EntryPointStyle.boot);
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -334,7 +338,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		assertEquals("Invalid number of command line arguments", 2, container.getArgs().size());
 
 		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertEquals("Invalid number of environment variables", 1, container.getEnv().size());
+		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
 
 		String springApplicationJson = container.getEnv().get(0).getValue();
 
@@ -388,7 +392,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testEntryPointStyleOverride() throws Exception {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -410,7 +416,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
 		assertTrue("Environment variables should not be empty", !container.getEnv().isEmpty());
-		assertEquals("Unexpected number of environment variables", 1, container.getEnv().size());
+		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
 
 		String springApplicationJson = container.getEnv().get(0).getValue();
 
@@ -427,7 +433,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testEntryPointStyleDefault() throws Exception {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -443,7 +451,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertTrue("Environment variables should be empty", container.getEnv().isEmpty());
+		assertTrue("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID", container.getEnv().size() == 1);
 		assertTrue("Command line arguments should not be empty", !container.getArgs().isEmpty());
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
@@ -452,7 +460,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testImagePullPolicyOverride() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -481,7 +491,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testImagePullPolicyDefault() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -506,7 +518,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testImagePullSecret() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -536,7 +550,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testImagePullSecretDefault() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -573,7 +589,10 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testGlobalEnvironmentVariables() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1,MYVAR2=MYVAL2" });
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1" ,"MYVAR2=MYVAL2" });
 
 		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR1", "MYVAL1", null),
 				new EnvVar("MYVAR2", "MYVAL2", null) };
@@ -597,7 +616,10 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testGlobalAndCustomEnvironmentVariables() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1,MYVAR2=MYVAL2" });
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1","MYVAR2=MYVAL2" });
 
 		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
 
@@ -614,7 +636,10 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testCustomEnvironmentVariablesOverrideGlobal() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1,MYVAR2=MYVAL2" });
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1", "MYVAR2=MYVAL2" });
 
 		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
 
@@ -629,6 +654,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 	private void testEnvironmentVariables(KubernetesSchedulerProperties kubernetesSchedulerProperties,
 			Map<String, String> schedulerProperties, EnvVar[] expectedVars) {
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -654,7 +682,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testTaskServiceAccountNameOverride() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -684,7 +714,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@Test
 	public void testTaskServiceAccountNameDefault() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
 
@@ -709,6 +741,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@AfterClass
 	public static void cleanup() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		kubernetesSchedulerProperties.setNamespace("default");
 
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
 				.inNamespace(kubernetesSchedulerProperties.getNamespace());
@@ -739,6 +772,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		@Bean
 		public KubernetesClient kubernetesClient() {
+			kubernetesSchedulerProperties.setNamespace("default");
 			return new DefaultKubernetesClient()
 					.inNamespace(kubernetesSchedulerProperties.getNamespace());
 		}
