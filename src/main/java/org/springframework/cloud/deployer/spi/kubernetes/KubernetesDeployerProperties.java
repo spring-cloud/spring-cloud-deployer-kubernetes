@@ -29,6 +29,8 @@ import io.fabric8.kubernetes.client.Config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
+
 /**
  * @author Florian Rosenberg
  * @author Thomas Risberg
@@ -39,8 +41,10 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  * @author David Turanski
  * @author Enrique Medina Montenegro
  */
-@ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
+@ConfigurationProperties(prefix = KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)
 public class KubernetesDeployerProperties {
+
+	public static final String KUBERNETES_DEPLOYER_PROPERTIES_PREFIX = "spring.cloud.deployer.kubernetes";
 
 	/**
 	 * Constants for app deployment properties that don't have a deployer level default property.
@@ -333,6 +337,12 @@ public class KubernetesDeployerProperties {
 			this.commands = commands;
 		}
 	}
+
+
+	/**
+	 * Name of the environment variable that can define the Kubernetes namespace to use.
+	 */
+	public static final String ENV_KEY_KUBERNETES_NAMESPACE = "KUBERNETES_NAMESPACE";
 
 	private static String KUBERNETES_NAMESPACE = System.getenv("KUBERNETES_NAMESPACE");
 

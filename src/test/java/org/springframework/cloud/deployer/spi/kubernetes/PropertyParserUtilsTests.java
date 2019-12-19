@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+
 /**
  * Tests for PropertyParserUtils
  *
@@ -34,7 +36,7 @@ public class PropertyParserUtilsTests {
 
 	@Test
 	public void testAnnotationParseSingle() {
-		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation:value");
+		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation:value");
 		assertFalse(annotations.isEmpty());
 		assertTrue(annotations.size() == 1);
 		assertTrue(annotations.containsKey("annotation"));
@@ -43,7 +45,7 @@ public class PropertyParserUtilsTests {
 
 	@Test
 	public void testAnnotationParseMultiple() {
-		Map<String, String> annotations = PropertyParserUtils.getAnnotations("annotation1:value1,annotation2:value2");
+		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2:value2");
 		assertFalse(annotations.isEmpty());
 		assertTrue(annotations.size() == 2);
 		assertTrue(annotations.containsKey("annotation1"));
@@ -56,7 +58,7 @@ public class PropertyParserUtilsTests {
 	public void testAnnotationMultipleColon() {
 		String annotation = "iam.amazonaws.com/role:arn:aws:iam::12345678:role/role-name,key1:val1:val2:val3," +
 				"key2:val4::val5:val6::val7:val8";
-		Map<String, String> annotations = PropertyParserUtils.getAnnotations(annotation);
+		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap(annotation);
 		assertFalse(annotations.isEmpty());
 		assertTrue(annotations.size() == 3);
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
@@ -69,7 +71,7 @@ public class PropertyParserUtilsTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testAnnotationParseInvalidValue() {
-		PropertyParserUtils.getAnnotations("annotation1:value1,annotation2,annotation3:value3");
+		PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2,annotation3:value3");
 	}
 
 	@Test

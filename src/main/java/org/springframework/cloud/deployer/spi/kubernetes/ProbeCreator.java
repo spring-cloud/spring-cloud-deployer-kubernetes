@@ -16,17 +16,21 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import io.fabric8.kubernetes.api.model.HTTPGetActionBuilder;
 import io.fabric8.kubernetes.api.model.HTTPHeader;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
+
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Base class for creating Probe's
@@ -88,12 +92,13 @@ abstract class ProbeCreator {
 	}
 
 	protected Map<String, String> getDeploymentProperties() {
-		return containerConfiguration.getAppDeploymentRequest().getDeploymentProperties();
+		AppDeploymentRequest appDeploymentRequest = this.containerConfiguration.getAppDeploymentRequest();
+		return (appDeploymentRequest instanceof ScheduleRequest) ?
+				((ScheduleRequest) appDeploymentRequest).getSchedulerProperties() : appDeploymentRequest.getDeploymentProperties();
 	}
 
 	protected String getDeploymentPropertyValue(String propertyName) {
-		return PropertyParserUtils.getDeploymentPropertyValue(this.containerConfiguration.getAppDeploymentRequest().getDeploymentProperties(),
-				propertyName, null);
+		return PropertyParserUtils.getDeploymentPropertyValue(getDeploymentProperties(), propertyName);
 	}
 
 	protected Integer getDefaultPort() {

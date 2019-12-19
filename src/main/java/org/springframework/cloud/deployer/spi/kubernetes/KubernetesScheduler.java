@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
+package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.StatusCause;
 import io.fabric8.kubernetes.api.model.batch.CronJob;
 import io.fabric8.kubernetes.api.model.batch.CronJobBuilder;
@@ -49,26 +49,26 @@ import org.springframework.util.StringUtils;
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  */
-public class KubernetesScheduler implements Scheduler {
+public class KubernetesScheduler extends AbstractKubernetesDeployer implements Scheduler {
 	private static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
 
-	private final KubernetesClient kubernetesClient;
+	public KubernetesScheduler(KubernetesClient client,
+			KubernetesSchedulerProperties properties) {
+		Assert.notNull(client, "KubernetesClient must not be null");
+		Assert.notNull(properties, "KubernetesSchedulerProperties must not be null");
 
-	private final KubernetesSchedulerProperties kubernetesSchedulerProperties;
-
-	public KubernetesScheduler(KubernetesClient kubernetesClient,
-			KubernetesSchedulerProperties kubernetesSchedulerProperties) {
-		Assert.notNull(kubernetesClient, "KubernetesClient must not be null");
-		Assert.notNull(kubernetesSchedulerProperties, "KubernetesSchedulerProperties must not be null");
-
-		this.kubernetesClient = kubernetesClient;
-		this.kubernetesSchedulerProperties = kubernetesSchedulerProperties;
+		this.client = client;
+		this.properties = properties;
+		this.containerFactory = new DefaultContainerFactory(properties);
+		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
+				KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX, properties);
 	}
 
 	@Override
 	public void schedule(ScheduleRequest scheduleRequest) {
+		scheduleRequest.setSchedulerProperties(mergeSchedulerProperties(scheduleRequest));
 		if(scheduleRequest != null) {
 			validateScheduleName(scheduleRequest);
 		}
@@ -86,6 +86,31 @@ public class KubernetesScheduler implements Scheduler {
 		}
 	}
 
+	/**
+	 * Merge the Deployment properties into Scheduler properties.
+	 * This way, the CronJob's scheduler properties are updated with the deployer properties if set any.
+	 * @param scheduleRequest the {@link ScheduleRequest}
+	 * @return the merged schedule properties
+	 */
+	static Map<String, String> mergeSchedulerProperties(ScheduleRequest scheduleRequest) {
+		Map<String, String> deploymentProperties = scheduleRequest.getDeploymentProperties();
+		Map<String, String> schedulerProperties = new HashMap<>();
+		schedulerProperties.putAll(scheduleRequest.getSchedulerProperties());
+		if (deploymentProperties != null) {
+			for (Map.Entry<String, String> deploymentProperty : deploymentProperties.entrySet()) {
+				String deploymentPropertyKey = deploymentProperty.getKey();
+				if (StringUtils.hasText(deploymentPropertyKey) && deploymentPropertyKey.startsWith(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)) {
+					String schedulerPropertyKey = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX +
+							deploymentPropertyKey.substring(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX.length());
+					if (!schedulerProperties.containsKey(schedulerPropertyKey)) {
+						schedulerProperties.put(schedulerPropertyKey, deploymentProperty.getValue());
+					}
+				}
+			}
+		}
+		return schedulerProperties;
+	}
+
 	public void validateScheduleName(ScheduleRequest request) {
 		if(request.getScheduleName() == null) {
 			throw new CreateScheduleException("The name for the schedule request is null", null);
@@ -101,7 +126,7 @@ public class KubernetesScheduler implements Scheduler {
 
 	@Override
 	public void unschedule(String scheduleName) {
-		boolean unscheduled = this.kubernetesClient.batch().cronjobs().withName(scheduleName).delete();
+		boolean unscheduled = this.client.batch().cronjobs().withName(scheduleName).delete();
 
 		if (!unscheduled) {
 			throw new SchedulerException("Failed to unschedule schedule " + scheduleName + " does not exist.");
@@ -118,7 +143,7 @@ public class KubernetesScheduler implements Scheduler {
 
 	@Override
 	public List<ScheduleInfo> list() {
-		CronJobList cronJobList = this.kubernetesClient.batch().cronjobs().list();
+		CronJobList cronJobList = this.client.batch().cronjobs().list();
 
 		List<CronJob> cronJobs = cronJobList.getItems();
 		List<ScheduleInfo> scheduleInfos = new ArrayList<>();
@@ -145,35 +170,34 @@ public class KubernetesScheduler implements Scheduler {
 		Map<String, String> labels = Collections.singletonMap(SPRING_CRONJOB_ID_KEY,
 				scheduleRequest.getDefinition().getName());
 
-		String schedule = scheduleRequest.getSchedulerProperties().get(SchedulerPropertyKeys.CRON_EXPRESSION);
+		Map<String, String> schedulerProperties = scheduleRequest.getSchedulerProperties();
+		String schedule = schedulerProperties.get(SchedulerPropertyKeys.CRON_EXPRESSION);
 		Assert.hasText(schedule, "The property: " + SchedulerPropertyKeys.CRON_EXPRESSION + " must be defined");
 
-		Container container = new ContainerCreator(this.kubernetesSchedulerProperties, scheduleRequest).build();
-
-		String taskServiceAccountName = KubernetesSchedulerPropertyResolver.getTaskServiceAccountName(scheduleRequest,
-				this.kubernetesSchedulerProperties);
-
-		String restartPolicy = this.kubernetesSchedulerProperties.getRestartPolicy().name();
+		PodSpec podSpec = createPodSpec(scheduleRequest);
+		String taskServiceAccountName = this.deploymentPropertiesResolver.getTaskServiceAccountName(scheduleRequest.getSchedulerProperties());
+		if (StringUtils.hasText(taskServiceAccountName)) {
+			podSpec.setServiceAccountName(taskServiceAccountName);
+		}
 
 		CronJob cronJob = new CronJobBuilder().withNewMetadata().withName(scheduleRequest.getScheduleName())
 				.withLabels(labels).endMetadata().withNewSpec().withSchedule(schedule).withNewJobTemplate()
-				.withNewSpec().withNewTemplate().withNewSpec().withServiceAccountName(taskServiceAccountName)
-				.withContainers(container).withRestartPolicy(restartPolicy).endSpec().endTemplate().endSpec()
+				.withNewSpec().withNewTemplate().withSpec(podSpec).endTemplate().endSpec()
 				.endJobTemplate().endSpec().build();
 
 		setImagePullSecret(scheduleRequest, cronJob);
 
-		return this.kubernetesClient.batch().cronjobs().create(cronJob);
+		return this.client.batch().cronjobs().create(cronJob);
 	}
 
-	protected String getExceptionMessageForField(KubernetesClientException kubernetesClientException,
+	protected String getExceptionMessageForField(KubernetesClientException clientException,
 			String fieldName) {
-		List<StatusCause> statusCauses = kubernetesClientException.getStatus().getDetails().getCauses();
+		List<StatusCause> statusCauses = clientException.getStatus().getDetails().getCauses();
 
 		if (!CollectionUtils.isEmpty(statusCauses)) {
 			for (StatusCause statusCause : statusCauses) {
 				if (fieldName.equals(statusCause.getField())) {
-					return kubernetesClientException.getStatus().getMessage();
+					return clientException.getStatus().getMessage();
 				}
 			}
 		}
@@ -182,8 +206,8 @@ public class KubernetesScheduler implements Scheduler {
 	}
 
 	private void setImagePullSecret(ScheduleRequest scheduleRequest, CronJob cronJob) {
-		String imagePullSecret = KubernetesSchedulerPropertyResolver.getImagePullSecret(scheduleRequest,
-				this.kubernetesSchedulerProperties);
+
+		String imagePullSecret = this.deploymentPropertiesResolver.getImagePullSecret(scheduleRequest.getSchedulerProperties());
 
 		if (StringUtils.hasText(imagePullSecret)) {
 			LocalObjectReference localObjectReference = new LocalObjectReference();

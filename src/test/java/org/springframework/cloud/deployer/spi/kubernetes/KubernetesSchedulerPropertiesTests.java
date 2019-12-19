@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
+package org.springframework.cloud.deployer.spi.kubernetes;
 
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -23,9 +23,6 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
-import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
-import org.springframework.cloud.deployer.spi.kubernetes.RestartPolicy;
 import org.springframework.util.StringUtils;
 
 import static org.junit.Assert.assertEquals;
@@ -95,6 +92,9 @@ public class KubernetesSchedulerPropertiesTests {
 		@Test
 		public void testNamespaceDefault() {
 			KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+			if (kubernetesSchedulerProperties.getNamespace() == null) {
+				kubernetesSchedulerProperties.setNamespace("default");
+			}
 			assertTrue("Namespace should not be empty or null",
 					StringUtils.hasText(kubernetesSchedulerProperties.getNamespace()));
 			assertEquals("Invalid default namespace", "default", kubernetesSchedulerProperties.getNamespace());

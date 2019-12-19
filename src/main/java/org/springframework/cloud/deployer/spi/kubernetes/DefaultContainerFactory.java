@@ -18,40 +18,28 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Probe;
-import io.fabric8.kubernetes.api.model.SecretKeySelector;
-import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -70,9 +58,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
 
-	private final KubernetesDeployerProperties properties;
+	public static final String SPRING_APPLICATION_JSON = "SPRING_APPLICATION_JSON";
 
-	private final NestedCommaDelimitedVariableParser nestedCommaDelimitedVariableParser = new NestedCommaDelimitedVariableParser();
+	public static final String SPRING_CLOUD_APPLICATION_GUID = "SPRING_CLOUD_APPLICATION_GUID";
+
+	private final KubernetesDeployerProperties properties;
 
 	public DefaultContainerFactory(KubernetesDeployerProperties properties) {
 		this.properties = properties;
@@ -81,6 +71,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 	@Override
 	public Container create(ContainerConfiguration containerConfiguration) {
 		AppDeploymentRequest request = containerConfiguration.getAppDeploymentRequest();
+		Map<String, String> deploymentProperties = getDeploymentProperties(request);
+		DeploymentPropertiesResolver deploymentPropertiesResolver = getDeploymentPropertiesResolver(request);
 
 		String image;
 		try {
@@ -91,11 +83,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 		logger.info("Using Docker image: " + image);
 
-		EntryPointStyle entryPointStyle = determineEntryPointStyle(properties, request);
+		EntryPointStyle entryPointStyle = deploymentPropertiesResolver.determineEntryPointStyle(deploymentProperties);
 		logger.info("Using Docker entry point style: " + entryPointStyle);
 
 		Map<String, String> envVarsMap = new HashMap<>();
-		for (String envVar : properties.getEnvironmentVariables()) {
+		for (String envVar : this.properties.getEnvironmentVariables()) {
 			String[] strings = envVar.split("=", 2);
 			Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
 			envVarsMap.put(strings[0], strings[1]);
@@ -103,7 +95,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		//Create EnvVar entries for additional variables set at the app level
 		//For instance, this may be used to set JAVA_OPTS independently for each app if the base container
 		//image supports it.
-		envVarsMap.putAll(getAppEnvironmentVariables(request));
+		envVarsMap.putAll(deploymentPropertiesResolver.getAppEnvironmentVariables(deploymentProperties));
 
 		List<String> appArgs = new ArrayList<>();
 
@@ -112,12 +104,12 @@ public class DefaultContainerFactory implements ContainerFactory {
 			appArgs = createCommandArgs(request);
 			break;
 		case boot:
-			if (envVarsMap.containsKey("SPRING_APPLICATION_JSON")) {
+			if (envVarsMap.containsKey(SPRING_APPLICATION_JSON)) {
 				throw new IllegalStateException(
 					"You can't use boot entry point style and also set SPRING_APPLICATION_JSON for the app");
 			}
 			try {
-				envVarsMap.put("SPRING_APPLICATION_JSON",
+				envVarsMap.put(SPRING_APPLICATION_JSON,
 					new ObjectMapper().writeValueAsString(request.getDefinition().getProperties()));
 			}
 			catch (JsonProcessingException e) {
@@ -148,8 +140,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
 		}
 
-		envVars.addAll(getSecretKeyRefs(request));
-		envVars.addAll(getConfigMapKeyRefs(request));
+		envVars.addAll(deploymentPropertiesResolver.getSecretKeyRefs(deploymentProperties));
+		envVars.addAll(deploymentPropertiesResolver.getConfigMapKeyRefs(deploymentProperties));
 		envVars.add(getGUIDEnvVar());
 
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
@@ -159,7 +151,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 		ContainerBuilder container = new ContainerBuilder();
 		container.withName(containerConfiguration.getAppId()).withImage(image).withEnv(envVars).withArgs(appArgs)
-			.withVolumeMounts(getVolumeMounts(request));
+			.withVolumeMounts(deploymentPropertiesResolver.getVolumeMounts(deploymentProperties));
 
 		Set<Integer> ports = new HashSet<>();
 
@@ -169,7 +161,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 			ports.add(defaultPort);
 		}
 
-		ports.addAll(getContainerPorts(request));
+		ports.addAll(deploymentPropertiesResolver.getContainerPorts(deploymentProperties));
 
 		configureReadinessProbe(containerConfiguration, container, ports);
 		configureLivenessProbe(containerConfiguration, container, ports);
@@ -186,7 +178,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		}
 
 		//Override the containers default entry point with one specified during the app deployment
-		List<String> containerCommand = getContainerCommand(request);
+		List<String> containerCommand = deploymentPropertiesResolver.getContainerCommand(deploymentProperties);
 		if (!containerCommand.isEmpty()) {
 			container.withCommand(containerCommand);
 		}
@@ -203,14 +195,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 		EnvVar guidEnvVar = new EnvVar();
 		guidEnvVar.setValueFrom(envVarSource);
-		guidEnvVar.setName("SPRING_CLOUD_APPLICATION_GUID");
+		guidEnvVar.setName(SPRING_CLOUD_APPLICATION_GUID);
 
 		return guidEnvVar;
 	}
 
 	private void configureReadinessProbe(ContainerConfiguration containerConfiguration,
 						ContainerBuilder containerBuilder, Set<Integer> ports) {
-		Probe readinessProbe = new ReadinessProbeCreator(properties, containerConfiguration).create();
+		Probe readinessProbe = new ReadinessProbeCreator(this.properties, containerConfiguration).create();
 
 		Integer readinessProbePort = readinessProbe.getHttpGet().getPort().getIntVal();
 
@@ -267,210 +259,15 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return cmdArgs;
 	}
 
-	/**
-	 * Volume mount deployment properties are specified in YAML format:
-	 * <p>
-	 * <code>
-	 * spring.cloud.deployer.kubernetes.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'},
-	 * {name: 'testpvc', mountPath: '/test/pvc'}, {name: 'testnfs', mountPath: '/test/nfs'}]
-	 * </code>
-	 * <p>
-	 * Volume mounts can be specified as deployer properties as well as app deployment properties.
-	 * Deployment properties override deployer properties.
-	 *
-	 * @param request the {@link AppDeploymentRequest}
-	 * @return the configured volume mounts
-	 */
-	protected List<VolumeMount> getVolumeMounts(AppDeploymentRequest request) {
-		List<VolumeMount> volumeMounts = new ArrayList<>();
 
-		String volumeMountDeploymentProperty = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
-			"spring.cloud.deployer.kubernetes.volumeMounts");
-		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
-			try {
-				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ volume-mounts: " + volumeMountDeploymentProperty + " }";
-				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
-				Properties yaml = properties.getObject();
-				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
-				KubernetesDeployerProperties deployerProperties = new Binder(source)
-						.bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
-				volumeMounts.addAll(deployerProperties.getVolumeMounts());
-			} catch (Exception e) {
-				throw new IllegalArgumentException(
-						String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
-			}
-		}
-		// only add volume mounts that have not already been added, based on the volume mount's name
-		// i.e. allow provided deployment volume mounts to override deployer defined volume mounts
-		volumeMounts.addAll(properties.getVolumeMounts().stream().filter(volumeMount -> volumeMounts.stream()
-			.noneMatch(existingVolumeMount -> existingVolumeMount.getName().equals(volumeMount.getName())))
-			.collect(Collectors.toList()));
-
-		return volumeMounts;
+	private DeploymentPropertiesResolver getDeploymentPropertiesResolver(AppDeploymentRequest request) {
+		String propertiesPrefix = (request instanceof ScheduleRequest) ? KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
+				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
+		return new DeploymentPropertiesResolver(propertiesPrefix, this.properties);
 	}
 
-	/**
-	 * The list represents a single command with many arguments.
-	 *
-	 * @param request AppDeploymentRequest - used to gather application overridden
-	 *                container command
-	 * @return a list of strings that represents the command and any arguments for that command
-	 */
-	private List<String> getContainerCommand(AppDeploymentRequest request) {
-		String containerCommand = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
-			"spring.cloud.deployer.kubernetes.containerCommand", "");
-		return new CommandLineTokenizer(containerCommand).getArgs();
-	}
-
-	/**
-	 * @param request AppDeploymentRequest - used to gather additional container ports
-	 * @return a list of Integers to add to the container
-	 */
-	private List<Integer> getContainerPorts(AppDeploymentRequest request) {
-		List<Integer> containerPortList = new ArrayList<>();
-		String containerPorts = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
-			"spring.cloud.deployer.kubernetes.containerPorts", null);
-		if (containerPorts != null) {
-			String[] containerPortSplit = containerPorts.split(",");
-			for (String containerPort : containerPortSplit) {
-				logger.trace("Adding container ports from AppDeploymentRequest: " + containerPort);
-				Integer port = Integer.parseInt(containerPort.trim());
-				containerPortList.add(port);
-			}
-		}
-		return containerPortList;
-	}
-
-	/**
-	 * @param request AppDeploymentRequest - used to gather application specific
-	 *                environment variables
-	 * @return a List of EnvVar objects for app specific environment settings
-	 */
-	private Map<String, String> getAppEnvironmentVariables(AppDeploymentRequest request) {
-		Map<String, String> appEnvVarMap = new HashMap<>();
-		String appEnvVar = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
-			"spring.cloud.deployer.kubernetes.environmentVariables", null);
-		if (appEnvVar != null) {
-			String[] appEnvVars = nestedCommaDelimitedVariableParser.parse(appEnvVar);
-			for (String envVar : appEnvVars) {
-				logger.trace("Adding environment variable from AppDeploymentRequest: " + envVar);
-				String[] strings = envVar.split("=", 2);
-				Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
-				appEnvVarMap.put(strings[0], strings[1]);
-			}
-		}
-		return appEnvVarMap;
-	}
-
-	static class NestedCommaDelimitedVariableParser {
-		static final String REGEX = "(\\w+='.+?'),?";
-		static final Pattern pattern = Pattern.compile(REGEX);
-
-		String[] parse(String value) {
-			List<String> vars = new ArrayList<>();
-
-			Matcher m = pattern.matcher(value);
-
-			while (m.find()) {
-				String replacedVar = m.group(1).replaceAll("'","");
-
-				if (!StringUtils.isEmpty(replacedVar)) {
-					vars.add(replacedVar);
-				}
-			}
-
-			String nonQuotedVars = value.replaceAll(pattern.pattern(), "");
-
-			if (!StringUtils.isEmpty(nonQuotedVars)) {
-				vars.addAll(Arrays.asList(nonQuotedVars.split(",")));
-			}
-
-			return vars.toArray(new String[0]);
-		}
-	}
-
-	private EntryPointStyle determineEntryPointStyle(KubernetesDeployerProperties properties,
-		AppDeploymentRequest request) {
-		EntryPointStyle entryPointStyle = null;
-		String deployerPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
-			"spring.cloud.deployer.kubernetes.entryPointStyle", null);
-		if (deployerPropertyValue != null) {
-			try {
-				entryPointStyle = EntryPointStyle.valueOf(deployerPropertyValue.toLowerCase());
-			}
-			catch (IllegalArgumentException ignore) {
-			}
-		}
-		if (entryPointStyle == null) {
-			entryPointStyle = properties.getEntryPointStyle();
-		}
-		return entryPointStyle;
-	}
-
-	private List<EnvVar> getSecretKeyRefs(AppDeploymentRequest request) {
-		List<EnvVar> secretKeyRefs = new ArrayList<>();
-
-		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
-				"spring.cloud.deployer.kubernetes.secretKeyRefs", "secretKeyRefs" );
-
-		deployerProperties.getSecretKeyRefs().forEach(secretKeyRef ->
-				secretKeyRefs.add(buildSecretKeyRefEnvVar(secretKeyRef)));
-
-		properties.getSecretKeyRefs().stream()
-				.filter(secretKeyRef -> secretKeyRefs.stream()
-						.noneMatch(existing -> existing.getName().equals(secretKeyRef.getEnvVarName())))
-				.collect(Collectors.toList())
-				.forEach(secretKeyRef -> secretKeyRefs.add(buildSecretKeyRefEnvVar(secretKeyRef)));
-
-		return secretKeyRefs;
-	}
-
-	private EnvVar buildSecretKeyRefEnvVar(KubernetesDeployerProperties.SecretKeyRef secretKeyRef) {
-		SecretKeySelector secretKeySelector = new SecretKeySelector();
-
-		EnvVarSource envVarSource = new EnvVarSource();
-		envVarSource.setSecretKeyRef(secretKeySelector);
-
-		EnvVar secretKeyEnvRefVar = new EnvVar();
-		secretKeyEnvRefVar.setValueFrom(envVarSource);
-		secretKeySelector.setName(secretKeyRef.getSecretName());
-		secretKeySelector.setKey(secretKeyRef.getDataKey());
-		secretKeyEnvRefVar.setName(secretKeyRef.getEnvVarName());
-
-		return secretKeyEnvRefVar;
-	}
-
-	private List<EnvVar> getConfigMapKeyRefs(AppDeploymentRequest request) {
-		List<EnvVar> configMapKeyRefs = new ArrayList<>();
-
-		KubernetesDeployerProperties deployerProperties = PropertyParserUtils.bindProperties(request,
-				"spring.cloud.deployer.kubernetes.configMapKeyRefs", "configMapKeyRefs");
-
-		deployerProperties.getConfigMapKeyRefs().forEach(configMapKeyRef ->
-				configMapKeyRefs.add(buildConfigMapKeyRefEnvVar(configMapKeyRef)));
-
-		properties.getConfigMapKeyRefs().stream()
-				.filter(configMapKeyRef -> configMapKeyRefs.stream()
-						.noneMatch(existing -> existing.getName().equals(configMapKeyRef.getEnvVarName())))
-				.collect(Collectors.toList())
-				.forEach(configMapKeyRef -> configMapKeyRefs.add(buildConfigMapKeyRefEnvVar(configMapKeyRef)));
-
-		return configMapKeyRefs;
-	}
-
-	private EnvVar buildConfigMapKeyRefEnvVar(KubernetesDeployerProperties.ConfigMapKeyRef configMapKeyRef) {
-		ConfigMapKeySelector configMapKeySelector = new ConfigMapKeySelector();
-
-		EnvVarSource envVarSource = new EnvVarSource();
-		envVarSource.setConfigMapKeyRef(configMapKeySelector);
-
-		EnvVar configMapKeyEnvRefVar = new EnvVar();
-		configMapKeyEnvRefVar.setValueFrom(envVarSource);
-		configMapKeySelector.setName(configMapKeyRef.getConfigMapName());
-		configMapKeySelector.setKey(configMapKeyRef.getDataKey());
-		configMapKeyEnvRefVar.setName(configMapKeyRef.getEnvVarName());
-
-		return configMapKeyEnvRefVar;
+	private Map<String, String> getDeploymentProperties(AppDeploymentRequest request) {
+		return (request instanceof ScheduleRequest) ? ((ScheduleRequest)request).getSchedulerProperties() :
+				request.getDeploymentProperties();
 	}
 }
