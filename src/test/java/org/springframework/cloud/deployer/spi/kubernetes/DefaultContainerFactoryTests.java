@@ -16,21 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
@@ -40,15 +25,28 @@ import io.fabric8.kubernetes.api.model.HTTPHeader;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Unit tests for {@link DefaultContainerFactory}.
@@ -624,6 +622,32 @@ public class DefaultContainerFactoryTests {
 				container.getLivenessProbe().getHttpGet().getHttpHeaders().isEmpty());
 		assertTrue("Readiness probe should not contain any HTTP headers",
 				container.getReadinessProbe().getHttpGet().getHttpHeaders().isEmpty());
+	}
+
+	@Test
+	public void testCommandLineArgsOverridesExistingProperties() {
+		AppDefinition definition = new AppDefinition("app-test", Collections.singletonMap("foo", "bar"));
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null,
+				Collections.singletonList("--foo=newValue"));
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("--foo=newValue");
+	}
+
+	@Test
+	public void testCommandLineArgsExcludesMalformedProperties() {
+		Map<String,String> properties = new HashMap<>();
+		properties.put("sun.cpu.isalist","");
+		properties.put("foo","bar");
+		AppDefinition definition = new AppDefinition("app-test", properties);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource());
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("--foo=bar");
 	}
 
 	private Resource getResource() {

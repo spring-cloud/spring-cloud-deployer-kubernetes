@@ -226,10 +226,26 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	protected List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
+		List<String> commandArgOptions = request.getCommandlineArguments().stream()
+				.map(arg-> arg.substring(0,arg.indexOf("=")).replaceAll("^--",""))
+				.collect(Collectors.toList());
+
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
 		for (Map.Entry<String, String> entry : args.entrySet()) {
-			cmdArgs.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
+			if (StringUtils.isEmpty(entry.getValue())) {
+				logger.warn(
+						"Excluding request property with missing value from command args: " + entry.getKey());
+			}
+			else if (commandArgOptions.contains(entry.getKey())) {
+				logger.warn(
+						String.format(
+								"Excluding request property [--%s=%s] as a command arg. Existing command line argument takes precedence."
+								, entry.getKey(), entry.getValue()));
+			}
+			else {
+				cmdArgs.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
+			}
 		}
 		// add provided command line args
 		cmdArgs.addAll(request.getCommandlineArguments());
