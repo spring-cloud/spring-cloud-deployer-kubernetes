@@ -20,7 +20,7 @@
 		<java.version>1.8</java.version>
 		<kubernetes-client.version>4.1.0</kubernetes-client.version>
 		<kubernetes-assertions.version>3.0.12</kubernetes-assertions.version>
-		<spring-cloud-deployer-spi.version>2.2.0.RELEASE</spring-cloud-deployer-spi.version>
+		<spring-cloud-deployer.version>2.2.0.RELEASE</spring-cloud-deployer.version>
 		<okhttp3.version>3.9.1</okhttp3.version>
 		<java-semver.version>0.9.0</java-semver.version>
 		<maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
@@ -46,12 +46,12 @@
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-deployer-spi</artifactId>
-			<version>${spring-cloud-deployer-spi.version}</version>
+			<version>${spring-cloud-deployer.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-deployer-resource-docker</artifactId>
-			<version>${spring-cloud-deployer-spi.version}</version>
+			<version>${spring-cloud-deployer.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -83,7 +83,7 @@
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-deployer-spi-test</artifactId>
-			<version>${spring-cloud-deployer-spi.version}</version>
+			<version>${spring-cloud-deployer.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
