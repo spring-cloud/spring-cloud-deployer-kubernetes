@@ -25,6 +25,8 @@ import io.fabric8.kubernetes.api.model.HTTPHeader;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,6 +57,7 @@ import static org.junit.Assert.fail;
  * @author Donovan Muller
  * @author Chris Schaefer
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
@@ -201,6 +204,26 @@ public class DefaultContainerFactoryTests {
 		assertNotNull(containerShell);
 		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
 		assertTrue(containerShell.getArgs().size() == 0);
+
+		List<String> cmdLineArgs = new ArrayList<>();
+		cmdLineArgs.add("--foo.bar=value1");
+		cmdLineArgs.add("--spring.cloud.task.executionid=1");
+		cmdLineArgs.add("--spring.cloud.data.flow.platformname=platform1");
+		cmdLineArgs.add("--spring.cloud.data.flow.taskappname==a1");
+		appDeploymentRequestShell = new AppDeploymentRequest(definition,
+				resource, props, cmdLineArgs);
+		shellContainerConfiguration = new ContainerConfiguration("app-test",
+				appDeploymentRequestShell);
+		containerShell = defaultContainerFactory.create(shellContainerConfiguration);
+		assertNotNull(containerShell);
+		assertTrue(containerShell.getEnv().size() == 6);
+		assertTrue(containerShell.getArgs().size() == 0);
+		String envVarString = containerShell.getEnv().toString();
+		assertTrue(envVarString.contains("name=FOO_BAR_BAZ, value=test"));
+		assertTrue(envVarString.contains("name=FOO_BAR, value=value1"));
+		assertTrue(envVarString.contains("name=SPRING_CLOUD_TASK_EXECUTIONID, value=1"));
+		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_TASKAPPNAME, value==a1"));
+		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_PLATFORMNAME, value=platform1"));
 
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,

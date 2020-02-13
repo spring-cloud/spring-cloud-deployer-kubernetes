@@ -16,30 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.ContainerBuilder;
-import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.EnvVarSource;
-import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
-import io.fabric8.kubernetes.api.model.Probe;
-import io.fabric8.kubernetes.api.model.SecretKeySelector;
-import io.fabric8.kubernetes.api.model.VolumeMount;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +30,31 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
+import io.fabric8.kubernetes.api.model.Probe;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
  * Kubernetes Pod by launching the specified Docker image.
@@ -63,6 +64,7 @@ import java.util.stream.Collectors;
  * @author Donovan Muller
  * @author David Turanski
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 public class DefaultContainerFactory implements ContainerFactory {
 
@@ -129,6 +131,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 			for (String key : request.getDefinition().getProperties().keySet()) {
 				String envVar = key.replace('.', '_').toUpperCase();
 				envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
+			}
+			// Push all the command line arguments as environment properties
+			// The task app name(in case of Composed Task), platform_name and executionId are expected to be updated.
+			// This will also override any of the existing app properties that match the provided cmdline args.
+			for (String cmdLineArg: request.getCommandlineArguments()) {
+				String cmdLineArgKey = cmdLineArg.substring(2, cmdLineArg.indexOf("="));
+				String cmdLineArgValue = cmdLineArg.substring(cmdLineArg.indexOf("=") + 1);
+				envVarsMap.put(cmdLineArgKey.replace('.', '_').toUpperCase(), cmdLineArgValue);
 			}
 			break;
 		}
