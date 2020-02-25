@@ -368,15 +368,25 @@ public class DefaultContainerFactory implements ContainerFactory {
 		static final Pattern pattern = Pattern.compile(REGEX);
 
 		String[] parse(String value) {
-
-			String[] vars = value.replaceAll(pattern.pattern(), "").split(",");
+			List<String> vars = new ArrayList<>();
 
 			Matcher m = pattern.matcher(value);
+
 			while (m.find()) {
-				vars = Arrays.copyOf(vars, vars.length + 1);
-				vars[vars.length - 1] = m.group(1).replaceAll("'","");
+				String replacedVar = m.group(1).replaceAll("'","");
+
+				if (!StringUtils.isEmpty(replacedVar)) {
+					vars.add(replacedVar);
+				}
 			}
-			return vars;
+
+			String nonQuotedVars = value.replaceAll(pattern.pattern(), "");
+
+			if (!StringUtils.isEmpty(nonQuotedVars)) {
+				vars.addAll(Arrays.asList(nonQuotedVars.split(",")));
+			}
+
+			return vars.toArray(new String[0]);
 		}
 	}
 
