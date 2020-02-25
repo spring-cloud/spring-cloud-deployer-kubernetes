@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -175,7 +175,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.environmentVariables",
-			"foo='bar,baz',car=caz,boo='zoo,gnu',doo=dar");
+				"JAVA_TOOL_OPTIONS='thing1,thing2',foo='bar,baz',car=caz,boo='zoo,gnu',doo=dar,OPTS='thing1'");
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
@@ -187,7 +187,43 @@ public class KubernetesAppDeployerTests {
 				new EnvVar("foo", "bar,baz", null),
 				new EnvVar("car", "caz", null),
 				new EnvVar("boo", "zoo,gnu", null),
-				new EnvVar("doo", "dar", null));
+				new EnvVar("doo", "dar", null),
+				new EnvVar("JAVA_TOOL_OPTIONS", "thing1,thing2", null),
+				new EnvVar("OPTS", "thing1", null));
+	}
+
+	@Test
+	public void deployWithEnvironmentWithSingleCommaDelimitedValue() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.environmentVariables",
+				"JAVA_TOOL_OPTIONS='thing1,thing2'");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getContainers().get(0).getEnv())
+				.contains(new EnvVar("JAVA_TOOL_OPTIONS", "thing1,thing2", null));
+	}
+
+	@Test
+	public void deployWithEnvironmentWithMultipleCommaDelimitedValue() throws Exception {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.environmentVariables",
+				"JAVA_TOOL_OPTIONS='thing1,thing2',OPTS='thing3, thing4'");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec("1", appDeploymentRequest, 8080, false);
+
+		assertThat(podSpec.getContainers().get(0).getEnv())
+				.contains(
+					new EnvVar("JAVA_TOOL_OPTIONS", "thing1,thing2", null),
+					new EnvVar("OPTS", "thing3, thing4", null));
 	}
 
 	@Test
