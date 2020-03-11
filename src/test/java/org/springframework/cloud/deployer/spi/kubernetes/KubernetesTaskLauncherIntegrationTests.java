@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2019 the original author or authors.
+ * Copyright 2016-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,6 @@ import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -43,8 +39,12 @@ import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationTests;
 import org.springframework.cloud.deployer.spi.test.Timeout;
-import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 import org.springframework.core.io.Resource;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
 /**
  * Integration tests for {@link KubernetesTaskLauncher}.
@@ -98,7 +98,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		log.info("Testing {}...", "JobPodAnnotation");
 
 		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(new KubernetesDeployerProperties(),
-				kubernetesClient);
+				new KubernetesTaskLauncherProperties(), kubernetesClient);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -141,4 +141,6 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
 				timeout.pause));
 	}
+
+
 }

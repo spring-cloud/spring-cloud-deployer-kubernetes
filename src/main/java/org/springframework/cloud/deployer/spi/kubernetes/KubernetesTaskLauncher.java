@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2019 the original author or authors.
+ * Copyright 2016-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,34 +24,35 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodStatus;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.api.model.batch.JobList;
+import io.fabric8.kubernetes.api.model.batch.JobSpec;
+import io.fabric8.kubernetes.api.model.batch.JobSpecBuilder;
+import io.fabric8.kubernetes.api.model.batch.JobStatus;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import org.hashids.Hashids;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
-
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.batch.Job;
-import io.fabric8.kubernetes.api.model.batch.JobSpec;
-import io.fabric8.kubernetes.api.model.batch.JobSpecBuilder;
-import io.fabric8.kubernetes.api.model.batch.JobStatus;
-import io.fabric8.kubernetes.api.model.KubernetesResourceList;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodSpec;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import io.fabric8.kubernetes.api.model.PodTemplateSpec;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
@@ -61,19 +62,26 @@ import org.springframework.util.StringUtils;
  * @author David Turanski
  * @author Leonardo Diniz
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 
+	public static final String BACKOFF_LIMIT_KEY = "backoffLimit";
+
+	private KubernetesTaskLauncherProperties taskLauncherProperties;
+
 	@Autowired
-	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
-	                             KubernetesClient client) {
-		this(properties, client, new DefaultContainerFactory(properties));
+	public KubernetesTaskLauncher(KubernetesDeployerProperties deployerProperties,
+			KubernetesTaskLauncherProperties taskLauncherProperties, KubernetesClient client) {
+		this(deployerProperties, taskLauncherProperties, client, new DefaultContainerFactory(deployerProperties));
 	}
 
 	@Autowired
-	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
+	public KubernetesTaskLauncher(KubernetesDeployerProperties kubernetesDeployerProperties,
+			KubernetesTaskLauncherProperties taskLauncherProperties,
 	                             KubernetesClient client, ContainerFactory containerFactory) {
-		this.properties = properties;
+		this.properties = kubernetesDeployerProperties;
+		this.taskLauncherProperties = taskLauncherProperties;
 		this.client = client;
 		this.containerFactory = containerFactory;
 	}
@@ -95,25 +103,8 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 
 		logPossibleDownloadResourceMessage(request.getResource());
-		Map<String, String> idMap = createIdMap(appId, request);
-		logger.debug(String.format("Launching pod for task: %s", appId));
-
 		try {
-			Map<String, String> podLabelMap = new HashMap<>();
-			podLabelMap.put("task-name", request.getDefinition().getName());
-			podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-
-			PodSpec podSpec = createPodSpec(appId, request, null, true);
-
-			Map<String, String> jobAnnotations = getJobAnnotations(request);
-
-			if (properties.isCreateJob()) {
-				launchJob(appId, podSpec, podLabelMap, idMap, jobAnnotations);
-			}
-			else {
-				launchPod(appId, podSpec, podLabelMap, idMap, jobAnnotations);
-			}
-
+			launch(appId, request);
 			return appId;
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -220,39 +211,63 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 
-	private void launchPod(String appId, PodSpec podSpec, Map<String, String> labelMap, Map<String, String> idMap,
-						   Map<String, String> annotations) {
-		client.pods()
-				.createNew()
-				.withNewMetadata()
-				.withName(appId)
-				.withLabels(labelMap)
-				.withAnnotations(annotations)
-				.addToLabels(idMap)
-				.endMetadata()
-				.withSpec(podSpec)
-				.done();
+	private void launch(String appId, AppDeploymentRequest request) {
+		Map<String, String> idMap = createIdMap(appId, request);
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", request.getDefinition().getName());
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+
+		PodSpec podSpec = createPodSpec(appId, request, null, true);
+
+		podSpec.setRestartPolicy(getRestartPolicy(request).name());
+
+		if (this.properties.isCreateJob()) {
+			logger.debug(String.format("Launching Job for task: %s", appId));
+			ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
+			PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
+
+			JobSpec jobSpec = new JobSpecBuilder()
+					.withTemplate(podTemplateSpec)
+					.withBackoffLimit(getBackoffLimit(request))
+					.build();
+
+			this.client.batch().jobs()
+					.createNew()
+					.withNewMetadata()
+					.withName(appId)
+					.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
+					.addToLabels(idMap)
+					.withAnnotations(getJobAnnotations(request))
+					.endMetadata()
+					.withSpec(jobSpec)
+					.done();
+		}
+		else {
+			logger.debug(String.format("Launching Pod for task: %s", appId));
+			this.client.pods()
+					.createNew()
+					.withNewMetadata()
+					.withName(appId)
+					.withLabels(podLabelMap)
+					.withAnnotations(getJobAnnotations(request))
+					.addToLabels(idMap)
+					.endMetadata()
+					.withSpec(podSpec)
+					.done();
+		}
 	}
 
-	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap,
-						   Map<String, String> annotations) {
-		ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
-		PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
+	private void launchJob(String appId, AppDeploymentRequest request) {
+		Map<String, String> idMap = createIdMap(appId, request);
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", request.getDefinition().getName());
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
 
-		JobSpec jobSpec = new JobSpecBuilder()
-				.withTemplate(podTemplateSpec)
-				.build();
+		PodSpec podSpec = createPodSpec(appId, request, null, true);
 
-		client.batch().jobs()
-				.createNew()
-				.withNewMetadata()
-				.withName(appId)
-				.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
-				.addToLabels(idMap)
-				.withAnnotations(annotations)
-				.endMetadata()
-				.withSpec(jobSpec)
-				.done();
+		podSpec.setRestartPolicy(getRestartPolicy(request).name());
+
+
 	}
 
 	private List<String> getIdsForTasks(Optional<String> taskName, boolean isCreateJob) {
@@ -395,6 +410,41 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	private Pod getPodByName(String name) {
 		PodResource podResource = client.pods().withName(name);
 		return podResource == null? null: client.pods().withName(name).get();
+	}
+
+	/**
+	 * Get the RestartPolicy setting for the deployment request.
+	 *
+	 * @param request The deployment request.
+	 * @return Whether RestartPolicy is requested
+	 */
+	protected RestartPolicy getRestartPolicy(AppDeploymentRequest request) {
+		String restartPolicyString =
+				PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+						"spring.cloud.deployer.kubernetes.restartPolicy");
+		RestartPolicy restartPolicy =  (StringUtils.isEmpty(restartPolicyString)) ? this.taskLauncherProperties.getRestartPolicy() :
+				RestartPolicy.valueOf(restartPolicyString);
+		if (this.properties.isCreateJob()) {
+			Assert.isTrue(!restartPolicy.equals(RestartPolicy.Always), "RestartPolicy should not be 'Always' when the JobSpec is used.");
+		}
+		return restartPolicy;
+	}
+
+	/**
+	 * Get the BackoffLimit setting for the deployment request.
+	 *
+	 * @param request The deployment request.
+	 * @return the backoffLimit
+	 */
+	protected Integer getBackoffLimit(AppDeploymentRequest request) {
+		String backoffLimitString = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.backoffLimit");
+		if (StringUtils.hasText(backoffLimitString)) {
+			return Integer.valueOf(backoffLimitString);
+		}
+		else {
+			return this.taskLauncherProperties.getBackoffLimit();
+		}
 	}
 
 
