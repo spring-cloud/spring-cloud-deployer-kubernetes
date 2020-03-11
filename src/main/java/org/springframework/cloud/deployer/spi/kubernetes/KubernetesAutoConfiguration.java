@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,36 +37,39 @@ import org.springframework.core.Ordered;
  * @author Chris Schaefer
  */
 @Configuration
-@EnableConfigurationProperties(KubernetesDeployerProperties.class)
+@EnableConfigurationProperties({KubernetesDeployerProperties.class, KubernetesTaskLauncherProperties.class})
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 public class KubernetesAutoConfiguration {
 	
 	@Autowired
-	private KubernetesDeployerProperties properties;
+	private KubernetesDeployerProperties deployerProperties;
+
+	@Autowired
+	private KubernetesTaskLauncherProperties taskLauncherProperties;
 
 	@Bean
 	@ConditionalOnMissingBean(AppDeployer.class)
 	public AppDeployer appDeployer(KubernetesClient kubernetesClient,
 	                               ContainerFactory containerFactory) {
-		return new KubernetesAppDeployer(properties, kubernetesClient, containerFactory);
+		return new KubernetesAppDeployer(deployerProperties, kubernetesClient, containerFactory);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean(TaskLauncher.class)
 	public TaskLauncher taskDeployer(KubernetesClient kubernetesClient,
 	                                 ContainerFactory containerFactory) {
-		return new KubernetesTaskLauncher(properties, kubernetesClient, containerFactory);
+		return new KubernetesTaskLauncher(deployerProperties, taskLauncherProperties, kubernetesClient, containerFactory);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean(KubernetesClient.class)
 	public KubernetesClient kubernetesClient() {
-		return KubernetesClientFactory.getKubernetesClient(this.properties);
+		return KubernetesClientFactory.getKubernetesClient(this.deployerProperties);
 	}
 
 	@Bean
 	public ContainerFactory containerFactory() {
-		return new DefaultContainerFactory(properties);
+		return new DefaultContainerFactory(deployerProperties);
 	}
 
 }

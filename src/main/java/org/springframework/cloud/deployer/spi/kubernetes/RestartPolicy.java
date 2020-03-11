@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
+package org.springframework.cloud.deployer.spi.kubernetes;
 
 /**
  * Defines restart policies that are available.
@@ -22,6 +22,12 @@ package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
  * @author Chris Schaefer
  */
 public enum RestartPolicy {
+
+	/**
+	 * Always restart a failed container.
+	 */
+	Always,
+
 	/**
 	 * Restart a failed container with an exponential back-off delay, capped at 5 minutes.
 	 */

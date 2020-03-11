@@ -25,6 +25,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
 import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
+import org.springframework.cloud.deployer.spi.kubernetes.RestartPolicy;
 import org.springframework.util.StringUtils;
 
 import static org.junit.Assert.assertEquals;

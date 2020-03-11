@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2019 the original author or authors.
+ * Copyright 2016-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,19 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.hamcrest.Matchers;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.KubernetesTestSupport;
@@ -42,9 +45,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
 /**
@@ -52,6 +57,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  *
  * @author Leonardo Diniz
  * @author Chris Schaefer
+ * @author Ilayaperumal Gopinathan
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 @TestPropertySource(properties = {"spring.cloud.deployer.kubernetes.create-job=true",
@@ -102,7 +108,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		kubernetesDeployerProperties.setCreateJob(true);
 
 		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(kubernetesDeployerProperties,
-				kubernetesClient);
+				new KubernetesTaskLauncherProperties(), kubernetesClient);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -146,5 +152,92 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		assertThat(taskName, eventually(hasStatusThat(
 				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
 				timeout.pause));
+	}
+
+
+	@Test
+	public void testJobSpecProperties() {
+		log.info("Testing {}...", "JobSpecProperties");
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setCreateJob(true);
+
+		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(kubernetesDeployerProperties,
+				new KubernetesTaskLauncherProperties(), this.kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		Map<String, String> appRequest = new HashMap<>();
+		appRequest.put("spring.cloud.deployer.kubernetes.restartPolicy", "OnFailure");
+		appRequest.put("spring.cloud.deployer.kubernetes.backoffLimit", "5");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, appRequest);
+
+		log.info("Launching {}...", request.getDefinition().getName());
+
+		String launchId = kubernetesTaskLauncher.launch(request);
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(launchId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.launching))), timeout.maxAttempts,
+				timeout.pause));
+
+		String taskName = request.getDefinition().getName();
+
+		log.info("Checking job spec of {}...", taskName);
+
+		List<io.fabric8.kubernetes.api.model.batch.Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(jobs.size(), is(1));
+
+		io.fabric8.kubernetes.api.model.batch.Job job = jobs.get(0);
+		assertTrue(job.getSpec().getBackoffLimit().equals(5));
+
+
+		log.info("Checking job pod spec annotations of {}...", taskName);
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(pods.size(), is(1));
+
+		Pod pod = pods.get(0);
+
+		log.info("Destroying {}...", taskName);
+
+		timeout = undeploymentTimeout();
+		kubernetesTaskLauncher.destroy(taskName);
+
+		assertThat(taskName, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
+				timeout.pause));
+	}
+
+
+	@Test
+	public void testJobSpecWithInvalidRestartPolicy() {
+		log.info("Testing {}...", "JobSpecProperties");
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setCreateJob(true);
+
+		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(kubernetesDeployerProperties,
+				new KubernetesTaskLauncherProperties(), this.kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		Map<String, String> appRequest = new HashMap<>();
+		appRequest.put("spring.cloud.deployer.kubernetes.restartPolicy", "Always");
+		appRequest.put("spring.cloud.deployer.kubernetes.backoffLimit", "5");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, appRequest);
+
+		log.info("Launching {}...", request.getDefinition().getName());
+
+		try {
+			String launchId = kubernetesTaskLauncher.launch(request);
+			fail("Expected exception as the RestartPolicy Always is not expected to be set for JobSpec.");
+		}
+		catch (Exception e) {
+			assertEquals("Incorrect exception message on RestartPolicy for JobSpec.", e.getMessage(),
+					"RestartPolicy should not be 'Always' when the JobSpec is used.");
+		}
 	}
 }

@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.scheduler.kubernetes;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.deployer.spi.kubernetes.EntryPointStyle;
 import org.springframework.cloud.deployer.spi.kubernetes.ImagePullPolicy;
+import org.springframework.cloud.deployer.spi.kubernetes.RestartPolicy;
 import org.springframework.util.StringUtils;
 
 /**
