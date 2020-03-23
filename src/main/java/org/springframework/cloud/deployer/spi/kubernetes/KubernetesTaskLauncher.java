@@ -72,8 +72,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties deployerProperties,
-			KubernetesTaskLauncherProperties taskLauncherProperties,
-	                             KubernetesClient client) {
+			KubernetesTaskLauncherProperties taskLauncherProperties, KubernetesClient client) {
 		this(deployerProperties, taskLauncherProperties, client, new DefaultContainerFactory(deployerProperties));
 	}
 
@@ -116,18 +115,14 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 			Map<String, String> jobAnnotations = getJobAnnotations(request);
 
-			Map<String, String> jobSpecProperties = new HashMap<>();
-
-			Integer backOffLimit = getBackoffLimit(request);
-
-			if (backOffLimit != null) {
-				jobSpecProperties.put(BACKOFF_LIMIT_KEY, String.valueOf(backOffLimit));
-			}
-
 			podSpec.setRestartPolicy(getRestartPolicy(request).name());
 
 			if (this.properties.isCreateJob()) {
-				launchJob(appId, podSpec, podLabelMap, idMap, jobAnnotations, jobSpecProperties);
+				Integer backOffLimit = getBackoffLimit(request);
+				launchJob(appId, podSpec, podLabelMap, idMap, jobAnnotations,
+						(backOffLimit != null) ?
+								Collections.singletonMap(BACKOFF_LIMIT_KEY, String.valueOf(backOffLimit)) :
+								Collections.EMPTY_MAP);
 			}
 			else {
 				launchPod(appId, podSpec, podLabelMap, idMap, jobAnnotations);

@@ -185,21 +185,19 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		log.info("Checking job spec of {}...", taskName);
 
-		List<io.fabric8.kubernetes.api.model.batch.Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
+		List<Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
 
 		assertThat(jobs.size(), is(1));
 
-		io.fabric8.kubernetes.api.model.batch.Job job = jobs.get(0);
-		assertTrue(job.getSpec().getBackoffLimit().equals(5));
+		Job job = jobs.get(0);
+		assertThat(job.getSpec().getBackoffLimit(), is(5));
 
 
-		log.info("Checking job pod spec annotations of {}...", taskName);
+		log.info("Checking pod spec of {}...", taskName);
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
 		assertThat(pods.size(), is(1));
-
-		Pod pod = pods.get(0);
 
 		log.info("Destroying {}...", taskName);
 
@@ -214,7 +212,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 	@Test
 	public void testJobSpecWithInvalidRestartPolicy() {
-		log.info("Testing {}...", "JobSpecProperties");
+		log.info("Testing {}...", "JobSpecWithInvalidRestartPolicy");
 
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setCreateJob(true);
@@ -232,7 +230,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		log.info("Launching {}...", request.getDefinition().getName());
 
 		try {
-			String launchId = kubernetesTaskLauncher.launch(request);
+			kubernetesTaskLauncher.launch(request);
 			fail("Expected exception as the RestartPolicy Always is not expected to be set for JobSpec.");
 		}
 		catch (Exception e) {

@@ -55,13 +55,21 @@ public class KubernetesTaskLauncherProperties {
 		this.restartPolicy = restartPolicy;
 	}
 
+	/**
+	 * Get the BackoffLimit value
+	 * @return the integer value of BackoffLimit
+	 */
 	public Integer getBackoffLimit() {
 		return backoffLimit;
 	}
 
+	/**
+	 * Sets the BackoffLimit.
+	 *
+	 * @param backoffLimit the integer value of BackoffLimit
+	 */
 	public void setBackoffLimit(Integer backoffLimit) {
 		this.backoffLimit = backoffLimit;
 	}
-
 
 }
