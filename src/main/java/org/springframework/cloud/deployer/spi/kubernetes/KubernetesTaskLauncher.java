@@ -103,31 +103,8 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 
 		logPossibleDownloadResourceMessage(request.getResource());
-		Map<String, String> idMap = createIdMap(appId, request);
-		logger.debug(String.format("Launching pod for task: %s", appId));
-
 		try {
-			Map<String, String> podLabelMap = new HashMap<>();
-			podLabelMap.put("task-name", request.getDefinition().getName());
-			podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-
-			PodSpec podSpec = createPodSpec(appId, request, null, true);
-
-			Map<String, String> jobAnnotations = getJobAnnotations(request);
-
-			podSpec.setRestartPolicy(getRestartPolicy(request).name());
-
-			if (this.properties.isCreateJob()) {
-				Integer backOffLimit = getBackoffLimit(request);
-				launchJob(appId, podSpec, podLabelMap, idMap, jobAnnotations,
-						(backOffLimit != null) ?
-								Collections.singletonMap(BACKOFF_LIMIT_KEY, String.valueOf(backOffLimit)) :
-								Collections.EMPTY_MAP);
-			}
-			else {
-				launchPod(appId, podSpec, podLabelMap, idMap, jobAnnotations);
-			}
-
+			launch(appId, request);
 			return appId;
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -234,43 +211,63 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 
-	private void launchPod(String appId, PodSpec podSpec, Map<String, String> labelMap, Map<String, String> idMap,
-						   Map<String, String> annotations) {
-		client.pods()
-				.createNew()
-				.withNewMetadata()
-				.withName(appId)
-				.withLabels(labelMap)
-				.withAnnotations(annotations)
-				.addToLabels(idMap)
-				.endMetadata()
-				.withSpec(podSpec)
-				.done();
+	private void launch(String appId, AppDeploymentRequest request) {
+		Map<String, String> idMap = createIdMap(appId, request);
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", request.getDefinition().getName());
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+
+		PodSpec podSpec = createPodSpec(appId, request, null, true);
+
+		podSpec.setRestartPolicy(getRestartPolicy(request).name());
+
+		if (this.properties.isCreateJob()) {
+			logger.debug(String.format("Launching Job for task: %s", appId));
+			ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
+			PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
+
+			JobSpec jobSpec = new JobSpecBuilder()
+					.withTemplate(podTemplateSpec)
+					.withBackoffLimit(getBackoffLimit(request))
+					.build();
+
+			this.client.batch().jobs()
+					.createNew()
+					.withNewMetadata()
+					.withName(appId)
+					.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
+					.addToLabels(idMap)
+					.withAnnotations(getJobAnnotations(request))
+					.endMetadata()
+					.withSpec(jobSpec)
+					.done();
+		}
+		else {
+			logger.debug(String.format("Launching Pod for task: %s", appId));
+			this.client.pods()
+					.createNew()
+					.withNewMetadata()
+					.withName(appId)
+					.withLabels(podLabelMap)
+					.withAnnotations(getJobAnnotations(request))
+					.addToLabels(idMap)
+					.endMetadata()
+					.withSpec(podSpec)
+					.done();
+		}
 	}
 
-	private void launchJob(String appId, PodSpec podSpec, Map<String, String> podLabelMap, Map<String, String> idMap,
-						   Map<String, String> annotations, Map<String, String> jobSpecProperties) {
-		ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
-		PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
+	private void launchJob(String appId, AppDeploymentRequest request) {
+		Map<String, String> idMap = createIdMap(appId, request);
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", request.getDefinition().getName());
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
 
-		JobSpec jobSpec = new JobSpecBuilder()
-				.withTemplate(podTemplateSpec)
-				.build();
+		PodSpec podSpec = createPodSpec(appId, request, null, true);
 
-		if (jobSpecProperties.containsKey(BACKOFF_LIMIT_KEY)) {
-			jobSpec.setBackoffLimit(Integer.valueOf(jobSpecProperties.get(BACKOFF_LIMIT_KEY)));
-		}
+		podSpec.setRestartPolicy(getRestartPolicy(request).name());
 
-		client.batch().jobs()
-				.createNew()
-				.withNewMetadata()
-				.withName(appId)
-				.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
-				.addToLabels(idMap)
-				.withAnnotations(annotations)
-				.endMetadata()
-				.withSpec(jobSpec)
-				.done();
+
 	}
 
 	private List<String> getIdsForTasks(Optional<String> taskName, boolean isCreateJob) {
