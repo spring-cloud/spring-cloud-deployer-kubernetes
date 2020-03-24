@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2019 the original author or authors.
+ * Copyright 2016-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1054,6 +1054,57 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
 		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testUnknownStatusOnPendingResources() throws InterruptedException {
+		log.info("Testing {}...", "UnknownStatusOnPendingResources");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+
+		Map<String, String> props = new HashMap<>();
+		// requests.cpu mirrors limits.cpu when only limits is set avoiding need to set both here
+		props.put("spring.cloud.deployer.kubernetes.limits.cpu", "5000");
+
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+
+		while(kubernetesClient.pods().withLabel("spring-deployment-id", deploymentId).list().getItems().isEmpty()) {
+			log.info("Waiting for deployed pod");
+			Thread.sleep(500);
+		}
+
+		Pod pod = kubernetesClient.pods().withLabel("spring-deployment-id", deploymentId).list().getItems().get(0);
+
+		while (pod.getStatus().getConditions().isEmpty()) {
+			log.info("Waiting for pod conditions to be set");
+			Thread.sleep(500);
+		}
+
+		while(!"Unschedulable".equals(pod.getStatus().getConditions().get(0).getReason())) {
+			log.info("Waiting for deployed pod to become Unschedulable");
+		}
+
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+
+		try {
+			kubernetesAppDeployer.undeploy(deploymentId);
+		} catch (IllegalStateException e) {
+			assertEquals("App '" + deploymentId + "' is not deployed", e.getMessage());
+		}
+
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
