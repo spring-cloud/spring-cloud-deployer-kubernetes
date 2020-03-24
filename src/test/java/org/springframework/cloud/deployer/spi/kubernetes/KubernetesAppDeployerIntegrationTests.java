@@ -227,9 +227,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
+
 		Map<String, String> props = new HashMap<>();
-		// setting to small memory value will cause app to fail to be deployed
-		props.put("spring.cloud.deployer.kubernetes.limits.memory", "8Mi");
+		props.put("spring.cloud.deployer.kubernetes.livenessProbePath", "/invalidpath");
+		props.put("spring.cloud.deployer.kubernetes.livenessProbeDelay", "1");
+		props.put("spring.cloud.deployer.kubernetes.livenessProbePeriod", "1");
+
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 
 		log.info("Deploying {}...", request.getDefinition().getName());
