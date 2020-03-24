@@ -146,9 +146,7 @@ public class AbstractKubernetesDeployer {
 							   .stream().filter(containerStatus -> container.getName().equals(containerStatus.getName()))
 							   .findFirst();
 
-						if(containerStatusOptional.isPresent()) {
-							statusBuilder.with(new KubernetesAppInstanceStatus(pod, service, properties, containerStatusOptional.get()));
-						}
+						statusBuilder.with(new KubernetesAppInstanceStatus(pod, service, properties, containerStatusOptional.orElse(null)));
 
 						break;
 					}
