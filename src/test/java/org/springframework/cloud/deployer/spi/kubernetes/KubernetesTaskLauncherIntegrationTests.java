@@ -141,6 +141,4 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
 				timeout.pause));
 	}
-
-
 }

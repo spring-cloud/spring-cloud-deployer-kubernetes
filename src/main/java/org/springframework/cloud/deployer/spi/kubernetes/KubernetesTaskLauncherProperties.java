@@ -25,7 +25,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.kubernetes")
 public class KubernetesTaskLauncherProperties {
-
 	/**
 	 * The {@link RestartPolicy} to use. Defaults to {@link RestartPolicy#Never}.
 	 */
@@ -71,5 +70,4 @@ public class KubernetesTaskLauncherProperties {
 	public void setBackoffLimit(Integer backoffLimit) {
 		this.backoffLimit = backoffLimit;
 	}
-
 }

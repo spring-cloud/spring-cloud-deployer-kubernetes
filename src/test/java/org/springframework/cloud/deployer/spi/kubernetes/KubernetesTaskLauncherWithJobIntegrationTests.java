@@ -192,7 +192,6 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		Job job = jobs.get(0);
 		assertThat(job.getSpec().getBackoffLimit(), is(5));
 
-
 		log.info("Checking pod spec of {}...", taskName);
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
@@ -208,7 +207,6 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
 				timeout.pause));
 	}
-
 
 	@Test
 	public void testJobSpecWithInvalidRestartPolicy() {

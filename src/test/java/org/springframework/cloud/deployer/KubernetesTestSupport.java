@@ -18,11 +18,9 @@ package org.springframework.cloud.deployer;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.deployer.spi.kubernetes.KubernetesClientFactory;
 import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties;
 import org.springframework.cloud.deployer.spi.test.junit.AbstractExternalResourceTestSupport;
@@ -37,9 +35,7 @@ import org.springframework.context.annotation.Configuration;
  * @author Chris Schaefer
  */
 public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<KubernetesClient> {
-
 	private ConfigurableApplicationContext context;
-
 
 	public KubernetesTestSupport() {
 		super("KUBERNETES");
@@ -60,7 +56,6 @@ public class KubernetesTestSupport extends AbstractExternalResourceTestSupport<K
 	@Configuration
 	@EnableAutoConfiguration
 	public static class Config {
-
 		private KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
 
 		@Bean

@@ -65,9 +65,6 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
-
-	public static final String BACKOFF_LIMIT_KEY = "backoffLimit";
-
 	private KubernetesTaskLauncherProperties taskLauncherProperties;
 
 	@Autowired
@@ -257,19 +254,6 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 	}
 
-	private void launchJob(String appId, AppDeploymentRequest request) {
-		Map<String, String> idMap = createIdMap(appId, request);
-		Map<String, String> podLabelMap = new HashMap<>();
-		podLabelMap.put("task-name", request.getDefinition().getName());
-		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
-
-		PodSpec podSpec = createPodSpec(appId, request, null, true);
-
-		podSpec.setRestartPolicy(getRestartPolicy(request).name());
-
-
-	}
-
 	private List<String> getIdsForTasks(Optional<String> taskName, boolean isCreateJob) {
 		List<String> ids = new ArrayList<>();
 		try {
@@ -446,6 +430,4 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			return this.taskLauncherProperties.getBackoffLimit();
 		}
 	}
-
-
 }
