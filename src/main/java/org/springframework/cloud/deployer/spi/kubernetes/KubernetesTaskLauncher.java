@@ -220,7 +220,11 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 		if (this.properties.isCreateJob()) {
 			logger.debug(String.format("Launching Job for task: %s", appId));
-			ObjectMeta objectMeta = new ObjectMetaBuilder().withLabels(podLabelMap).addToLabels(idMap).build();
+			ObjectMeta objectMeta = new ObjectMetaBuilder()
+					.withLabels(podLabelMap)
+					.addToLabels(idMap)
+					.withAnnotations(getJobAnnotations(request))
+					.build();
 			PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
 
 			JobSpec jobSpec = new JobSpecBuilder()

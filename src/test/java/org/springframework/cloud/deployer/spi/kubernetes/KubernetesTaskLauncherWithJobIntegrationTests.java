@@ -134,15 +134,31 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		assertThat(jobs.size(), is(1));
 
-		Map<String, String> annotations = jobs.get(0).getMetadata().getAnnotations();
-		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 3);
-		assertTrue(annotations.containsKey("key1"));
-		assertTrue(annotations.get("key1").equals("val1"));
-		assertTrue(annotations.containsKey("key2"));
-		assertTrue(annotations.get("key2").equals("val2"));
-		assertTrue(annotations.containsKey("key3"));
-		assertTrue(annotations.get("key3").equals("val31:val32"));
+		Map<String, String> jobAnnotations = jobs.get(0).getMetadata().getAnnotations();
+		assertFalse(jobAnnotations.isEmpty());
+		assertTrue(jobAnnotations.size() == 3);
+		assertTrue(jobAnnotations.containsKey("key1"));
+		assertTrue(jobAnnotations.get("key1").equals("val1"));
+		assertTrue(jobAnnotations.containsKey("key2"));
+		assertTrue(jobAnnotations.get("key2").equals("val2"));
+		assertTrue(jobAnnotations.containsKey("key3"));
+		assertTrue(jobAnnotations.get("key3").equals("val31:val32"));
+
+		log.info("Checking Pod spec annotations of {}...", taskName);
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(pods.size(), is(1));
+
+		Map<String, String> podAnnotations = pods.get(0).getMetadata().getAnnotations();
+		assertFalse(podAnnotations.isEmpty());
+		assertTrue(podAnnotations.size() == 3);
+		assertTrue(podAnnotations.containsKey("key1"));
+		assertTrue(podAnnotations.get("key1").equals("val1"));
+		assertTrue(podAnnotations.containsKey("key2"));
+		assertTrue(podAnnotations.get("key2").equals("val2"));
+		assertTrue(podAnnotations.containsKey("key3"));
+		assertTrue(podAnnotations.get("key3").equals("val31:val32"));
 
 		log.info("Destroying {}...", taskName);
 
