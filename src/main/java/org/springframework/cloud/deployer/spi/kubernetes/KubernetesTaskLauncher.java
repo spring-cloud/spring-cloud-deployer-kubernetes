@@ -68,6 +68,18 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	private KubernetesTaskLauncherProperties taskLauncherProperties;
 
 	@Autowired
+	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
+			KubernetesClient client) {
+		this(properties, new KubernetesTaskLauncherProperties(), client, new DefaultContainerFactory(properties));
+	}
+
+	@Autowired
+	public KubernetesTaskLauncher(KubernetesDeployerProperties properties,
+			KubernetesClient client, ContainerFactory containerFactory) {
+		this(properties, new KubernetesTaskLauncherProperties(), client, containerFactory);
+	}
+
+	@Autowired
 	public KubernetesTaskLauncher(KubernetesDeployerProperties deployerProperties,
 			KubernetesTaskLauncherProperties taskLauncherProperties, KubernetesClient client) {
 		this(deployerProperties, taskLauncherProperties, client, new DefaultContainerFactory(deployerProperties));
