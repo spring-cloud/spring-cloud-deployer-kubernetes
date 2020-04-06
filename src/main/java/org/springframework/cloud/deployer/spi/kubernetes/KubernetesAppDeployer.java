@@ -356,8 +356,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
 				.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
 				.withPodManagementPolicy("Parallel").withReplicas(replicas).withNewTemplate().withNewMetadata()
-				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(podSpec)
-				.endTemplate().build();
+				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(getDeploymentLabels(request))
+				.endMetadata().withSpec(podSpec).endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(spec).build();

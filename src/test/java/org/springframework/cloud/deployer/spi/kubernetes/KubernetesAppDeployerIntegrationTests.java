@@ -814,12 +814,58 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
 
+		
+		
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 
 		List<Deployment> deployments = kubernetesClient.apps().deployments().withLabels(selector).list().getItems();
 
 		Map<String, String> specLabels = deployments.get(0).getSpec().getTemplate().getMetadata().getLabels();
 
+		assertTrue("Label 'label1' not found in deployment spec", specLabels.containsKey("label1"));
+		assertEquals("Unexpected value for label1", "value1", specLabels.get("label1"));
+		assertTrue("Label 'label2' not found in deployment spec", specLabels.containsKey("label2"));
+		assertEquals("Unexpected value for label1", "value2", specLabels.get("label2"));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+	
+	@Test
+	public void testDeploymentLabelsStatefulSet() {
+		log.info("Testing {}...", "DeploymentLabelsForStatefulSet");
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "2");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+		props.put("spring.cloud.deployer.kubernetes.deploymentLabels",
+				"label1:value1,label2:value2");
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+		
+		Map<String, String> idMap = deployer.createIdMap(deploymentId, appDeploymentRequest);
+		
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+
+		StatefulSet statefulSet = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems().get(0);
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(2);
+		Assertions.assertThat(statefulSetSpec.getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
+		
+		Map<String, String> specLabels = statefulSetSpec.getTemplate().getMetadata().getLabels();
 		assertTrue("Label 'label1' not found in deployment spec", specLabels.containsKey("label1"));
 		assertEquals("Unexpected value for label1", "value1", specLabels.get("label1"));
 		assertTrue("Label 'label2' not found in deployment spec", specLabels.containsKey("label2"));
