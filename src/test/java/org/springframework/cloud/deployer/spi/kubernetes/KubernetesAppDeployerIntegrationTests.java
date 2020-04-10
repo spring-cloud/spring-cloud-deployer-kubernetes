@@ -16,6 +16,24 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static org.assertj.core.api.Assertions.entry;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
+import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
+import static org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer.SPRING_APP_KEY;
+import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -26,6 +44,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.assertj.core.api.Assertions;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.deployer.KubernetesTestSupport;
+import org.springframework.cloud.deployer.resource.docker.DockerResource;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
+import org.springframework.cloud.deployer.spi.app.AppStatus;
+import org.springframework.cloud.deployer.spi.core.AppDefinition;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.Timeout;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -47,51 +92,6 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetSpec;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.assertj.core.api.Assertions;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
-import org.junit.ClassRule;
-import org.junit.Test;
-
-import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.deployer.KubernetesTestSupport;
-import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
-import org.springframework.cloud.deployer.spi.app.AppStatus;
-import org.springframework.cloud.deployer.spi.core.AppDefinition;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
-import org.springframework.cloud.deployer.spi.test.Timeout;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
-import static org.assertj.core.api.Assertions.entry;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
-import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown;
-import static org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer.SPRING_APP_KEY;
-import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
 /**
  * Integration tests for {@link KubernetesAppDeployer}.
@@ -841,7 +841,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "2");
 		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
 		props.put("spring.cloud.deployer.kubernetes.deploymentLabels",
-				"label1:value1,label2:value2");
+				"stateful-label1:stateful-value1,stateful-label2:stateful-value2");
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
@@ -864,12 +864,29 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
 		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(2);
 		Assertions.assertThat(statefulSetSpec.getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
+       
+		//verify stateful set match labels
+		Map<String, String> setLabels = statefulSet.getMetadata().getLabels();
+		assertTrue("Label 'stateful-label1' not found in StatefulSet metadata", setLabels.containsKey("stateful-label1"));
+		assertEquals("Unexpected value in stateful-set metadata label for stateful-label1", "stateful-value1", setLabels.get("stateful-label1"));
+		assertTrue("Label 'stateful-label2' not found in StatefulSet metadata", setLabels.containsKey("stateful-label2"));
+		assertEquals("Unexpected value in stateful-set metadata label for stateful-label2","stateful-value2", setLabels.get("stateful-label2"));
 		
+		//verify pod template labels
 		Map<String, String> specLabels = statefulSetSpec.getTemplate().getMetadata().getLabels();
-		assertTrue("Label 'label1' not found in deployment spec", specLabels.containsKey("label1"));
-		assertEquals("Unexpected value for label1", "value1", specLabels.get("label1"));
-		assertTrue("Label 'label2' not found in deployment spec", specLabels.containsKey("label2"));
-		assertEquals("Unexpected value for label1", "value2", specLabels.get("label2"));
+		assertTrue("Label 'stateful-label1' not found in template metadata", specLabels.containsKey("stateful-label1"));
+		assertEquals("Unexpected value for statefulSet metadata stateful-label1", "stateful-value1", specLabels.get("stateful-label1"));
+		assertTrue("Label 'stateful-label2' not found in statefulSet template", specLabels.containsKey("stateful-label2"));
+		assertEquals("Unexpected value for statefulSet metadata stateful-label2", "stateful-value2", specLabels.get("stateful-label2"));
+		
+		//verify that labels got replicated to one of the deployments
+		List<Pod> pods =  kubernetesClient.pods().withLabels(selector).list().getItems();
+		Map<String, String> podLabels = pods.get(0).getMetadata().getLabels();
+
+		assertTrue("Label 'stateful-label1' not found in podLabels", podLabels.containsKey("stateful-label1"));
+		assertEquals("Unexpected value for podLabels stateful-label1", "stateful-value1", podLabels.get("stateful-label1"));
+		assertTrue("Label 'stateful-label2' not found in podLabels", podLabels.containsKey("stateful-label2"));
+		assertEquals("Unexpected value for podLabels stateful-label2", "stateful-value2", podLabels.get("stateful-label2"));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();

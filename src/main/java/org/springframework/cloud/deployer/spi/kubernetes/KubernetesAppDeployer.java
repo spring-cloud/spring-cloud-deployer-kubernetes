@@ -351,16 +351,18 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		String statefulSetInitContainerImageName = getStatefulSetInitContainerImageName(request, properties);
 
 		podSpec.getInitContainers().add(createStatefulSetInitContainer(statefulSetInitContainerImageName));
-
+		
+		Map<String, String> deploymentLabels=getDeploymentLabels(request);
+		
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
 				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
 				.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
 				.withPodManagementPolicy("Parallel").withReplicas(replicas).withNewTemplate().withNewMetadata()
-				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(getDeploymentLabels(request))
+				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels)
 				.endMetadata().withSpec(podSpec).endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
-				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata().withSpec(spec).build();
+				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels).endMetadata().withSpec(spec).build();
 
 		client.apps().statefulSets().create(statefulSet);
 	}
