@@ -145,7 +145,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		envVars.add(getGUIDEnvVar());
 
 		if (request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY) != null) {
-			envVars.add(new EnvVar(SPRING_CLOUD_APPLICATION_GUID,
+			envVars.add(new EnvVar("SPRING_CLOUD_APPLICATION_GROUP",
 				request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY), null));
 		}
 

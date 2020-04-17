@@ -41,6 +41,7 @@ import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.core.io.Resource;
@@ -85,7 +86,7 @@ public class AbstractKubernetesDeployer {
 	 * @param implementationClass the SPI implementation class
 	 * @return the Kubernetes runtime environment info
 	 */
-	RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
+	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
 		return new RuntimeEnvironmentInfo.Builder()
 				.spiClass(spiClass)
 				.implementationName(implementationClass.getSimpleName())
@@ -118,7 +119,7 @@ public class AbstractKubernetesDeployer {
 		return map;
 	}
 
-	AppStatus buildAppStatus(String id, PodList podList, ServiceList services) {
+	protected AppStatus buildAppStatus(String id, PodList podList, ServiceList services) {
 		AppStatus.Builder statusBuilder = AppStatus.of(id);
 		Service service = null;
 		if (podList != null && podList.getItems() != null) {
@@ -149,7 +150,7 @@ public class AbstractKubernetesDeployer {
 		return statusBuilder.build();
 	}
 
-	void logPossibleDownloadResourceMessage(Resource resource) {
+	protected void logPossibleDownloadResourceMessage(Resource resource) {
 		if (logger.isInfoEnabled()) {
 			logger.info("Preparing to run a container from  " + resource
 					+ ". This may take some time if the image must be downloaded from a remote container registry.");
@@ -271,7 +272,7 @@ public class AbstractKubernetesDeployer {
 	 * @return the Secret Object
 	 */
 	Secret getProbeCredentialsSecret(Map<String, String> kubernetesDeployerProperties) {
-		String secretName = DeploymentPropertiesResolver.getPropertyValue(kubernetesDeployerProperties,
+		String secretName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.deploymentPropertiesResolver.getPropertyPrefix() + "kubernetes.probeCredentialsSecret");
 
 		if (!StringUtils.isEmpty(secretName)) {

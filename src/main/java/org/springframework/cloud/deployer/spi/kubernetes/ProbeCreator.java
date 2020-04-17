@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -97,7 +98,7 @@ abstract class ProbeCreator {
 	}
 
 	protected String getDeploymentPropertyValue(String propertyName) {
-		return DeploymentPropertiesResolver.getPropertyValue(getDeploymentProperties(), propertyName, null);
+		return PropertyParserUtils.getDeploymentPropertyValue(getDeploymentProperties(), propertyName);
 	}
 
 	protected Integer getDefaultPort() {

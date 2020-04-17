@@ -64,6 +64,7 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -353,11 +354,11 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		ServiceSpecBuilder spec = new ServiceSpecBuilder();
 		boolean isCreateLoadBalancer = false;
-		String createLoadBalancer = DeploymentPropertiesResolver.getPropertyValue(request.getDeploymentProperties(),
+		String createLoadBalancer = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
 			"spring.cloud.deployer.kubernetes.createLoadBalancer");
-		String createNodePort = DeploymentPropertiesResolver.getPropertyValue(request.getDeploymentProperties(),
+		String createNodePort = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
 			"spring.cloud.deployer.kubernetes.createNodePort");
-		String additionalServicePorts = DeploymentPropertiesResolver.getPropertyValue(request.getDeploymentProperties(),
+		String additionalServicePorts = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
 				"spring.cloud.deployer.kubernetes.servicePorts");
 
 		if (createLoadBalancer != null && createNodePort != null) {
