@@ -52,7 +52,8 @@ public class RunAbstractKubernetesDeployerTests {
 		this.deploymentProperties = new HashMap<>();
 		this.deploymentRequest = new AppDeploymentRequest(new AppDefinition("foo", Collections.emptyMap()), new FileSystemResource(""), deploymentProperties);
 		this.kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver("spring.cloud.deployer.", this.kubernetesDeployerProperties);
+		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
+				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, this.kubernetesDeployerProperties);
 	}
 
 	@Test

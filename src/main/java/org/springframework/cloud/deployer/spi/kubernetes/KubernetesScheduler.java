@@ -62,11 +62,13 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		this.client = client;
 		this.properties = properties;
 		this.containerFactory = new DefaultContainerFactory(properties);
-		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver("spring.cloud.scheduler.", properties);
+		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
+				KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX, properties);
 	}
 
 	@Override
 	public void schedule(ScheduleRequest scheduleRequest) {
+		scheduleRequest.setSchedulerProperties(mergeSchedulerProperties(scheduleRequest));
 		if(scheduleRequest != null) {
 			validateScheduleName(scheduleRequest);
 		}
@@ -82,6 +84,31 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 			throw new CreateScheduleException("Failed to create schedule " + scheduleRequest.getScheduleName(), e);
 		}
+	}
+
+	/**
+	 * Merge the Deployment properties into Scheduler properties.
+	 * This way, the CronJob's scheduler properties are updated with the deployer properties if set any.
+	 * @param scheduleRequest the {@link ScheduleRequest}
+	 * @return the merged schedule properties
+	 */
+	static Map<String, String> mergeSchedulerProperties(ScheduleRequest scheduleRequest) {
+		Map<String, String> deploymentProperties = scheduleRequest.getDeploymentProperties();
+		Map<String, String> schedulerProperties = new HashMap<>();
+		schedulerProperties.putAll(scheduleRequest.getSchedulerProperties());
+		if (deploymentProperties != null) {
+			for (Map.Entry<String, String> deploymentProperty : deploymentProperties.entrySet()) {
+				String deploymentPropertyKey = deploymentProperty.getKey();
+				if (StringUtils.hasText(deploymentPropertyKey) && deploymentPropertyKey.startsWith(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)) {
+					String schedulerPropertyKey = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX +
+							deploymentPropertyKey.substring(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX.length());
+					if (!schedulerProperties.containsKey(schedulerPropertyKey)) {
+						schedulerProperties.put(schedulerPropertyKey, deploymentProperty.getValue());
+					}
+				}
+			}
+		}
+		return schedulerProperties;
 	}
 
 	public void validateScheduleName(ScheduleRequest request) {

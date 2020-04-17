@@ -168,6 +168,25 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	}
 
 	@Test
+	public void testSchedulerPropertiesMerge() {
+		final String baseScheduleName = "test-schedule1";
+		Map<String, String> schedulerProperties = new HashMap<>();
+		schedulerProperties.put(CRON_EXPRESSION, "0/10 * * * *");
+		schedulerProperties.put(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".imagePullPolicy", "Never");
+		Map<String, String> deploymentProperties = new HashMap<>();
+		deploymentProperties.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".environmentVariables", "MYVAR1=MYVAL1,MYVAR2=MYVAL2");
+		deploymentProperties.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".imagePullPolicy", "Always");
+		AppDefinition appDefinition = new AppDefinition(randomName(), null);
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, deploymentProperties, null,
+				baseScheduleName, testApplication());
+
+		Map<String, String> mergedProperties = KubernetesScheduler.mergeSchedulerProperties(scheduleRequest);
+
+		assertTrue("Expected value from Scheduler properties, but found in Deployer properties", mergedProperties.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".imagePullPolicy").equals("Never"));
+		assertTrue("Deployer property is expected to be merged as scheduler property", mergedProperties.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".environmentVariables").equals("MYVAR1=MYVAL1,MYVAR2=MYVAL2"));
+	}
+
+	@Test
 	public void listScheduleWithExternalCronJobs() {
 		CronJobList cronJobList = new CronJobList();
 		CronJobSpec cronJobSpec = new CronJobSpec();
@@ -401,7 +420,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
 				kubernetesSchedulerProperties);
 
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".entryPointStyle", "boot");
@@ -469,7 +488,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
 				kubernetesSchedulerProperties);
 
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".imagePullPolicy", "Always");
@@ -528,7 +547,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 				kubernetesSchedulerProperties);
 
 		String secretName = "mysecret";
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".imagePullSecret", secretName);
@@ -575,7 +594,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 	@Test
 	public void testCustomEnvironmentVariables() {
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR1=MYVAL1,MYVAR2=MYVAL2");
@@ -602,7 +621,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 	@Test
 	public void testCustomEnvironmentVariablesWithNestedComma() {
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR='VAL1,VAL2',MYVAR2=MYVAL2");
@@ -621,7 +640,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		}
 		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1","MYVAR2=MYVAL2" });
 
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR3=MYVAL3,MYVAR4=MYVAL4");
@@ -641,7 +660,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		}
 		kubernetesSchedulerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1", "MYVAR2=MYVAL2" });
 
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR2=OVERRIDE");
@@ -692,7 +711,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 				kubernetesSchedulerProperties);
 
 		String taskServiceAccountName = "mysa";
-		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES;
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
 
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".taskServiceAccountName", taskServiceAccountName);

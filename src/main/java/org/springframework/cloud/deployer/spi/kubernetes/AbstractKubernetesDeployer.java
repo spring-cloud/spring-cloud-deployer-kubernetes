@@ -273,7 +273,7 @@ public class AbstractKubernetesDeployer {
 	 */
 	Secret getProbeCredentialsSecret(Map<String, String> kubernetesDeployerProperties) {
 		String secretName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.deploymentPropertiesResolver.getPropertyPrefix() + "kubernetes.probeCredentialsSecret");
+				this.deploymentPropertiesResolver.getPropertyPrefix() + ".probeCredentialsSecret");
 
 		if (!StringUtils.isEmpty(secretName)) {
 			return this.client.secrets().withName(secretName).get();

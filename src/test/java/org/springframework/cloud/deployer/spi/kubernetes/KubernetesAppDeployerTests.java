@@ -76,7 +76,8 @@ public class KubernetesAppDeployerTests {
 
 	private KubernetesAppDeployer deployer;
 
-	private DeploymentPropertiesResolver deploymentPropertiesResolver = new DeploymentPropertiesResolver("spring.cloud.deployer.",  new KubernetesDeployerProperties());
+	private DeploymentPropertiesResolver deploymentPropertiesResolver = new DeploymentPropertiesResolver(
+			KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, new KubernetesDeployerProperties());
 
 
 	@Test

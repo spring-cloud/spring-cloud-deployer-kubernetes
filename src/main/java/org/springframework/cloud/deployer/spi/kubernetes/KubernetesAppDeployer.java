@@ -95,7 +95,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		this.properties = properties;
 		this.client = client;
 		this.containerFactory = containerFactory;
-		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver("spring.cloud.deployer.", properties);
+		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
+				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, properties);
 	}
 
 	@Override

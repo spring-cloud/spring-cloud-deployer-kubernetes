@@ -23,12 +23,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @author Chris Schaefer
  */
-@ConfigurationProperties(prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES)
+@ConfigurationProperties(prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX)
 public class KubernetesSchedulerProperties extends KubernetesDeployerProperties {
 	/**
 	 * Namespace to use for Kubernetes Scheduler properties.
 	 */
-	public static final String KUBERNETES_SCHEDULER_PROPERTIES = "spring.cloud.scheduler.kubernetes";
+	public static final String KUBERNETES_SCHEDULER_PROPERTIES_PREFIX = "spring.cloud.scheduler.kubernetes";
 
 	/**
 	 * The {@link RestartPolicy} to use. Defaults to {@link RestartPolicy#Never}.
