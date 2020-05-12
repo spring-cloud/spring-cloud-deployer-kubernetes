@@ -17,8 +17,10 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Pod;
@@ -123,6 +125,9 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertThat(pods.size(), is(1));
 
 		Pod pod = pods.get(0);
+
+		assertTrue(pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
 
 		assertTrue(annotations.containsKey("key1"));
@@ -131,6 +136,53 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertTrue(annotations.get("key2").equals("val2"));
 		assertTrue(annotations.containsKey("key3"));
 		assertTrue(annotations.get("key3").equals("val31:val32"));
+
+		log.info("Destroying {}...", taskName);
+
+		timeout = undeploymentTimeout();
+		kubernetesTaskLauncher.destroy(taskName);
+
+		assertThat(taskName, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
+				timeout.pause));
+	}
+
+	@Test
+	public void testJobPodExternalPort() {
+		log.info("Testing {}...", "JobPodAnnotation");
+
+		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(new KubernetesDeployerProperties(),
+				new KubernetesTaskLauncherProperties(), kubernetesClient);
+
+		Map<String, String> properties = new HashMap<>();
+		properties.put("server.port", "9292");
+
+		AppDefinition definition = new AppDefinition(randomName(), properties);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, null);
+
+		log.info("Launching {}...", request.getDefinition().getName());
+
+		String launchId = kubernetesTaskLauncher.launch(request);
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(launchId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
+				timeout.pause));
+
+		String taskName = request.getDefinition().getName();
+
+		log.info("Checking job pod spec annotations of {}...", taskName);
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(pods.size(), is(1));
+
+		Pod pod = pods.get(0);
+
+		assertTrue(!pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+
+		assertTrue(pod.getSpec().getContainers().get(0).getPorts().get(0).getContainerPort().intValue() == 9292);
 
 		log.info("Destroying {}...", taskName);
 

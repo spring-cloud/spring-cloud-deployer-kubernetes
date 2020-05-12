@@ -166,7 +166,6 @@ public class AbstractKubernetesDeployer {
 	PodSpec createPodSpec(AppDeploymentRequest appDeploymentRequest) {
 
 		String appId = createDeploymentId(appDeploymentRequest);
-		int externalPort = getExternalPort(appDeploymentRequest);
 
 		Map<String, String>  deploymentProperties = (appDeploymentRequest instanceof ScheduleRequest) ?
 				((ScheduleRequest) appDeploymentRequest).getSchedulerProperties() : appDeploymentRequest.getDeploymentProperties();
@@ -183,8 +182,17 @@ public class AbstractKubernetesDeployer {
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration(appId, appDeploymentRequest)
 				.withProbeCredentialsSecret(getProbeCredentialsSecret(deploymentProperties))
-				.withExternalPort(externalPort)
 				.withHostNetwork(hostNetwork);
+
+		if (KubernetesAppDeployer.class.isAssignableFrom(this.getClass())) {
+			containerConfiguration.withExternalPort(getExternalPort(appDeploymentRequest));
+		}
+		else {
+			Map<String, String> parameters = appDeploymentRequest.getDefinition().getProperties();
+			if (parameters.containsKey(SERVER_PORT_KEY)) {
+				containerConfiguration.withExternalPort(Integer.valueOf(parameters.get(SERVER_PORT_KEY)));
+			}
+		}
 
 		Container container = containerFactory.create(containerConfiguration);
 
