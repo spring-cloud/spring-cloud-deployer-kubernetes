@@ -17,8 +17,10 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Pod;
@@ -123,6 +125,9 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertThat(pods.size(), is(1));
 
 		Pod pod = pods.get(0);
+
+		assertTrue(pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
 
 		assertTrue(annotations.containsKey("key1"));
