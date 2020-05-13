@@ -187,12 +187,6 @@ public class AbstractKubernetesDeployer {
 		if (KubernetesAppDeployer.class.isAssignableFrom(this.getClass())) {
 			containerConfiguration.withExternalPort(getExternalPort(appDeploymentRequest));
 		}
-		else {
-			Map<String, String> parameters = appDeploymentRequest.getDefinition().getProperties();
-			if (parameters.containsKey(SERVER_PORT_KEY)) {
-				containerConfiguration.withExternalPort(Integer.valueOf(parameters.get(SERVER_PORT_KEY)));
-			}
-		}
 
 		Container container = containerFactory.create(containerConfiguration);
 
