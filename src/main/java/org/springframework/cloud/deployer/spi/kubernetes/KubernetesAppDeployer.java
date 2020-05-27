@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,6 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ReplicationController;
-import io.fabric8.kubernetes.api.model.ReplicationControllerList;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.ServicePort;
@@ -466,7 +464,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		Map<String, String> labels = Collections.singletonMap(SPRING_APP_KEY, appIdToDelete);
 
 		deleteService(labels);
-		deleteReplicationController(labels);
 		deleteDeployment(labels);
 		deleteStatefulSet(labels);
 		deletePod(labels);
@@ -480,18 +477,6 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		if (servicesToDelete != null && servicesToDelete.list().getItems() != null) {
 			boolean servicesDeleted = servicesToDelete.delete();
 			logger.debug(String.format("Service deleted for: %s - %b", labels, servicesDeleted));
-		}
-	}
-
-	private void deleteReplicationController(Map<String, String> labels) {
-		FilterWatchListDeletable<ReplicationController, ReplicationControllerList, Boolean, Watch,
-				Watcher<ReplicationController>> replicationControllersToDelete = client.replicationControllers()
-				.withLabels(labels);
-
-		if (replicationControllersToDelete != null && replicationControllersToDelete.list().getItems() != null) {
-			boolean replicationControllersDeleted = replicationControllersToDelete.delete();
-			logger.debug(String.format("ReplicationController deleted for: %s - %b", labels,
-					replicationControllersDeleted));
 		}
 	}
 

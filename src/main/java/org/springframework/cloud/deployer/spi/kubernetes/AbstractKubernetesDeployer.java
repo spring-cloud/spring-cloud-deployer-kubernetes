@@ -101,8 +101,7 @@ public class AbstractKubernetesDeployer {
 	}
 
 	/**
-	 * Creates a map of labels for a given ID. This will allow Kubernetes services
-	 * to "select" the right ReplicationControllers.
+	 * Creates a map of labels for a given application ID.
 	 *
 	 * @param appId the application id
 	 * @param request The {@link AppDeploymentRequest}
