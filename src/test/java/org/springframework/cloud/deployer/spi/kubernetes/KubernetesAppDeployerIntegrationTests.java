@@ -20,13 +20,11 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.deployed;
 import static org.springframework.cloud.deployer.spi.app.DeploymentState.failed;
@@ -34,9 +32,11 @@ import static org.springframework.cloud.deployer.spi.app.DeploymentState.unknown
 import static org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer.SPRING_APP_KEY;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,7 +44,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
+import okhttp3.Response;
 import org.assertj.core.api.Assertions;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -72,6 +74,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.EnvFromSource;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.client.dsl.ExecListener;
+import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -98,7 +106,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
  *
  * @author Thomas Risberg
  * @author Donovan Muller
- * @Author David Turanski
+ * @author David Turanski
  * @author Chris Schaefer
  * @author Christian Tzolov
  */
@@ -154,7 +162,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 		assertNotNull(statefulSets);
-		assertTrue(statefulSets.size() == 1);
+		assertEquals(1, statefulSets.size());
 		StatefulSet statefulSet = statefulSets.get(0);
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
 		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
@@ -167,7 +175,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(appInstanceCount(is(1)), timeout.maxAttempts, timeout.pause));
 
 		statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
-		assertTrue(statefulSets.size() == 1);
+		assertEquals(1, statefulSets.size());
 		statefulSetSpec = statefulSets.get(0).getSpec();
 		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(1);
 		Assertions.assertThat(statefulSetSpec.getServiceName()).isEqualTo(deploymentId);
@@ -354,9 +362,9 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			log.info("Annotation key: " + annotationsEntry.getKey());
 		}
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
-		assertTrue(annotations.get("iam.amazonaws.com/role").equals("role-arn"));
+		assertEquals("role-arn", annotations.get("iam.amazonaws.com/role"));
 		assertTrue(annotations.containsKey("foo"));
-		assertTrue(annotations.get("foo").equals("bar"));
+		assertEquals("bar", annotations.get("foo"));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
@@ -864,7 +872,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
 		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(2);
 		Assertions.assertThat(statefulSetSpec.getTemplate().getMetadata().getLabels()).containsAllEntriesOf(idMap);
-       
+
 		//verify stateful set match labels
 		Map<String, String> setLabels = statefulSet.getMetadata().getLabels();
 		assertTrue("Label 'stateful-label1' not found in StatefulSet metadata", setLabels.containsKey("stateful-label1"));
@@ -1109,7 +1117,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		List<String> commands = testInitContainer.getCommand();
 
 		assertTrue("Init container commands missing", commands != null && !commands.isEmpty());
-		assertTrue("Invalid number of init container commands", commands.size() == 3);
+		assertEquals("Invalid number of init container commands", 3, commands.size());
 		assertEquals("sh", commands.get(0));
 		assertEquals("-c", commands.get(1));
 		assertEquals("echo hello", commands.get(2));
@@ -1172,6 +1180,571 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
 
+	@Test
+	public void testSecretRef() throws InterruptedException {
+		log.info("Testing {}...", "SecretRef");
+
+		Secret secret = randomSecret();
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setSecretRefs(Collections.singletonList(secret.getMetadata().getName()));
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getSecretRef().getName(), secret.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		assertEquals(secret.getData().size(), 2);
+
+		for(Map.Entry<String, String> secretData : secret.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
+			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.secrets().delete(secret);
+	}
+
+	@Test
+	public void testSecretRefFromDeployerProperty() throws InterruptedException {
+		log.info("Testing {}...", "SecretRefFromDeployerProperty");
+
+		Secret secret = randomSecret();
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretRefs", secret.getMetadata().getName());
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getSecretRef().getName(), secret.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		assertEquals(secret.getData().size(), 2);
+
+		for(Map.Entry<String, String> secretData : secret.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
+			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.secrets().delete(secret);
+	}
+
+	@Test
+	public void testSecretRefFromDeployerPropertyOverride() throws IOException, InterruptedException {
+		log.info("Testing {}...", "SecretRefFromDeployerPropertyOverride");
+
+		Secret propertySecret = randomSecret();
+		Secret deployerPropertySecret = randomSecret();
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setSecretRefs(Collections.singletonList(propertySecret.getMetadata().getName()));
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretRefs", deployerPropertySecret.getMetadata().getName());
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getSecretRef().getName(), deployerPropertySecret.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		for(Map.Entry<String, String> deployerPropertySecretData : deployerPropertySecret.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(deployerPropertySecretData.getValue()));
+			assertTrue(podEnvironment.contains(deployerPropertySecretData.getKey() + "=" + decodedValue));
+		}
+
+		for(Map.Entry<String, String> propertySecretData : propertySecret.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(propertySecretData.getValue()));
+			assertFalse(podEnvironment.contains(propertySecretData.getKey() + "=" + decodedValue));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.secrets().delete(propertySecret);
+		kubernetesClient.secrets().delete(deployerPropertySecret);
+	}
+
+	@Test
+	public void testSecretRefFromPropertyMultiple() throws InterruptedException {
+		log.info("Testing {}...", "SecretRefFromPropertyMultiple");
+
+		Secret secret1 = randomSecret();
+		Secret secret2 = randomSecret();
+
+		List<String> secrets = new ArrayList<>();
+		secrets.add(secret1.getMetadata().getName());
+		secrets.add(secret2.getMetadata().getName());
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setSecretRefs(secrets);
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, null);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(2));
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		EnvFromSource envFromSource1 = envFromSources.get(0);
+		assertEquals(envFromSource1.getSecretRef().getName(), secret1.getMetadata().getName());
+
+		EnvFromSource envFromSource2 = envFromSources.get(1);
+		assertEquals(envFromSource2.getSecretRef().getName(), secret2.getMetadata().getName());
+
+		Map<String, String> mergedSecretData = new HashMap<>();
+		mergedSecretData.putAll(secret1.getData());
+		mergedSecretData.putAll(secret2.getData());
+
+		assertEquals(4, mergedSecretData.size());
+
+		for(Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
+			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.secrets().delete(secret1);
+		kubernetesClient.secrets().delete(secret2);
+	}
+
+	@Test
+	public void testSecretRefFromDeploymentPropertyMultiple() throws InterruptedException {
+		log.info("Testing {}...", "SecretRefFromDeploymentPropertyMultiple");
+
+		Secret secret1 = randomSecret();
+		Secret secret2 = randomSecret();
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.secretRefs", "[" + secret1.getMetadata().getName() + "," +
+				secret2.getMetadata().getName() + "]");
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(2));
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		EnvFromSource envFromSource1 = envFromSources.get(0);
+		assertEquals(envFromSource1.getSecretRef().getName(), secret1.getMetadata().getName());
+
+		EnvFromSource envFromSource2 = envFromSources.get(1);
+		assertEquals(envFromSource2.getSecretRef().getName(), secret2.getMetadata().getName());
+
+		Map<String, String> mergedSecretData = new HashMap<>();
+		mergedSecretData.putAll(secret1.getData());
+		mergedSecretData.putAll(secret2.getData());
+
+		assertEquals(4, mergedSecretData.size());
+
+		for(Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
+			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
+			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.secrets().delete(secret1);
+		kubernetesClient.secrets().delete(secret2);
+	}
+
+	@Test
+	public void testConfigMapRef() throws InterruptedException {
+		log.info("Testing {}...", "ConfigMapRef");
+
+		ConfigMap configMap = randomConfigMap();
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setConfigMapRefs(Collections.singletonList(configMap.getMetadata().getName()));
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getConfigMapRef().getName(), configMap.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		assertEquals(configMap.getData().size(), 2);
+
+		for(Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
+			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.configMaps().delete(configMap);
+	}
+
+	@Test
+	public void testConfigMapRefFromDeployerProperty() throws InterruptedException {
+		log.info("Testing {}...", "ConfigMapRefFromDeployerProperty");
+
+		ConfigMap configMap = randomConfigMap();
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapRefs", configMap.getMetadata().getName());
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getConfigMapRef().getName(), configMap.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		assertEquals(configMap.getData().size(), 2);
+
+		for(Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
+			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.configMaps().delete(configMap);
+	}
+
+	@Test
+	public void testConfigMapRefFromDeployerPropertyOverride() throws IOException, InterruptedException {
+		log.info("Testing {}...", "ConfigMapRefFromDeployerPropertyOverride");
+
+		ConfigMap propertyConfigMap = randomConfigMap();
+		ConfigMap deployerPropertyConfigMap = randomConfigMap();
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setConfigMapRefs(Collections.singletonList(propertyConfigMap.getMetadata().getName()));
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapRefs", deployerPropertyConfigMap.getMetadata().getName());
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(1));
+
+		EnvFromSource envFromSource = envFromSources.get(0);
+		assertEquals(envFromSource.getConfigMapRef().getName(), deployerPropertyConfigMap.getMetadata().getName());
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		for(Map.Entry<String, String> deployerPropertyConfigMapData : deployerPropertyConfigMap.getData().entrySet()) {
+			assertTrue(podEnvironment.contains(deployerPropertyConfigMapData.getKey() + "="
+					+ deployerPropertyConfigMapData.getValue()));
+		}
+
+		for(Map.Entry<String, String> propertyConfigMapData : propertyConfigMap.getData().entrySet()) {
+			assertFalse(podEnvironment.contains(propertyConfigMapData.getKey() + "=" + propertyConfigMapData.getValue()));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.configMaps().delete(propertyConfigMap);
+		kubernetesClient.configMaps().delete(deployerPropertyConfigMap);
+	}
+
+	@Test
+	public void testConfigMapRefFromPropertyMultiple() throws InterruptedException {
+		log.info("Testing {}...", "ConfigMapRefFromPropertyMultiple");
+
+		ConfigMap configMap1 = randomConfigMap();
+		ConfigMap configMap2 = randomConfigMap();
+
+		List<String> configMaps = new ArrayList<>();
+		configMaps.add(configMap1.getMetadata().getName());
+		configMaps.add(configMap2.getMetadata().getName());
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setConfigMapRefs(configMaps);
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, null);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(2));
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		EnvFromSource envFromSource1 = envFromSources.get(0);
+		assertEquals(envFromSource1.getConfigMapRef().getName(), configMap1.getMetadata().getName());
+
+		EnvFromSource envFromSource2 = envFromSources.get(1);
+		assertEquals(envFromSource2.getConfigMapRef().getName(), configMap2.getMetadata().getName());
+
+		Map<String, String> mergedConfigMapData = new HashMap<>();
+		mergedConfigMapData.putAll(configMap1.getData());
+		mergedConfigMapData.putAll(configMap2.getData());
+
+		assertEquals(4, mergedConfigMapData.size());
+
+		for(Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
+			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.configMaps().delete(configMap1);
+		kubernetesClient.configMaps().delete(configMap2);
+	}
+
+	@Test
+	public void testConfigMapRefFromDeploymentPropertyMultiple() throws InterruptedException {
+		log.info("Testing {}...", "ConfigMapRefFromDeploymentPropertyMultiple");
+
+		ConfigMap configMap1 = randomConfigMap();
+		ConfigMap configMap2 = randomConfigMap();
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.configMapRefs", "[" + configMap1.getMetadata().getName() + "," +
+				configMap2.getMetadata().getName() + "]");
+
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Container container = kubernetesClient.apps().deployments().withName(deploymentId).get().getSpec()
+				.getTemplate().getSpec().getContainers().get(0);
+
+		List<EnvFromSource> envFromSources = container.getEnvFrom();
+
+		assertThat(envFromSources, is(notNullValue()));
+		assertThat(envFromSources.size(), is(2));
+
+		String podEnvironment = getPodEnvironment(deploymentId);
+
+		EnvFromSource envFromSource1 = envFromSources.get(0);
+		assertEquals(envFromSource1.getConfigMapRef().getName(), configMap1.getMetadata().getName());
+
+		EnvFromSource envFromSource2 = envFromSources.get(1);
+		assertEquals(envFromSource2.getConfigMapRef().getName(), configMap2.getMetadata().getName());
+
+		Map<String, String> mergedConfigMapData = new HashMap<>();
+		mergedConfigMapData.putAll(configMap1.getData());
+		mergedConfigMapData.putAll(configMap2.getData());
+
+		assertEquals(4, mergedConfigMapData.size());
+
+		for(Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
+			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
+		}
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+
+		kubernetesClient.configMaps().delete(configMap1);
+		kubernetesClient.configMaps().delete(configMap2);
+	}
+
 	@Override
 	protected String randomName() {
 		// Kubernetest service names must start with a letter and can only be 24 characters long
@@ -1212,5 +1785,83 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				mapMatcher.describeTo(description);
 			}
 		};
+	}
+
+	private String getPodEnvironment(String deploymentId) throws InterruptedException {
+		String podName = kubernetesClient.pods().withLabel("spring-deployment-id", deploymentId).list().getItems()
+				.get(0).getMetadata().getName();
+
+		final CountDownLatch countDownLatch = new CountDownLatch(1);
+		ByteArrayOutputStream execOutputStream = new ByteArrayOutputStream();
+
+		ExecWatch watch = kubernetesClient.pods().withName(podName).inContainer(deploymentId)
+				.writingOutput(execOutputStream)
+				.usingListener(new ExecListener() {
+					@Override
+					public void onOpen(Response response) {
+					}
+
+					@Override
+					public void onFailure(Throwable throwable, Response response) {
+						countDownLatch.countDown();
+					}
+
+					@Override
+					public void onClose(int code, String reason) {
+						countDownLatch.countDown();
+					}
+				}).exec("printenv");
+
+		countDownLatch.await();
+
+		byte[] bytes = execOutputStream.toByteArray();
+
+		watch.close();
+
+		return new String(bytes);
+	}
+
+	// Creates a Secret with a name will be generated prefixed by "secret-" followed by random numbers.
+	//
+	// Two data keys are present, both prefixed by "d-" followed by random numbers. This allows for cases where
+	// multiple Secrets may be read into environment variables avoiding variable name clashes.
+	//
+	// Data values are Base64 encoded strings of value1 and value2
+	private Secret randomSecret() {
+		Map<String, String> secretData = new HashMap<>();
+		secretData.put("d-" + UUID.randomUUID().toString().substring(0, 5), "dmFsdWUx");
+		secretData.put("d-" + UUID.randomUUID().toString().substring(0, 5), "dmFsdWUy");
+
+		Secret secret = new Secret();
+		secret.setData(secretData);
+
+		ObjectMeta objectMeta = new ObjectMeta();
+		objectMeta.setName("secret-" + UUID.randomUUID().toString().substring(0, 5));
+
+		secret.setMetadata(objectMeta);
+
+		return kubernetesClient.secrets().create(secret);
+	}
+
+	// Creates a ConfigMap with a name will be generated prefixed by "cm-" followed by random numbers.
+	//
+	// Two data keys are present, both prefixed by "d-" followed by random numbers. This allows for cases where
+	// multiple ConfigMaps may be read into environment variables avoiding variable name clashes.
+	//
+	// Data values are strings of value1 and value
+	private ConfigMap randomConfigMap() {
+		Map<String, String> configMapData = new HashMap<>();
+		configMapData.put("d-" + UUID.randomUUID().toString().substring(0, 5), "value1");
+		configMapData.put("d-" + UUID.randomUUID().toString().substring(0, 5), "value2");
+
+		ConfigMap configMap = new ConfigMap();
+		configMap.setData(configMapData);
+
+		ObjectMeta objectMeta = new ObjectMeta();
+		objectMeta.setName("cm-" + UUID.randomUUID().toString().substring(0, 5));
+
+		configMap.setMetadata(objectMeta);
+
+		return kubernetesClient.configMaps().create(configMap);
 	}
 }

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvFromSource;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
@@ -55,12 +56,9 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 public class DefaultContainerFactory implements ContainerFactory {
-
 	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
-
-	public static final String SPRING_APPLICATION_JSON = "SPRING_APPLICATION_JSON";
-
-	public static final String SPRING_CLOUD_APPLICATION_GUID = "SPRING_CLOUD_APPLICATION_GUID";
+	private static final String SPRING_APPLICATION_JSON = "SPRING_APPLICATION_JSON";
+	private static final String SPRING_CLOUD_APPLICATION_GUID = "SPRING_CLOUD_APPLICATION_GUID";
 
 	private final KubernetesDeployerProperties properties;
 
@@ -149,9 +147,13 @@ public class DefaultContainerFactory implements ContainerFactory {
 				request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY), null));
 		}
 
+		List<EnvFromSource> envFromSources = new ArrayList<>();
+		envFromSources.addAll(deploymentPropertiesResolver.getConfigMapRefs(deploymentProperties));
+		envFromSources.addAll(deploymentPropertiesResolver.getSecretRefs(deploymentProperties));
+
 		ContainerBuilder container = new ContainerBuilder();
-		container.withName(containerConfiguration.getAppId()).withImage(image).withEnv(envVars).withArgs(appArgs)
-			.withVolumeMounts(deploymentPropertiesResolver.getVolumeMounts(deploymentProperties));
+		container.withName(containerConfiguration.getAppId()).withImage(image).withEnv(envVars).withEnvFrom(envFromSources)
+				.withArgs(appArgs).withVolumeMounts(deploymentPropertiesResolver.getVolumeMounts(deploymentProperties));
 
 		Set<Integer> ports = new HashSet<>();
 
@@ -230,7 +232,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 * @param request the {@link AppDeploymentRequest}
 	 * @return the command line arguments to use
 	 */
-	protected List<String> createCommandArgs(AppDeploymentRequest request) {
+	List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
 		List<String> commandArgOptions = request.getCommandlineArguments().stream()
 				.map(arg-> arg.substring(0,arg.indexOf("=")).replaceAll("^--",""))
