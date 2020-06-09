@@ -43,13 +43,12 @@ import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeploy
  */
 @ConfigurationProperties(prefix = KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)
 public class KubernetesDeployerProperties {
-
-	public static final String KUBERNETES_DEPLOYER_PROPERTIES_PREFIX = "spring.cloud.deployer.kubernetes";
+	static final String KUBERNETES_DEPLOYER_PROPERTIES_PREFIX = "spring.cloud.deployer.kubernetes";
 
 	/**
 	 * Constants for app deployment properties that don't have a deployer level default property.
 	 */
-	public static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
+	static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
 	/**
 	 * The maximum concurrent tasks allowed for this platform instance.
@@ -449,6 +448,16 @@ public class KubernetesDeployerProperties {
 	private List<ConfigMapKeyRef> configMapKeyRefs = new ArrayList<>();
 
 	/**
+	 * ConfigMap references to be added to the Pod environment.
+	 */
+	private List<String> configMapRefs = new ArrayList<>();
+
+	/**
+	 * Secret references to be added to the Pod environment.
+	 */
+	private List<String> secretRefs = new ArrayList<>();
+
+	/**
 	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
 	 */
 	private StatefulSet statefulSet = new StatefulSet();
@@ -707,6 +716,22 @@ public class KubernetesDeployerProperties {
 
 	public void setConfigMapKeyRefs(List<ConfigMapKeyRef> configMapKeyRefs) {
 		this.configMapKeyRefs = configMapKeyRefs;
+	}
+
+	public List<String> getConfigMapRefs() {
+		return configMapRefs;
+	}
+
+	public void setConfigMapRefs(List<String> configMapRefs) {
+		this.configMapRefs = configMapRefs;
+	}
+
+	public List<String> getSecretRefs() {
+		return secretRefs;
+	}
+
+	public void setSecretRefs(List<String> secretRefs) {
+		this.secretRefs = secretRefs;
 	}
 
 	public String[] getEnvironmentVariables() {

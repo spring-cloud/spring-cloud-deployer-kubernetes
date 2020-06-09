@@ -27,14 +27,17 @@ import java.util.stream.Collectors;
 
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.AffinityBuilder;
+import io.fabric8.kubernetes.api.model.ConfigMapEnvSource;
 import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvFromSource;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
 import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.SecretEnvSource;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -65,26 +68,24 @@ import static java.lang.String.format;
  * @author Ilayaperumal Gopinathan
  */
 
-public class DeploymentPropertiesResolver {
+class DeploymentPropertiesResolver {
+	static final String STATEFUL_SET_IMAGE_NAME = "busybox";
 
 	private final Log logger = LogFactory.getLog(getClass().getName());
 
-	protected static final String STATEFUL_SET_IMAGE_NAME = "busybox";
-
 	private String propertyPrefix;
-
 	private KubernetesDeployerProperties properties;
 
-	protected DeploymentPropertiesResolver(String propertyPrefix, KubernetesDeployerProperties properties) {
+	DeploymentPropertiesResolver(String propertyPrefix, KubernetesDeployerProperties properties) {
 		this.propertyPrefix = propertyPrefix;
 		this.properties = properties;
 	}
 
-	protected String getPropertyPrefix() {
+	String getPropertyPrefix() {
 		return this.propertyPrefix;
 	}
 
-	protected List<Toleration> getTolerations(Map<String, String> kubernetesDeployerProperties) {
+	List<Toleration> getTolerations(Map<String, String> kubernetesDeployerProperties) {
 		List<Toleration> tolerations = new ArrayList<>();
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
@@ -119,7 +120,7 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployer properties map
 	 * @return the configured volumes
 	 */
-	protected List<Volume> getVolumes(Map<String, String> kubernetesDeployerProperties) {
+	List<Volume> getVolumes(Map<String, String> kubernetesDeployerProperties) {
 		List<Volume> volumes = new ArrayList<>();
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
@@ -147,7 +148,7 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployment properties map
 	 * @return the resource limits to use
 	 */
-	protected Map<String, Quantity> deduceResourceLimits(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, Quantity> deduceResourceLimits(Map<String, String> kubernetesDeployerProperties) {
 		String memory = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".limits.memory");
 
@@ -178,7 +179,7 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployment properties map
 	 * @return The image pull policy to use for the container in the request.
 	 */
-	protected ImagePullPolicy deduceImagePullPolicy(Map<String, String> kubernetesDeployerProperties) {
+	ImagePullPolicy deduceImagePullPolicy(Map<String, String> kubernetesDeployerProperties) {
 		String pullPolicyOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 						this.propertyPrefix + ".imagePullPolicy");
 
@@ -192,7 +193,9 @@ public class DeploymentPropertiesResolver {
 				pullPolicy = ImagePullPolicy.IfNotPresent;
 			}
 		}
+
 		logger.debug("Using imagePullPolicy " + pullPolicy);
+
 		return pullPolicy;
 	}
 
@@ -204,9 +207,10 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployer properties map
 	 * @return the resource requests to use
 	 */
-	protected Map<String, Quantity> deduceResourceRequests(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, Quantity> deduceResourceRequests(Map<String, String> kubernetesDeployerProperties) {
 		String memOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".requests.memory");
+
 		if (memOverride == null) {
 			memOverride = properties.getRequests().getMemory();
 		}
@@ -214,6 +218,7 @@ public class DeploymentPropertiesResolver {
 
 		String cpuOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".requests.cpu");
+
 		if (cpuOverride == null) {
 			cpuOverride = properties.getRequests().getCpu();
 		}
@@ -221,12 +226,15 @@ public class DeploymentPropertiesResolver {
 		logger.debug("Using requests - cpu: " + cpuOverride + " mem: " + memOverride);
 
 		Map<String,Quantity> requests = new HashMap<String, Quantity>();
+
 		if (memOverride != null) {
 			requests.put("memory", new Quantity(memOverride));
 		}
+
 		if (cpuOverride != null) {
 			requests.put("cpu", new Quantity(cpuOverride));
 		}
+
 		return requests;
 	}
 
@@ -236,12 +244,14 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployer properties
 	 * @return the storage class name
 	 */
-	protected String getStatefulSetStorageClassName(Map<String, String> kubernetesDeployerProperties) {
+	String getStatefulSetStorageClassName(Map<String, String> kubernetesDeployerProperties) {
 		String storageClassName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".statefulSet.volumeClaimTemplate.storageClassName");
+
 		if (storageClassName == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
 			storageClassName = properties.getStatefulSet().getVolumeClaimTemplate().getStorageClassName();
 		}
+
 		return storageClassName;
 	}
 
@@ -251,14 +261,15 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployer properties
 	 * @return the StatefulSet storage
 	 */
-	protected String getStatefulSetStorage(Map<String, String> kubernetesDeployerProperties) {
+	String getStatefulSetStorage(Map<String, String> kubernetesDeployerProperties) {
 		String storage = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".statefulSet.volumeClaimTemplate.storage");;
+				this.propertyPrefix + ".statefulSet.volumeClaimTemplate.storage");
+
 		if (storage == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
 			storage = properties.getStatefulSet().getVolumeClaimTemplate().getStorage();
 		}
-		long storageAmount = ByteSizeUtils.parseToMebibytes(storage);
-		return storageAmount + "Mi";
+
+		return ByteSizeUtils.parseToMebibytes(storage) + "Mi";
 	}
 
 	/**
@@ -267,17 +278,20 @@ public class DeploymentPropertiesResolver {
 	 * @param kubernetesDeployerProperties the kubernetes deployment properties map
 	 * @return Whether host networking is requested
 	 */
-	protected boolean getHostNetwork(Map<String, String> kubernetesDeployerProperties) {
+	boolean getHostNetwork(Map<String, String> kubernetesDeployerProperties) {
 		String hostNetworkOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 						this.propertyPrefix + ".hostNetwork");
 		boolean hostNetwork;
+
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
 			hostNetwork = properties.isHostNetwork();
 		}
 		else {
 			hostNetwork = Boolean.valueOf(hostNetworkOverride);
 		}
+
 		logger.debug("Using hostNetwork " + hostNetwork);
+
 		return hostNetwork;
 	}
 
@@ -287,7 +301,7 @@ public class DeploymentPropertiesResolver {
 	 * @param deploymentProperties The deployment request deployment properties.
 	 * @return map of nodeSelectors
 	 */
-	protected Map<String, String> getNodeSelectors(Map<String, String> deploymentProperties) {
+	Map<String, String> getNodeSelectors(Map<String, String> deploymentProperties) {
 		Map<String, String> nodeSelectors = new HashMap<>();
 
 		String nodeSelector = this.properties.getNodeSelector();
@@ -307,7 +321,7 @@ public class DeploymentPropertiesResolver {
 			String[] nodeSelectorPairs = nodeSelector.split(",");
 			for (String nodeSelectorPair : nodeSelectorPairs) {
 				String[] selector = nodeSelectorPair.split(":");
-				Assert.isTrue(selector.length == 2, format("Invalid nodeSelector value: '{}'", nodeSelectorPair));
+				Assert.isTrue(selector.length == 2, format("Invalid nodeSelector value: '%s'", nodeSelectorPair));
 				nodeSelectors.put(selector[0].trim(), selector[1].trim());
 			}
 		}
@@ -315,7 +329,7 @@ public class DeploymentPropertiesResolver {
 		return nodeSelectors;
 	}
 
-	protected String getImagePullSecret(Map<String, String> kubernetesDeployerProperties) {
+	String getImagePullSecret(Map<String, String> kubernetesDeployerProperties) {
 		String imagePullSecret = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".imagePullSecret", "");
 
@@ -326,7 +340,7 @@ public class DeploymentPropertiesResolver {
 		return imagePullSecret;
 	}
 
-	protected String getDeploymentServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
+	String getDeploymentServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
 		String deploymentServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".deploymentServiceAccountName");
 
@@ -337,7 +351,7 @@ public class DeploymentPropertiesResolver {
 		return deploymentServiceAccountName;
 	}
 
-	protected PodSecurityContext getPodSecurityContext(Map<String, String> kubernetesDeployerProperties) {
+	PodSecurityContext getPodSecurityContext(Map<String, String> kubernetesDeployerProperties) {
 		PodSecurityContext podSecurityContext = null;
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
@@ -352,8 +366,10 @@ public class DeploymentPropertiesResolver {
 		else {
 			String runAsUser = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".podSecurityContext.runAsUser");
+
 			String fsGroup = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".podSecurityContext.fsGroup");
+
 			if (!StringUtils.isEmpty(runAsUser) && !StringUtils.isEmpty(fsGroup)) {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(Long.valueOf(runAsUser))
@@ -367,10 +383,11 @@ public class DeploymentPropertiesResolver {
 						.build();
 			}
 		}
+
 		return podSecurityContext;
 	}
 
-	protected Affinity getAffinityRules(Map<String, String> kubernetesDeployerProperties) {
+	Affinity getAffinityRules(Map<String, String> kubernetesDeployerProperties) {
 		Affinity affinity = new Affinity();
 
 		String nodeAffinityPropertyKey = this.propertyPrefix + ".affinity.nodeAffinity";
@@ -422,17 +439,25 @@ public class DeploymentPropertiesResolver {
 					.withPodAntiAffinity(podAntiAffinityProperties.getPodAntiAffinity())
 					.buildPodAntiAffinity());
 		}
+
 		return affinity;
 	}
 
-	protected Container getInitContainer(Map<String, String> kubernetesDeployerProperties) {
+	Container getInitContainer(Map<String, String> kubernetesDeployerProperties) {
 		Container container = null;
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
 				this.propertyPrefix + ".initContainer", "initContainer");
+
 		if (deployerProperties.getInitContainer() == null) {
-			String containerName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".initContainer.containerName");
-			String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".initContainer.imageName");
-			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".initContainer.commands");
+			String containerName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".initContainer.containerName");
+
+			String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".initContainer.imageName");
+
+			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".initContainer.commands");
+
 			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
 				container = new ContainerBuilder()
 						.withName(containerName)
@@ -443,6 +468,7 @@ public class DeploymentPropertiesResolver {
 		}
 		else {
 			KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
+
 			if (initContainer != null) {
 				container = new ContainerBuilder()
 						.withName(initContainer.getContainerName())
@@ -451,19 +477,22 @@ public class DeploymentPropertiesResolver {
 						.build();
 			}
 		}
+
 		return container;
 	}
 
-	protected Map<String, String> getPodAnnotations(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, String> getPodAnnotations(Map<String, String> kubernetesDeployerProperties) {
 		String annotationsValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".podAnnotations", "");
+
 		if (StringUtils.isEmpty(annotationsValue)) {
 			annotationsValue = properties.getPodAnnotations();
 		}
+
 		return PropertyParserUtils.getStringPairsToMap(annotationsValue);
 	}
 
-	protected Map<String, String> getServiceAnnotations(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, String> getServiceAnnotations(Map<String, String> kubernetesDeployerProperties) {
 		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".serviceAnnotations", "");
 
@@ -474,7 +503,7 @@ public class DeploymentPropertiesResolver {
 		return PropertyParserUtils.getStringPairsToMap(annotationsProperty);
 	}
 
-	protected Map<String, String> getDeploymentLabels(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, String> getDeploymentLabels(Map<String, String> kubernetesDeployerProperties) {
 		Map<String, String> labels = new HashMap<>();
 
 		String deploymentLabels = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
@@ -494,7 +523,7 @@ public class DeploymentPropertiesResolver {
 		return labels;
 	}
 
-	protected RestartPolicy getRestartPolicy(Map<String, String> kubernetesDeployerProperties) {
+	RestartPolicy getRestartPolicy(Map<String, String> kubernetesDeployerProperties) {
 		String restartPolicy = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".restartPolicy", "");
 
@@ -502,11 +531,11 @@ public class DeploymentPropertiesResolver {
 			return RestartPolicy.valueOf(restartPolicy);
 		}
 
-		return  (this.properties instanceof KubernetesSchedulerProperties) ?
-			((KubernetesSchedulerProperties) this.properties).getRestartPolicy() : RestartPolicy.Always;
+		return (this.properties instanceof KubernetesSchedulerProperties) ?
+				((KubernetesSchedulerProperties) this.properties).getRestartPolicy() : RestartPolicy.Always;
 	}
 
-	protected String getTaskServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
+	String getTaskServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
 		String taskServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".taskServiceAccountName", "");
 
@@ -514,7 +543,7 @@ public class DeploymentPropertiesResolver {
 			return taskServiceAccountName;
 		}
 
-		return  (this.properties instanceof KubernetesSchedulerProperties) ?
+		return (this.properties instanceof KubernetesSchedulerProperties) ?
 				((KubernetesSchedulerProperties) this.properties).getTaskServiceAccountName() : null;
 	}
 
@@ -526,7 +555,7 @@ public class DeploymentPropertiesResolver {
 	 * @param yamlLabel the label representing the field to bind to
 	 * @return a {@link KubernetesDeployerProperties} with the bound property data
 	 */
-	protected static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
+	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
 			String propertyKey, String yamlLabel) {
 		String deploymentPropertyValue = kubernetesDeployerProperties.getOrDefault(propertyKey, "");
 
@@ -550,7 +579,7 @@ public class DeploymentPropertiesResolver {
 		return deployerProperties;
 	}
 
-	protected String getStatefulSetInitContainerImageName(Map<String, String> kubernetesDeployerProperties) {
+	String getStatefulSetInitContainerImageName(Map<String, String> kubernetesDeployerProperties) {
 		String statefulSetInitContainerImageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".statefulSetInitContainerImageName", "");
 
@@ -567,7 +596,7 @@ public class DeploymentPropertiesResolver {
 		return STATEFUL_SET_IMAGE_NAME;
 	}
 
-	protected Map<String, String> getJobAnnotations(Map<String, String> kubernetesDeployerProperties) {
+	Map<String, String> getJobAnnotations(Map<String, String> kubernetesDeployerProperties) {
 		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".jobAnnotations", "");
 
@@ -592,10 +621,11 @@ public class DeploymentPropertiesResolver {
 	 * @param deploymentProperties the deployment properties from {@link AppDeploymentRequest}
 	 * @return the configured volume mounts
 	 */
-	protected List<VolumeMount> getVolumeMounts(Map<String, String> deploymentProperties) {
+	List<VolumeMount> getVolumeMounts(Map<String, String> deploymentProperties) {
 		List<VolumeMount> volumeMounts = new ArrayList<>();
 		String volumeMountDeploymentProperty = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".volumeMounts");
+
 		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
@@ -611,6 +641,7 @@ public class DeploymentPropertiesResolver {
 						String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
 			}
 		}
+
 		// only add volume mounts that have not already been added, based on the volume mount's name
 		// i.e. allow provided deployment volume mounts to override deployer defined volume mounts
 		volumeMounts.addAll(this.properties.getVolumeMounts().stream().filter(volumeMount -> volumeMounts.stream()
@@ -626,9 +657,10 @@ public class DeploymentPropertiesResolver {
 	 * @param deploymentProperties the kubernetes deployer properties map
 	 * @return a list of strings that represents the command and any arguments for that command
 	 */
-	protected List<String> getContainerCommand(Map<String, String> deploymentProperties) {
+	List<String> getContainerCommand(Map<String, String> deploymentProperties) {
 		String containerCommand = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".containerCommand", "");
+
 		return new CommandLineTokenizer(containerCommand).getArgs();
 	}
 
@@ -636,10 +668,11 @@ public class DeploymentPropertiesResolver {
 	 * @param deploymentProperties the kubernetes deployer properties map
 	 * @return a list of Integers to add to the container
 	 */
-	protected List<Integer> getContainerPorts(Map<String, String> deploymentProperties) {
+	List<Integer> getContainerPorts(Map<String, String> deploymentProperties) {
 		List<Integer> containerPortList = new ArrayList<>();
 		String containerPorts = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".containerPorts", null);
+
 		if (containerPorts != null) {
 			String[] containerPortSplit = containerPorts.split(",");
 			for (String containerPort : containerPortSplit) {
@@ -648,6 +681,7 @@ public class DeploymentPropertiesResolver {
 				containerPortList.add(port);
 			}
 		}
+
 		return containerPortList;
 	}
 
@@ -655,10 +689,11 @@ public class DeploymentPropertiesResolver {
 	 * @param deploymentProperties the kubernetes deployer properties map
 	 * @return a List of EnvVar objects for app specific environment settings
 	 */
-	protected Map<String, String> getAppEnvironmentVariables(Map<String, String> deploymentProperties) {
+	Map<String, String> getAppEnvironmentVariables(Map<String, String> deploymentProperties) {
 		Map<String, String> appEnvVarMap = new HashMap<>();
 		String appEnvVar = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".environmentVariables", null);
+
 		if (appEnvVar != null) {
 			String[] appEnvVars = new NestedCommaDelimitedVariableParser().parse(appEnvVar);
 			for (String envVar : appEnvVars) {
@@ -668,6 +703,7 @@ public class DeploymentPropertiesResolver {
 				appEnvVarMap.put(strings[0], strings[1]);
 			}
 		}
+
 		return appEnvVarMap;
 	}
 
@@ -698,11 +734,11 @@ public class DeploymentPropertiesResolver {
 		}
 	}
 
-
-	protected EntryPointStyle determineEntryPointStyle(Map<String, String> deploymentProperties) {
+	EntryPointStyle determineEntryPointStyle(Map<String, String> deploymentProperties) {
 		EntryPointStyle entryPointStyle = null;
 		String deployerPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".entryPointStyle", null);
+
 		if (deployerPropertyValue != null) {
 			try {
 				entryPointStyle = EntryPointStyle.valueOf(deployerPropertyValue.toLowerCase());
@@ -710,13 +746,15 @@ public class DeploymentPropertiesResolver {
 			catch (IllegalArgumentException ignore) {
 			}
 		}
+
 		if (entryPointStyle == null) {
 			entryPointStyle = this.properties.getEntryPointStyle();
 		}
+
 		return entryPointStyle;
 	}
 
-	protected List<EnvVar> getConfigMapKeyRefs(Map<String, String> deploymentProperties) {
+	List<EnvVar> getConfigMapKeyRefs(Map<String, String> deploymentProperties) {
 		List<EnvVar> configMapKeyRefs = new ArrayList<>();
 		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,
 				this.propertyPrefix + ".configMapKeyRefs", "configMapKeyRefs");
@@ -748,7 +786,7 @@ public class DeploymentPropertiesResolver {
 		return configMapKeyEnvRefVar;
 	}
 
-	protected List<EnvVar> getSecretKeyRefs(Map<String, String> deploymentProperties) {
+	List<EnvVar> getSecretKeyRefs(Map<String, String> deploymentProperties) {
 		List<EnvVar> secretKeyRefs = new ArrayList<>();
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,
@@ -779,5 +817,63 @@ public class DeploymentPropertiesResolver {
 		secretKeyEnvRefVar.setName(secretKeyRef.getEnvVarName());
 
 		return secretKeyEnvRefVar;
+	}
+
+	List<EnvFromSource> getConfigMapRefs(Map<String, String> deploymentProperties) {
+		List<EnvFromSource> configMapRefs = new ArrayList<>();
+		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,
+				this.propertyPrefix + ".configMapRefs", "configMapRefs");
+
+		deployerProperties.getConfigMapRefs().forEach(configMapRef ->
+				configMapRefs.add(buildConfigMapRefEnvVar(configMapRef)));
+
+		if (deployerProperties.getConfigMapRefs().isEmpty()) {
+			properties.getConfigMapRefs().stream()
+					.filter(configMapRef -> configMapRefs.stream()
+							.noneMatch(existing -> existing.getConfigMapRef().getName().equals(configMapRef)))
+					.collect(Collectors.toList())
+					.forEach(configMapRef -> configMapRefs.add(buildConfigMapRefEnvVar(configMapRef)));
+		}
+
+		return configMapRefs;
+	}
+
+	private EnvFromSource buildConfigMapRefEnvVar(String configMapRefName) {
+		ConfigMapEnvSource configMapEnvSource = new ConfigMapEnvSource();
+		configMapEnvSource.setName(configMapRefName);
+
+		EnvFromSource envFromSource = new EnvFromSource();
+		envFromSource.setConfigMapRef(configMapEnvSource);
+
+		return envFromSource;
+	}
+
+	List<EnvFromSource> getSecretRefs(Map<String, String> deploymentProperties) {
+		List<EnvFromSource> secretRefs = new ArrayList<>();
+		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,
+				this.propertyPrefix + ".secretRefs", "secretRefs");
+
+		deployerProperties.getSecretRefs().forEach(secretRef ->
+				secretRefs.add(buildSecretRefEnvVar(secretRef)));
+
+		if (deployerProperties.getSecretRefs().isEmpty()) {
+			properties.getSecretRefs().stream()
+					.filter(secretRef -> secretRefs.stream()
+							.noneMatch(existing -> existing.getSecretRef().getName().equals(secretRef)))
+					.collect(Collectors.toList())
+					.forEach(secretRef -> secretRefs.add(buildSecretRefEnvVar(secretRef)));
+		}
+
+		return secretRefs;
+	}
+
+	private EnvFromSource buildSecretRefEnvVar(String secretRefName) {
+		SecretEnvSource secretEnvSource = new SecretEnvSource();
+		secretEnvSource.setName(secretRefName);
+
+		EnvFromSource envFromSource = new EnvFromSource();
+		envFromSource.setSecretRef(secretEnvSource);
+
+		return envFromSource;
 	}
 }
