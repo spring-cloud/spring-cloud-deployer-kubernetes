@@ -146,4 +146,54 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
 				timeout.pause));
 	}
+
+	@Test
+	public void testDeploymentLabels() {
+		log.info("Testing {}...", "deploymentLabels");
+
+		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(new KubernetesDeployerProperties(),
+				new KubernetesTaskLauncherProperties(), kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
+				Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels", "label1:value1,label2:value2"));
+
+		log.info("Launching {}...", request.getDefinition().getName());
+
+		String launchId = kubernetesTaskLauncher.launch(request);
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(launchId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
+				timeout.pause));
+
+		String taskName = request.getDefinition().getName();
+
+		log.info("Checking job pod spec labels of {}...", taskName);
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(pods.size(), is(1));
+
+		Pod pod = pods.get(0);
+
+		assertTrue(pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+
+		Map<String, String> labels = pod.getMetadata().getLabels();
+
+		assertTrue(labels.containsKey("label1"));
+		assertTrue(labels.get("label1").equals("value1"));
+		assertTrue(labels.containsKey("label2"));
+		assertTrue(labels.get("label2").equals("value2"));
+
+		log.info("Destroying {}...", taskName);
+
+		timeout = undeploymentTimeout();
+		kubernetesTaskLauncher.destroy(taskName);
+
+		assertThat(taskName, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
+				timeout.pause));
+	}
 }

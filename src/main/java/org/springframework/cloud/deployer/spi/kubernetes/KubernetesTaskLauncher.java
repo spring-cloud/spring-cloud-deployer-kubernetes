@@ -54,6 +54,7 @@ import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -229,16 +230,20 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		podLabelMap.put("task-name", request.getDefinition().getName());
 		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
 
+		Map<String, String> deploymentProperties = request.getDeploymentProperties();
+		Map<String, String> deploymentLabels = this.deploymentPropertiesResolver.getDeploymentLabels(deploymentProperties);
+		if (!CollectionUtils.isEmpty(deploymentLabels)) {
+			logger.debug(String.format("Adding deploymentLabels: %s", deploymentLabels));
+		}
 		PodSpec podSpec = createPodSpec(request);
 
 		podSpec.setRestartPolicy(getRestartPolicy(request).name());
-
-		Map<String, String> deploymentProperties = request.getDeploymentProperties();
 		if (this.properties.isCreateJob()) {
 			logger.debug(String.format("Launching Job for task: %s", appId));
 			ObjectMeta objectMeta = new ObjectMetaBuilder()
 					.withLabels(podLabelMap)
 					.addToLabels(idMap)
+					.addToLabels(deploymentLabels)
 					.withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(deploymentProperties))
 					.build();
 			PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
@@ -266,6 +271,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.withNewMetadata()
 					.withName(appId)
 					.withLabels(podLabelMap)
+					.addToLabels(deploymentLabels)
 					.withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(deploymentProperties))
 					.addToLabels(idMap)
 					.endMetadata()
