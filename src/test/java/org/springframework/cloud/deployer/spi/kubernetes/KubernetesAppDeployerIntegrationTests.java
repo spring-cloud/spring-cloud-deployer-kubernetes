@@ -389,7 +389,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				.withName(mountName)
 				.build()));
 		deployProperties.setVolumeMounts(Collections.singletonList(new VolumeMount(hostPathVolumeSource.getPath(), null,
-				mountName, false, null)));
+				mountName, false, null, null)));
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
 		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
 				containerFactory);
@@ -640,8 +640,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		PersistentVolumeClaimSpec pvcSpec = pvc.getSpec();
 		Assertions.assertThat(pvcSpec.getAccessModes()).containsOnly("ReadWriteOnce");
 		Assertions.assertThat(pvcSpec.getStorageClassName()).isNull();
-		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getAmount()).isEqualTo("10Mi");
-		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getAmount()).isEqualTo("10Mi");
+
+		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getAmount()).isEqualTo("10");
+		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getAmount()).isEqualTo("10");
+
+		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getFormat()).isEqualTo("Mi");
+		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getFormat()).isEqualTo("Mi");
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
@@ -793,8 +797,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		PersistentVolumeClaimSpec pvcSpec = pvc.getSpec();
 		Assertions.assertThat(pvcSpec.getAccessModes()).containsOnly("ReadWriteOnce");
-		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getAmount()).isEqualTo("1Gi");
-		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getAmount()).isEqualTo("1Gi");
+
+		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getAmount()).isEqualTo("1");
+		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getAmount()).isEqualTo("1");
+
+		Assertions.assertThat(pvcSpec.getResources().getLimits().get("storage").getFormat()).isEqualTo("Gi");
+		Assertions.assertThat(pvcSpec.getResources().getRequests().get("storage").getFormat()).isEqualTo("Gi");
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
