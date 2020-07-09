@@ -164,10 +164,14 @@ class DeploymentPropertiesResolver {
 		}
 
 		Map<String,Quantity> limits = new HashMap<String,Quantity>();
-		limits.put("memory", new Quantity(memory));
-		limits.put("cpu", new Quantity(cpu));
 
-		logger.debug("Using limits - cpu: " + cpu + " mem: " + memory);
+		if (!StringUtils.isEmpty(memory)) {
+			limits.put("memory", new Quantity(memory));
+		}
+
+		if (!StringUtils.isEmpty(cpu)) {
+			limits.put("cpu", new Quantity(cpu));
+		}
 
 		return limits;
 	}
