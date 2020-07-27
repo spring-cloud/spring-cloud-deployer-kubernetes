@@ -561,7 +561,7 @@ class DeploymentPropertiesResolver {
 	 */
 	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
 			String propertyKey, String yamlLabel) {
-		String deploymentPropertyValue = kubernetesDeployerProperties.getOrDefault(propertyKey, "");
+		String deploymentPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, propertyKey);
 
 		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
 

@@ -1532,7 +1532,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 				kubernetesClient);
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.configMapRefs", configMap.getMetadata().getName());
+		props.put("spring.cloud.deployer.kubernetes.config-map-refs", configMap.getMetadata().getName());
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
