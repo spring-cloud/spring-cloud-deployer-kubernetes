@@ -508,6 +508,58 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	}
 
 	@Test
+	public void testJobAnnotationsFromSchedulerProperties() {
+		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		kubernetesSchedulerProperties.setJobAnnotations("test1:value1");
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesSchedulerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				null, getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertEquals("Job annotation is not set", "value1", cronJob.getMetadata().getAnnotations().get("test1"));
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
+	public void testJobAnnotationsOverride() {
+		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		kubernetesSchedulerProperties.setJobAnnotations("test1:value1");
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesSchedulerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		String prefix = KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX;
+		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
+		schedulerProperties.put(prefix + ".jobAnnotations", "test1:value2");
+
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties,
+				null, getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertEquals("Job annotation is not set", "value2", cronJob.getMetadata().getAnnotations().get("test1"));
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
 	public void testImagePullPolicyDefault() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 		if (kubernetesSchedulerProperties.getNamespace() == null) {
@@ -588,6 +640,35 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		List<LocalObjectReference> secrets = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getImagePullSecrets();
 		assertTrue("There should be no secrets", secrets.isEmpty());
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
+	public void testImagePullSecretFromSchedulerProperties() {
+		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+
+		String secretName = "image-secret";
+		kubernetesSchedulerProperties.setImagePullSecret(secretName);
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesSchedulerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				getDeploymentProperties(), getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+		CronJobSpec cronJobSpec = cronJob.getSpec();
+
+		List<LocalObjectReference> secrets = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
+				.getImagePullSecrets();
+		assertEquals("Unexpected image pull secret", secretName, secrets.get(0).getName());
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
