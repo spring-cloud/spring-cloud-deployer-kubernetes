@@ -181,7 +181,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		}
 
 		CronJob cronJob = new CronJobBuilder().withNewMetadata().withName(scheduleRequest.getScheduleName())
-				.withLabels(labels).endMetadata().withNewSpec().withSchedule(schedule).withNewJobTemplate()
+				.withLabels(labels).withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(schedulerProperties)).endMetadata()
+				.withNewSpec().withSchedule(schedule).withNewJobTemplate()
 				.withNewSpec().withNewTemplate().withSpec(podSpec).endTemplate().endSpec()
 				.endJobTemplate().endSpec().build();
 
