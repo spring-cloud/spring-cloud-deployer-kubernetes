@@ -66,6 +66,8 @@ public class AbstractKubernetesDeployer {
 	protected static final String SPRING_APP_KEY = "spring-app-id";
 	protected static final String SPRING_MARKER_KEY = "role";
 	protected static final String SPRING_MARKER_VALUE = "spring-app";
+	protected static final String APP_NAME_PROPERTY_KEY = AppDeployer.PREFIX + "appName";
+	protected static final String APP_NAME_KEY = "spring-application-name";
 
 	private static final String SERVER_PORT_KEY = "server.port";
 
@@ -115,6 +117,14 @@ public class AbstractKubernetesDeployer {
 			map.put(SPRING_GROUP_KEY, groupId);
 		}
 		map.put(SPRING_DEPLOYMENT_KEY, appId);
+
+		// un-versioned app name provided by skipper
+		String appName = request.getDeploymentProperties().get(APP_NAME_PROPERTY_KEY);
+
+		if (StringUtils.hasText(appName)) {
+			map.put(APP_NAME_KEY, appName);
+		}
+
 		return map;
 	}
 

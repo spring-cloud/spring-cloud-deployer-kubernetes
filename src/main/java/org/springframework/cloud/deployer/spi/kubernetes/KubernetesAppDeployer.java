@@ -139,47 +139,13 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 			throw new IllegalStateException(String.format("App '%s' is not deployed", appId));
 		}
-		List<Service> apps = client.services().withLabel(SPRING_APP_KEY, appId).list().getItems();
-		if (apps != null) {
-			for (Service app : apps) {
-				String appIdToDelete = app.getMetadata().getName();
-				logger.debug(String.format("Deleting Resources for: %s", appIdToDelete));
 
-				Service svc = client.services().withName(appIdToDelete).get();
-				try {
-					if (svc != null && "LoadBalancer".equals(svc.getSpec().getType())) {
-						int tries = 0;
-						int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
-						while (tries++ < maxWait) {
-							if (svc.getStatus() != null && svc.getStatus().getLoadBalancer() != null
-								&& svc.getStatus().getLoadBalancer().getIngress() != null && svc.getStatus()
-								.getLoadBalancer().getIngress().isEmpty()) {
-								if (tries % 6 == 0) {
-									logger.warn("Waiting for LoadBalancer to complete before deleting it ...");
-								}
-								logger.debug(String.format("Waiting for LoadBalancer, try %d", tries));
-								try {
-									Thread.sleep(10000L);
-								}
-								catch (InterruptedException e) {
-								}
-								svc = client.services().withName(appIdToDelete).get();
-							}
-							else {
-								break;
-							}
-						}
-						logger.debug(String.format("LoadBalancer Ingress: %s",
-							svc.getStatus().getLoadBalancer().getIngress().toString()));
-					}
-
-					deleteAllObjects(appIdToDelete);
-				}
-				catch (RuntimeException e) {
-					logger.error(e.getMessage(), e);
-					throw e;
-				}
-			}
+		try {
+			deleteAllObjects(appId);
+		}
+		catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
+			throw e;
 		}
 	}
 
@@ -325,9 +291,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		String statefulSetInitContainerImageName = this.deploymentPropertiesResolver.getStatefulSetInitContainerImageName(kubernetesDeployerProperties);
 
 		podSpec.getInitContainers().add(createStatefulSetInitContainer(statefulSetInitContainerImageName));
-		
+
 		Map<String, String> deploymentLabels=  this.deploymentPropertiesResolver.getDeploymentLabels(request.getDeploymentProperties());
-		
+
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
 				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
 				.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
@@ -402,13 +368,67 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			servicePorts.addAll(addAdditionalServicePorts(additionalServicePorts));
 		}
 
-		spec.withSelector(idMap).addAllToPorts(servicePorts);
+		spec.addAllToPorts(servicePorts);
 
 		Map<String, String> annotations = this.deploymentPropertiesResolver.getServiceAnnotations(request.getDeploymentProperties());
 
-		client.services().createNew().withNewMetadata().withName(appId)
+		String serviceName = getServiceName(request, appId);
+
+		// if called from skipper, use unique selectors to maintain connectivity
+		// between service and pods that are being brought up/down
+		if (request.getDeploymentProperties().containsKey(APP_NAME_PROPERTY_KEY)) {
+			spec.withSelector(Collections.singletonMap(APP_NAME_KEY,
+					request.getDeploymentProperties().get(APP_NAME_PROPERTY_KEY)));
+
+			String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
+
+			if (groupId != null) {
+				spec.addToSelector(SPRING_GROUP_KEY, groupId);
+			}
+		} else {
+			spec.withSelector(idMap);
+		}
+
+		client.services().createOrReplaceWithNew().withNewMetadata().withName(serviceName)
 			.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 			.endMetadata().withSpec(spec.build()).done();
+	}
+
+	// logic to support using un-versioned service names when called from skipper
+	private String getServiceName(AppDeploymentRequest request, String appId) {
+		String appName = request.getDeploymentProperties().get(APP_NAME_PROPERTY_KEY);
+
+		// if we have an un-versioned app name from skipper
+		if(StringUtils.hasText(appName)) {
+			String serviceName = formatServiceName(request, appName);
+
+			// need to check if a versioned service exists to maintain backwards compat..
+			// version number itself isn't checked on as it could be different if create or upgrade
+			// which we don't know at runtime....
+			List<Service> services = client.services().withLabel(SPRING_DEPLOYMENT_KEY).list().getItems();
+
+			for (Service service : services) {
+				String serviceMetadataName = service.getMetadata().getName();
+
+				if(serviceMetadataName.startsWith(serviceName + "-v")) {
+					return appId;
+				}
+			}
+
+			return serviceName;
+		}
+
+		// no un-versioned app name provided, maybe not called from skipper, return whatever is in appId
+		return appId;
+	}
+
+	private String formatServiceName(AppDeploymentRequest request, String appName) {
+		String groupId = request.getDeploymentProperties().get(AppDeployer.GROUP_PROPERTY_KEY);
+
+		String serviceName = groupId == null ? String.format("%s", appName)
+				: String.format("%s-%s", groupId, appName);
+
+		return serviceName.replace('.', '-').toLowerCase();
 	}
 
 	private Set<ServicePort> addAdditionalServicePorts(String additionalServicePorts) {
@@ -463,6 +483,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	private void deleteAllObjects(String appIdToDelete) {
 		Map<String, String> labels = Collections.singletonMap(SPRING_APP_KEY, appIdToDelete);
 
+		waitForLoadBalancerReady(labels);
 		deleteService(labels);
 		deleteDeployment(labels);
 		deleteStatefulSet(labels);
@@ -518,6 +539,39 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {
 			boolean pvcsDeleted = pvcsToDelete.delete();
 			logger.debug(String.format("PVC deleted for: %s - %b", labels, pvcsDeleted));
+		}
+	}
+
+	private void waitForLoadBalancerReady(Map<String, String> labels) {
+		List<Service> services = client.services().withLabels(labels).list().getItems();
+
+		if (!services.isEmpty()) {
+			Service svc = services.get(0);
+			if (svc != null && "LoadBalancer".equals(svc.getSpec().getType())) {
+				int tries = 0;
+				int maxWait = properties.getMinutesToWaitForLoadBalancer() * 6; // we check 6 times per minute
+				while (tries++ < maxWait) {
+					if (svc.getStatus() != null && svc.getStatus().getLoadBalancer() != null
+							&& svc.getStatus().getLoadBalancer().getIngress() != null && svc.getStatus()
+							.getLoadBalancer().getIngress().isEmpty()) {
+						if (tries % 6 == 0) {
+							logger.warn("Waiting for LoadBalancer to complete before deleting it ...");
+						}
+						logger.debug(String.format("Waiting for LoadBalancer, try %d", tries));
+						try {
+							Thread.sleep(10000L);
+						}
+						catch (InterruptedException e) {
+						}
+						svc = client.services().withLabels(labels).list().getItems().get(0);
+					}
+					else {
+						break;
+					}
+				}
+				logger.debug(String.format("LoadBalancer Ingress: %s",
+						svc.getStatus().getLoadBalancer().getIngress().toString()));
+			}
 		}
 	}
 }
