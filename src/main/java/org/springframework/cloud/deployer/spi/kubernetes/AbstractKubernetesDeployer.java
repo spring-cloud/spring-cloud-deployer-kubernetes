@@ -135,7 +135,8 @@ public class AbstractKubernetesDeployer {
 			for (Pod pod : podList.getItems()) {
 				String deploymentKey = pod.getMetadata().getLabels().get(SPRING_DEPLOYMENT_KEY);
 				for (Service svc : services.getItems()) {
-					if (svc.getMetadata().getName().equals(deploymentKey)) {
+					// handle case of when the version provided by skipper has been removed
+					if(deploymentKey.startsWith(svc.getMetadata().getName())) {
 						service = svc;
 						break;
 					}
