@@ -81,24 +81,22 @@ public class KubernetesDeployerProperties {
 		 */
 		private String memory;
 
-        /**
-         * Container GPU vendor limit.
-         */
-        private String gpuVendor;
+		/**
+		 * Container GPU vendor limit.
+		 */
+		private String gpuVendor;
 
-        /**
-         * Container GPU count limit.
-         */
-        private String gpuCount;
+		/**
+		 * Container GPU count limit.
+		 */
+		private String gpuCount;
 
 		public LimitsResources() {
 		}
 
-		public LimitsResources(String cpu, String memory, String gpuVendor, String gpuCount) {
+		public LimitsResources(String cpu, String memory) {
 			this.cpu = cpu;
 			this.memory = memory;
-			this.gpuVendor = gpuVendor;
-			this.gpuCount = gpuCount;
 		}
 
 		public String getCpu() {
@@ -118,20 +116,20 @@ public class KubernetesDeployerProperties {
 		}
 
 		public String getGpuVendor() {
-		  return gpuVendor;
-	    }
+			return gpuVendor;
+		}
 
-	    public void setGpuVendor(String gpuVendor) {
-	        this.gpuVendor = gpuVendor;
-	    }
+		public void setGpuVendor(String gpuVendor) {
+			this.gpuVendor = gpuVendor;
+		}
 
-	    public String getGpuCount() {
-	        return gpuCount;
-	    }
+		public String getGpuCount() {
+			return gpuCount;
+		}
 
-	    public void setGpuCount(String gpuCount) {
-	        this.gpuCount = gpuCount;
-	    }
+		public void setGpuCount(String gpuCount) {
+			this.gpuCount = gpuCount;
+		}
 	}
 
 	/**
