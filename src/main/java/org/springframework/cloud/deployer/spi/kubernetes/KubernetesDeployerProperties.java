@@ -94,9 +94,11 @@ public class KubernetesDeployerProperties {
 		public LimitsResources() {
 		}
 
-		public LimitsResources(String cpu, String memory) {
+		public LimitsResources(String cpu, String memory, String gpuVendor, String gpuCount) {
 			this.cpu = cpu;
 			this.memory = memory;
+			this.gpuVendor = gpuVendor;
+			this.gpuCount = gpuCount;
 		}
 
 		public String getCpu() {
