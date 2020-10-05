@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -60,8 +61,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  * @author Ilayaperumal Gopinathan
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
-@TestPropertySource(properties = {"spring.cloud.deployer.kubernetes.create-job=true",
-		"spring.cloud.deployer.kubernetes.namespace=default"})
+@TestPropertySource(properties = "spring.cloud.deployer.kubernetes.create-job=true")
 public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
 	@ClassRule
@@ -72,6 +72,13 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 	@Autowired
 	private KubernetesClient kubernetesClient;
+
+	@Before
+	public void setup() {
+		if (kubernetesClient.getNamespace() == null) {
+			kubernetesClient.getConfiguration().setNamespace("default");
+		}
+	}
 
 	@Override
 	protected TaskLauncher provideTaskLauncher() {
@@ -136,7 +143,6 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		Map<String, String> jobAnnotations = jobs.get(0).getMetadata().getAnnotations();
 		assertFalse(jobAnnotations.isEmpty());
-		assertTrue(jobAnnotations.size() == 3);
 		assertTrue(jobAnnotations.containsKey("key1"));
 		assertTrue(jobAnnotations.get("key1").equals("val1"));
 		assertTrue(jobAnnotations.containsKey("key2"));
@@ -152,7 +158,6 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		Map<String, String> podAnnotations = pods.get(0).getMetadata().getAnnotations();
 		assertFalse(podAnnotations.isEmpty());
-		assertTrue(podAnnotations.size() == 3);
 		assertTrue(podAnnotations.containsKey("key1"));
 		assertTrue(podAnnotations.get("key1").equals("val1"));
 		assertTrue(podAnnotations.containsKey("key2"));

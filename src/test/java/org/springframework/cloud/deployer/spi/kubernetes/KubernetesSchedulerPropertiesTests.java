@@ -94,10 +94,11 @@ public class KubernetesSchedulerPropertiesTests {
 			KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 			if (kubernetesSchedulerProperties.getNamespace() == null) {
 				kubernetesSchedulerProperties.setNamespace("default");
+
+				assertTrue("Namespace should not be empty or null",
+						StringUtils.hasText(kubernetesSchedulerProperties.getNamespace()));
+				assertEquals("Invalid default namespace", "default", kubernetesSchedulerProperties.getNamespace());
 			}
-			assertTrue("Namespace should not be empty or null",
-					StringUtils.hasText(kubernetesSchedulerProperties.getNamespace()));
-			assertEquals("Invalid default namespace", "default", kubernetesSchedulerProperties.getNamespace());
 		}
 
 		@Test

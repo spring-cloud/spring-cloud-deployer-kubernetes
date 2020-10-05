@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 the original author or authors.
+ * Copyright 2018-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -841,10 +841,10 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 	@AfterClass
 	public static void cleanup() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
-		kubernetesSchedulerProperties.setNamespace("default");
 
 		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
-				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+				.inNamespace(kubernetesSchedulerProperties.getNamespace() != null
+						? kubernetesSchedulerProperties.getNamespace() : "default");
 
 		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
 				kubernetesSchedulerProperties);
@@ -872,9 +872,11 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		@Bean
 		public KubernetesClient kubernetesClient() {
-			kubernetesSchedulerProperties.setNamespace("default");
-			return new DefaultKubernetesClient()
-					.inNamespace(kubernetesSchedulerProperties.getNamespace());
+			if (kubernetesSchedulerProperties.getNamespace() == null) {
+				kubernetesSchedulerProperties.setNamespace("default");
+			}
+
+			return KubernetesClientFactory.getKubernetesClient(kubernetesSchedulerProperties);
 		}
 	}
 }
