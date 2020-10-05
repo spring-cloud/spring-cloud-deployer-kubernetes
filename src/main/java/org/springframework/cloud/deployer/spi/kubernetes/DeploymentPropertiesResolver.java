@@ -163,6 +163,20 @@ class DeploymentPropertiesResolver {
 			cpu = properties.getLimits().getCpu();
 		}
 
+		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+			this.propertyPrefix + ".limits.gpuVendor");
+
+		if (StringUtils.isEmpty(gpuVendor)) {
+			gpuVendor = properties.getLimits().getGpuVendor();
+		}
+
+		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+			this.propertyPrefix + ".limits.gpuCount");
+
+		if (StringUtils.isEmpty(gpuCount)) {
+			gpuCount = properties.getLimits().getGpuCount();
+		}
+
 		Map<String,Quantity> limits = new HashMap<String,Quantity>();
 
 		if (!StringUtils.isEmpty(memory)) {
@@ -171,6 +185,10 @@ class DeploymentPropertiesResolver {
 
 		if (!StringUtils.isEmpty(cpu)) {
 			limits.put("cpu", new Quantity(cpu));
+		}
+
+		if (!StringUtils.isEmpty(gpuVendor) && !StringUtils.isEmpty(gpuCount)) {
+			limits.put(gpuVendor + "/gpu", new Quantity(gpuCount));
 		}
 
 		return limits;
