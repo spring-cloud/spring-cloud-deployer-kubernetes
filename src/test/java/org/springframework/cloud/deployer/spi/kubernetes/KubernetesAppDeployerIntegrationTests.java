@@ -52,6 +52,7 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -111,8 +112,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
  * @author Christian Tzolov
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
-		"logging.level.org.springframework.cloud.deployer.spi=INFO",
-		"spring.cloud.deployer.kubernetes.namespace=default"
+		"logging.level.org.springframework.cloud.deployer.spi=INFO"
 })
 public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
@@ -131,6 +131,13 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	@Override
 	protected AppDeployer provideAppDeployer() {
 		return appDeployer;
+	}
+
+	@Before
+	public void setup() {
+		if (kubernetesClient.getNamespace() == null) {
+			kubernetesClient.getConfiguration().setNamespace("default");
+		}
 	}
 
 	@Test
