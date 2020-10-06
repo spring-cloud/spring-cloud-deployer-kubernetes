@@ -210,13 +210,14 @@ public class DefaultContainerFactoryTests {
 		cmdLineArgs.add("--spring.cloud.task.executionid=1");
 		cmdLineArgs.add("--spring.cloud.data.flow.platformname=platform1");
 		cmdLineArgs.add("--spring.cloud.data.flow.taskappname==a1");
+		cmdLineArgs.add("blah=chacha");
 		appDeploymentRequestShell = new AppDeploymentRequest(definition,
 				resource, props, cmdLineArgs);
 		shellContainerConfiguration = new ContainerConfiguration("app-test",
 				appDeploymentRequestShell);
 		containerShell = defaultContainerFactory.create(shellContainerConfiguration);
 		assertNotNull(containerShell);
-		assertTrue(containerShell.getEnv().size() == 6);
+		assertTrue(containerShell.getEnv().size() == 7);
 		assertTrue(containerShell.getArgs().size() == 0);
 		String envVarString = containerShell.getEnv().toString();
 		assertTrue(envVarString.contains("name=FOO_BAR_BAZ, value=test"));
@@ -224,6 +225,7 @@ public class DefaultContainerFactoryTests {
 		assertTrue(envVarString.contains("name=SPRING_CLOUD_TASK_EXECUTIONID, value=1"));
 		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_TASKAPPNAME, value==a1"));
 		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_PLATFORMNAME, value=platform1"));
+		assertTrue(envVarString.contains("name=BLAH, value=chacha"));
 
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
