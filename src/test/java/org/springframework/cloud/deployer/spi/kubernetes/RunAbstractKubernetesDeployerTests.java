@@ -30,6 +30,7 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.FileSystemResource;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -61,6 +62,56 @@ public class RunAbstractKubernetesDeployerTests {
 		deploymentProperties.put("spring.cloud.deployer.kubernetes.imagePullPolicy", "not-a-real-value");
 		ImagePullPolicy pullPolicy = this.deploymentPropertiesResolver.deduceImagePullPolicy(deploymentRequest.getDeploymentProperties());
 		assertThat(pullPolicy, is(ImagePullPolicy.IfNotPresent));
+	}
+
+	@Test
+	public void limitGpu_noDeploymentProperty_incompleteServerProperty1_noGpu() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuVendor("nvidia.com");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		assertNull(limits.get("nvidia.com/gpu"));
+	}
+
+	@Test
+	public void limitGpu_noDeploymentProperty_incompleteServerProperty2_noGpu() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuCount("2");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		assertNull(limits.get("nvidia.com/gpu"));
+	}
+
+	@Test
+	public void limitGpu_noDeploymentProperty_serverProperty_usesServerProperty() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuVendor("nvidia.com");
+		kubernetesDeployerProperties.getLimits().setGpuCount("2");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		MatcherAssert.assertThat(limits.get("nvidia.com/gpu"), is(new Quantity("2")));
+	}
+
+	@Test
+	public void limitGpu_deploymentPropertyVendor_usesDeploymentProperty() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuVendor("nvidia.com");
+		kubernetesDeployerProperties.getLimits().setGpuCount("2");
+		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.gpu_vendor", "ati.com");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		MatcherAssert.assertThat(limits.get("ati.com/gpu"), is(new Quantity("2")));
+	}
+
+	@Test
+	public void limitGpu_deploymentPropertyCount_usesDeploymentProperty() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuVendor("nvidia.com");
+		kubernetesDeployerProperties.getLimits().setGpuCount("2");
+		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.gpu_count", "1");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		MatcherAssert.assertThat(limits.get("nvidia.com/gpu"), is(new Quantity("1")));
+	}
+
+	@Test
+	public void limitGpu_deploymentPropertyBoth_usesDeploymentProperty() throws Exception {
+		kubernetesDeployerProperties.getLimits().setGpuVendor("nvidia.com");
+		kubernetesDeployerProperties.getLimits().setGpuCount("2");
+		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.gpu_vendor", "ati.com");
+		deploymentProperties.put("spring.cloud.deployer.kubernetes.limits.gpu_count", "1");
+		Map<String, Quantity> limits = this.deploymentPropertiesResolver.deduceResourceLimits(deploymentRequest.getDeploymentProperties());
+		MatcherAssert.assertThat(limits.get("ati.com/gpu"), is(new Quantity("1")));
 	}
 
 	@Test
