@@ -126,7 +126,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 			// The task app name(in case of Composed Task), platform_name and executionId are expected to be updated.
 			// This will also override any of the existing app properties that match the provided cmdline args.
 			for (String cmdLineArg: request.getCommandlineArguments()) {
-				String cmdLineArgKey = cmdLineArg.substring(2, cmdLineArg.indexOf("="));
+				String cmdLineArgKey;
+
+				if (cmdLineArg.startsWith("--")) {
+					cmdLineArgKey = cmdLineArg.substring(2, cmdLineArg.indexOf("="));
+				} else {
+					cmdLineArgKey = cmdLineArg.substring(0, cmdLineArg.indexOf("="));
+				}
+
 				String cmdLineArgValue = cmdLineArg.substring(cmdLineArg.indexOf("=") + 1);
 				envVarsMap.put(cmdLineArgKey.replace('.', '_').toUpperCase(), cmdLineArgValue);
 			}
