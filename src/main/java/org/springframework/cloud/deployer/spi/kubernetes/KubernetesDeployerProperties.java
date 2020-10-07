@@ -98,9 +98,9 @@ public class KubernetesDeployerProperties {
 		 * 'All' args constructor
 		 * @deprecated
 		 * This method should no longer be used to set all fields at construct time.
-		 * <p> Use the {@link LimitResources()} default constructor and set() methods instead.
-		 * @param cpu
-		 * @param memory
+		 * <p> Use the default constructor and set() methods instead.
+		 * @param cpu Container resource cpu limit
+		 * @param memory Container resource memory limit
 		 */
 		@Deprecated
 		public LimitsResources(String cpu, String memory) {
