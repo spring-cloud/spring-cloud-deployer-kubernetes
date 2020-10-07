@@ -164,14 +164,14 @@ class DeploymentPropertiesResolver {
 		}
 
 		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-			this.propertyPrefix + ".limits.gpu_vendor");
+			this.propertyPrefix + ".limits.gpuVendor");
 
 		if (StringUtils.isEmpty(gpuVendor)) {
 			gpuVendor = properties.getLimits().getGpuVendor();
 		}
 
 		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-			this.propertyPrefix + ".limits.gpu_count");
+			this.propertyPrefix + ".limits.gpuCount");
 
 		if (StringUtils.isEmpty(gpuCount)) {
 			gpuCount = properties.getLimits().getGpuCount();

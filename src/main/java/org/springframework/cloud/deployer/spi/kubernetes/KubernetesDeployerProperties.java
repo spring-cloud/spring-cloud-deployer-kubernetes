@@ -82,23 +82,30 @@ public class KubernetesDeployerProperties {
 		private String memory;
 
 		/**
-		 * Container GPU vendor limit.
+		 * Container GPU vendor name for limit
 		 */
 		private String gpuVendor;
 
 		/**
-		 * Container GPU count limit.
+		 * Container GPU count for limit.
 		 */
 		private String gpuCount;
 
 		public LimitsResources() {
 		}
 
-		public LimitsResources(String cpu, String memory, String gpuVendor, String gpuCount) {
+		/**
+		 * 'All' args constructor
+		 * @deprecated
+		 * This method should no longer be used to set all fields at construct time.
+		 * <p> Use the {@link LimitResources()} default constructor and set() methods instead.
+		 * @param cpu
+		 * @param memory
+		 */
+		@Deprecated
+		public LimitsResources(String cpu, String memory) {
 			this.cpu = cpu;
 			this.memory = memory;
-			this.gpuVendor = gpuVendor;
-			this.gpuCount = gpuCount;
 		}
 
 		public String getCpu() {
