@@ -233,7 +233,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Testing {}...", "FailedDeploymentWithLoadBalancer");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateLoadBalancer(true);
-		deployProperties.setLivenessProbePeriod(10);
+		deployProperties.setLivenessHttpProbePeriod(10);
 		deployProperties.setMaxTerminatedErrorRestarts(1);
 		deployProperties.setMaxCrashLoopBackOffRestarts(1);
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
@@ -244,9 +244,9 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Resource resource = testApplication();
 
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.livenessProbePath", "/invalidpath");
-		props.put("spring.cloud.deployer.kubernetes.livenessProbeDelay", "1");
-		props.put("spring.cloud.deployer.kubernetes.livenessProbePeriod", "1");
+		props.put("spring.cloud.deployer.kubernetes.livenessHttpProbePath", "/invalidpath");
+		props.put("spring.cloud.deployer.kubernetes.livenessHttpProbeDelay", "1");
+		props.put("spring.cloud.deployer.kubernetes.livenessHttpProbePeriod", "1");
 
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 

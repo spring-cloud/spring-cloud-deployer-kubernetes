@@ -20,9 +20,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HTTPHeader;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 
@@ -46,6 +48,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -302,13 +305,14 @@ public class DefaultContainerFactoryTests {
 				new VolumeMount("/test/nfs/overridden", null, "testnfs", true, null, null));
 	}
 
+	/**
+	 * @deprecated {@see {@link #createCustomLivenessHttpPortFromProperties()}}
+	 */
 	@Test
+	@Deprecated
 	public void createCustomLivenessPortFromProperties() {
-		int defaultPort = 8080;
-		int livenessPort = 8090;
-
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		kubernetesDeployerProperties.setLivenessProbePort(livenessPort);
+		kubernetesDeployerProperties.setLivenessProbePort(8090);
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
 
@@ -319,7 +323,7 @@ public class DefaultContainerFactoryTests {
 				resource, props);
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
-				.withExternalPort(defaultPort)
+				.withExternalPort(8080)
 				.withHostNetwork(true);
 		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
@@ -327,19 +331,50 @@ public class DefaultContainerFactoryTests {
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
 
-		assertTrue("Only two container ports should be set", containerPorts.size() == 2);
-		assertTrue(8080 == containerPorts.get(0).getContainerPort());
-		assertTrue(8080 == containerPorts.get(0).getHostPort());
-		assertTrue(8090 == containerPorts.get(1).getContainerPort());
-		assertTrue(8090 == containerPorts.get(1).getHostPort());
-		assertTrue(8090 == container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
 	}
 
 	@Test
+	public void createCustomLivenessHttpPortFromProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setLivenessHttpProbePort(8090);
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(8080)
+				.withHostNetwork(true);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+	/**
+	 * @deprecated {@see {@link #createCustomLivenessHttpPortFromAppRequest()}}
+	 */
+	@Test
+	@Deprecated
 	public void createCustomLivenessPortFromAppRequest() {
-		int defaultPort = 8080;
-		int livenessPort = 8090;
-
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
@@ -347,32 +382,63 @@ public class DefaultContainerFactoryTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.liveness-probe-port", Integer.toString(livenessPort));
+		props.put("spring.cloud.deployer.kubernetes.liveness-probe-port", Integer.toString(8090));
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
 				.withHostNetwork(true)
-				.withExternalPort(defaultPort);
+				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
 
-		assertTrue("Only two container ports should be set", containerPorts.size() == 2);
-		assertTrue(8080 == containerPorts.get(0).getContainerPort());
-		assertTrue(8080 == containerPorts.get(0).getHostPort());
-		assertTrue(8090 == containerPorts.get(1).getContainerPort());
-		assertTrue(8090 == containerPorts.get(1).getHostPort());
-		assertTrue(8090 == container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
 	}
 
 	@Test
+	public void createCustomLivenessHttpPortFromAppRequest() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.liveness-http-probe-port", Integer.toString(8090));
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+	/**
+	 * @deprecated {@see {@link #createCustomReadinessHttpPortFromAppRequest()}}
+	 */
+	@Test
+	@Deprecated
 	public void createCustomReadinessPortFromAppRequest() {
-		int defaultPort = 8080;
-		int readinessPort = 8090;
-
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
@@ -380,34 +446,126 @@ public class DefaultContainerFactoryTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		Resource resource = getResource();
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.readinessProbePort", Integer.toString(readinessPort));
+		props.put("spring.cloud.deployer.kubernetes.readinessProbePort", Integer.toString(8090));
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
 				resource, props);
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
 				.withHostNetwork(true)
-				.withExternalPort(defaultPort);
+				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
 
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
 
-		assertTrue("Only two container ports should be set", containerPorts.size() == 2);
-		assertTrue(8080 == containerPorts.get(0).getContainerPort());
-		assertTrue(8080 == containerPorts.get(0).getHostPort());
-		assertTrue(8090 == containerPorts.get(1).getContainerPort());
-		assertTrue(8090 == containerPorts.get(1).getHostPort());
-		assertTrue(8090 == container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
 	}
 
 	@Test
+	public void createCustomReadinessHttpPortFromAppRequest() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.readinessHttpProbePort", Integer.toString(8090));
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+	/**
+	 * @deprecated {@see {@link #createCustomReadinessHttpPortFromProperties()}}
+	 */
+	@Test
+	@Deprecated
 	public void createCustomReadinessPortFromProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessProbePort(8090);
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+	@Test
+	public void createCustomReadinessHttpPortFromProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessHttpProbePort(8090);
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals("Only two container ports should be set", 2, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
+		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
+		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+	}
+
+	@Test
+	public void createDefaultHttpProbePorts() {
 		int defaultPort = 8080;
-		int readinessPort = 8090;
 
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		kubernetesDeployerProperties.setReadinessProbePort(readinessPort);
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
 
@@ -422,48 +580,17 @@ public class DefaultContainerFactoryTests {
 				.withExternalPort(defaultPort);
 		Container container = defaultContainerFactory.create(containerConfiguration);
 		assertNotNull(container);
-
 		List<ContainerPort> containerPorts = container.getPorts();
 		assertNotNull(containerPorts);
-
-		assertTrue("Only two container ports should be set", containerPorts.size() == 2);
-		assertTrue(8080 == containerPorts.get(0).getContainerPort());
-		assertTrue(8080 == containerPorts.get(0).getHostPort());
-		assertTrue(8090 == containerPorts.get(1).getContainerPort());
-		assertTrue(8090 == containerPorts.get(1).getHostPort());
-		assertTrue(8090 == container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("Only the default container port should set", 1, containerPorts.size());
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8080, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals(8080, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
 	}
 
 	@Test
-	public void createDefaultProbePorts() {
-		int defaultPort = 8080;
-
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
-				kubernetesDeployerProperties);
-
-		AppDefinition definition = new AppDefinition("app-test", null);
-		Resource resource = getResource();
-		Map<String, String> props = new HashMap<>();
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
-				resource, props);
-
-		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
-				.withHostNetwork(true)
-				.withExternalPort(defaultPort);
-		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
-		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
-		assertTrue("Only the default container port should set", containerPorts.size() == 1);
-		assertTrue(8080 == containerPorts.get(0).getContainerPort());
-		assertTrue(8080 == containerPorts.get(0).getHostPort());
-		assertTrue(8080 == container.getLivenessProbe().getHttpGet().getPort().getIntVal());
-		assertTrue(8080 == container.getReadinessProbe().getHttpGet().getPort().getIntVal());
-	}
-
-	@Test
-	public void createProbesWithDefaultEndpoints() {
+	public void createHttpProbesWithDefaultEndpoints() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
@@ -484,14 +611,14 @@ public class DefaultContainerFactoryTests {
 		assertNotNull(container);
 
 		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(HttpProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
 
 		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(HttpProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
 	}
 
 	@Test
-	public void createProbesWithBoot1Endpoints() {
+	public void createHttpProbesWithBoot1Endpoints() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
@@ -514,13 +641,17 @@ public class DefaultContainerFactoryTests {
 		assertNotNull(container);
 
 		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals(HttpProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
 
 		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(ProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals(HttpProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
 	}
 
+	/**
+	 * @deprecated {@see {@link #createHttpProbesWithOverrides()}}
+	 */
 	@Test
+	@Deprecated
 	public void createProbesWithOverrides() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
@@ -552,6 +683,41 @@ public class DefaultContainerFactoryTests {
 	}
 
 	@Test
+	public void createHttpProbesWithOverrides() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessHttpProbePath", "/liveness");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessHttpProbePath", "/readiness");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	/**
+	 * @deprecated {@see {@link #createHttpProbesWithPropertyOverrides()}}
+	 */
+	@Test
+	@Deprecated
 	public void createProbesWithPropertyOverrides() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setReadinessProbePath("/readiness");
@@ -581,7 +747,36 @@ public class DefaultContainerFactoryTests {
 	}
 
 	@Test
-	public void testProbeCredentialsSecret() throws Exception {
+	public void createHttpProbesWithPropertyOverrides() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessHttpProbePath("/readiness");
+		kubernetesDeployerProperties.setLivenessHttpProbePath("/liveness");
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, null);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+	}
+
+	@Test
+	public void testHttpProbeCredentialsSecret() {
 		Secret secret = randomSecret();
 		String secretName = secret.getMetadata().getName();
 
@@ -599,19 +794,19 @@ public class DefaultContainerFactoryTests {
 		Container container = containerFactory.create(containerConfiguration);
 
 		String credentials = containerConfiguration.getProbeCredentialsSecret().getData()
-				.get(ProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME);
+				.get(HttpProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME);
 
 		HTTPHeader livenessProbeHeader = container.getLivenessProbe().getHttpGet().getHttpHeaders().get(0);
-		assertEquals(ProbeCreator.AUTHORIZATION_HEADER_NAME, livenessProbeHeader.getName());
+		assertEquals(HttpProbeCreator.AUTHORIZATION_HEADER_NAME, livenessProbeHeader.getName());
 		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, livenessProbeHeader.getValue());
 
 		HTTPHeader readinessProbeHeader = container.getReadinessProbe().getHttpGet().getHttpHeaders().get(0);
-		assertEquals(ProbeCreator.AUTHORIZATION_HEADER_NAME, readinessProbeHeader.getName());
+		assertEquals(HttpProbeCreator.AUTHORIZATION_HEADER_NAME, readinessProbeHeader.getName());
 		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, readinessProbeHeader.getValue());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testProbeCredentialsInvalidSecret() throws Exception {
+	public void testHttpProbeCredentialsInvalidSecret() {
 		Secret secret = randomSecret();
 		secret.setData(Collections.singletonMap("unexpectedkey", "dXNlcjpwYXNz"));
 
@@ -634,7 +829,7 @@ public class DefaultContainerFactoryTests {
 	}
 
 	@Test
-	public void testProbeHeadersWithoutAuth() throws Exception {
+	public void testHttpProbeHeadersWithoutAuth() {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource());
 
@@ -648,6 +843,497 @@ public class DefaultContainerFactoryTests {
 				container.getLivenessProbe().getHttpGet().getHttpHeaders().isEmpty());
 		assertTrue("Readiness probe should not contain any HTTP headers",
 				container.getReadinessProbe().getHttpGet().getHttpHeaders().isEmpty());
+	}
+
+	@Test
+	public void createTcpProbe() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePort", "5050");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePort", "9090");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(9090).withContainerPort(9090).build());
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
+		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+
+		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
+		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+
+		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbe.getPeriodSeconds());
+		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbe.getPeriodSeconds());
+
+		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbe.getInitialDelaySeconds());
+		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbe.getInitialDelaySeconds());
+	}
+
+	@Test
+	public void createTcpProbeMissingLivenessPort() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePort", "5050");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		try {
+			defaultContainerFactory.create(containerConfiguration);
+		} catch (IllegalArgumentException e) {
+			assertTrue("Expected livenessTcpProbePort to be set", e.getMessage()
+					.contains("The livenessTcpProbePort property must be set"));
+		}
+	}
+
+	@Test
+	public void createTcpProbeMissingReadinessPort() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePort", "5050");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		try {
+			defaultContainerFactory.create(containerConfiguration);
+		} catch (IllegalArgumentException e) {
+			assertTrue("A readinessTcpProbePort property must be set.", e.getMessage()
+					.contains("A readinessTcpProbePort property must be set."));
+		}
+	}
+
+	@Test
+	public void createReadinessTcpProbeWithNonDigitPort() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePort", "9090");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePort", "somePort");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		try {
+			defaultContainerFactory.create(containerConfiguration);
+		} catch (Exception e) {
+			assertTrue("ReadinessTcpPortProbe must contain all digits",
+					e.getMessage().contains("ReadinessTcpProbePort must contain all digits"));
+		}
+	}
+
+	@Test
+	public void createLivenessTcpProbeWithNonDigitPort() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePort", "somePort");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePort", "5050");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		try {
+			defaultContainerFactory.create(containerConfiguration);
+		} catch (Exception e) {
+			assertTrue("LivenessTcpPortProbe must contain all digits",
+					e.getMessage().contains("LivenessTcpProbePort must contain all digits"));
+		}
+	}
+
+	@Test
+	public void createTcpProbeGlobalProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setProbeType(ProbeType.TCP);
+		kubernetesDeployerProperties.setReadinessTcpProbePort(5050);
+		kubernetesDeployerProperties.setReadinessTcpProbeDelay(1);
+		kubernetesDeployerProperties.setReadinessTcpProbePeriod(2);
+		kubernetesDeployerProperties.setLivenessTcpProbePort(9090);
+		kubernetesDeployerProperties.setLivenessTcpProbeDelay(3);
+		kubernetesDeployerProperties.setLivenessTcpProbePeriod(4);
+
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, null);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(9090).withContainerPort(9090).build());
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
+		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+
+		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
+		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+
+		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
+		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbePeriodSeconds);
+		assertEquals("Invalid livesness TCP probe period seconds", 4, livenessProbePeriodSeconds.intValue());
+
+		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
+		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbePeriodSeconds);
+		assertEquals("Invalid readiness TCP probe period seconds", 2, readinessProbePeriodSeconds.intValue());
+
+		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
+		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
+		assertEquals("Invalid liveness TCP probe initial delay seconds", 3, livenessProbeInitialDelaySeconds.intValue());
+
+		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
+		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
+		assertEquals("Invalid readiness TCP probe initial delay seconds", 1, readinessProbeInitialDelaySeconds.intValue());
+	}
+
+	@Test
+	public void createTcpProbeGlobalPropertyOverride() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setProbeType(ProbeType.TCP);
+		kubernetesDeployerProperties.setReadinessTcpProbePort(5050);
+		kubernetesDeployerProperties.setReadinessTcpProbeDelay(1);
+		kubernetesDeployerProperties.setReadinessTcpProbePeriod(2);
+		kubernetesDeployerProperties.setLivenessTcpProbePort(9090);
+		kubernetesDeployerProperties.setLivenessTcpProbeDelay(3);
+		kubernetesDeployerProperties.setLivenessTcpProbePeriod(4);
+
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.TCP.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePort", "5050");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbePeriod", "11");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessTcpProbeDelay", "12");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePort", "9090");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbePeriod", "13");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessTcpProbeDelay", "14");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
+		assertThat(container.getPorts())
+				.contains(new ContainerPortBuilder().withHostPort(9090).withContainerPort(9090).build());
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
+		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+
+		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
+		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
+		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+
+		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
+		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbePeriodSeconds);
+		assertEquals("Invalid livesness TCP probe period seconds", 13, livenessProbePeriodSeconds.intValue());
+
+		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
+		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbePeriodSeconds);
+		assertEquals("Invalid readiness TCP probe period seconds", 11, readinessProbePeriodSeconds.intValue());
+
+		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
+		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
+		assertEquals("Invalid liveness TCP probe initial delay seconds", 14, livenessProbeInitialDelaySeconds.intValue());
+
+		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
+		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
+		assertEquals("Invalid readiness TCP probe initial delay seconds", 12, readinessProbeInitialDelaySeconds.intValue());
+	}
+
+	@Test
+	public void createCommandProbe() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.COMMAND.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessCommandProbeCommand", "ls /");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessCommandProbeCommand", "ls /dev");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		List<String> livenessCommandProbeCommand = livenessProbe.getExec().getCommand();
+		assertFalse("Liveness command probe command should not be empty", livenessCommandProbeCommand.isEmpty());
+		assertEquals("Invalid liveness command probe command", "ls /dev", String.join(" ", livenessCommandProbeCommand));
+
+		List<String> readinessCommandProbeCommand = readinessProbe.getExec().getCommand();
+		assertFalse("Readiness command probe command should not be empty", readinessCommandProbeCommand.isEmpty());
+		assertEquals("Invalid readiness command probe command", "ls /", String.join(" ", readinessCommandProbeCommand));
+
+		assertNotNull("Liveness command probe period seconds should not be null", livenessProbe.getPeriodSeconds());
+		assertNotNull("Readiness command probe period seconds should not be null", readinessProbe.getPeriodSeconds());
+
+		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbe.getInitialDelaySeconds());
+		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbe.getInitialDelaySeconds());
+	}
+
+	@Test
+	public void createCommandProbeMissingCommand() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.COMMAND.name());
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		try {
+			defaultContainerFactory.create(containerConfiguration);
+		} catch (IllegalArgumentException e) {
+			assertTrue("The readinessCommandProbeCommand property must be set.", e.getMessage()
+					.contains("The readinessCommandProbeCommand property must be set."));
+		}
+	}
+
+	@Test
+	public void createCommandProbeGlobalProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setProbeType(ProbeType.COMMAND);
+		kubernetesDeployerProperties.setReadinessCommandProbeCommand("ls /");
+		kubernetesDeployerProperties.setReadinessCommandProbeDelay(1);
+		kubernetesDeployerProperties.setReadinessCommandProbePeriod(2);
+		kubernetesDeployerProperties.setLivenessCommandProbeCommand("ls /dev");
+		kubernetesDeployerProperties.setLivenessCommandProbeDelay(3);
+		kubernetesDeployerProperties.setLivenessCommandProbePeriod(4);
+
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, null);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		String livenessTcpProbeCommand = String.join(" ", livenessProbe.getExec().getCommand());
+		assertNotNull("Liveness command probe command should not be null", livenessTcpProbeCommand);
+		assertEquals("Invalid liveness command probe command", "ls /dev", livenessTcpProbeCommand);
+
+		String readinessTcpProbeCommand = String.join(" ", readinessProbe.getExec().getCommand());
+		assertNotNull("Readiness command probe command should not be null", readinessTcpProbeCommand);
+		assertEquals("Invalid readiness command probe command", "ls /", readinessTcpProbeCommand);
+
+		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
+		assertNotNull("Liveness command probe period seconds should not be null", livenessProbePeriodSeconds);
+		assertEquals("Invalid livesness command probe period seconds", 4, livenessProbePeriodSeconds.intValue());
+
+		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
+		assertNotNull("Readiness command probe period seconds should not be null", readinessProbePeriodSeconds);
+		assertEquals("Invalid readiness command probe period seconds", 2, readinessProbePeriodSeconds.intValue());
+
+		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
+		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
+		assertEquals("Invalid liveness command probe initial delay seconds", 3, livenessProbeInitialDelaySeconds.intValue());
+
+		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
+		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
+		assertEquals("Invalid readiness command probe initial delay seconds", 1, readinessProbeInitialDelaySeconds.intValue());
+	}
+
+	@Test
+	public void createCommandProbeGlobalPropertyOverride() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setProbeType(ProbeType.COMMAND);
+		kubernetesDeployerProperties.setReadinessCommandProbeCommand("ls /");
+		kubernetesDeployerProperties.setReadinessCommandProbeDelay(1);
+		kubernetesDeployerProperties.setReadinessCommandProbePeriod(2);
+		kubernetesDeployerProperties.setLivenessCommandProbeCommand("ls /dev");
+		kubernetesDeployerProperties.setLivenessCommandProbeDelay(3);
+		kubernetesDeployerProperties.setLivenessCommandProbePeriod(4);
+
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.probeType", ProbeType.COMMAND.name());
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessCommandProbeCommand", "ls /");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessCommandProbePeriod", "11");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessCommandProbeDelay", "12");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessCommandProbeCommand", "ls /dev");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessCommandProbePeriod", "13");
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessCommandProbeDelay", "14");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		Probe livenessProbe = container.getLivenessProbe();
+		Probe readinessProbe = container.getReadinessProbe();
+
+		assertNotNull("LivenessProbe should not be null", livenessProbe);
+		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+
+		String livenessTcpProbeCommand = String.join(" ", livenessProbe.getExec().getCommand());
+		assertNotNull("Liveness command probe command should not be null", livenessTcpProbeCommand);
+		assertEquals("Invalid liveness command probe command", "ls /dev", livenessTcpProbeCommand);
+
+		String readinessTcpProbeCommand = String.join(" ", readinessProbe.getExec().getCommand());
+		assertNotNull("Readiness command probe command should not be null", readinessTcpProbeCommand);
+		assertEquals("Invalid readiness command probe command", "ls /", readinessTcpProbeCommand);
+
+		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
+		assertNotNull("Liveness command probe period seconds should not be null", livenessProbePeriodSeconds);
+		assertEquals("Invalid livesness command probe period seconds", 13, livenessProbePeriodSeconds.intValue());
+
+		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
+		assertNotNull("Readiness command probe period seconds should not be null", readinessProbePeriodSeconds);
+		assertEquals("Invalid readiness command probe period seconds", 11, readinessProbePeriodSeconds.intValue());
+
+		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
+		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
+		assertEquals("Invalid liveness command probe initial delay seconds", 14, livenessProbeInitialDelaySeconds.intValue());
+
+		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
+		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
+		assertEquals("Invalid readiness command probe initial delay seconds", 12, readinessProbeInitialDelaySeconds.intValue());
 	}
 
 	@Test
@@ -689,7 +1375,7 @@ public class DefaultContainerFactoryTests {
 		objectMeta.setName(secretName);
 
 		Secret secret = new Secret();
-		secret.setData(Collections.singletonMap(ProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME, secretValue));
+		secret.setData(Collections.singletonMap(HttpProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME, secretValue));
 		secret.setMetadata(objectMeta);
 
 		return secret;

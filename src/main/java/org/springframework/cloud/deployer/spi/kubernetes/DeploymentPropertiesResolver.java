@@ -776,6 +776,18 @@ class DeploymentPropertiesResolver {
 		return entryPointStyle;
 	}
 
+	ProbeType determineProbeType(Map<String, String> deploymentProperties) {
+		ProbeType probeType = this.properties.getProbeType();
+		String deployerPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".probeType", null);
+
+		if (StringUtils.hasText(deployerPropertyValue)) {
+			probeType = ProbeType.valueOf(deployerPropertyValue.toUpperCase());
+		}
+
+		return probeType;
+	}
+
 	List<EnvVar> getConfigMapKeyRefs(Map<String, String> deploymentProperties) {
 		List<EnvVar> configMapKeyRefs = new ArrayList<>();
 		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,

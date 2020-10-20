@@ -211,26 +211,58 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 	private void configureReadinessProbe(ContainerConfiguration containerConfiguration,
 						ContainerBuilder containerBuilder, Set<Integer> ports) {
-		Probe readinessProbe = new ReadinessProbeCreator(this.properties, containerConfiguration).create();
+		Probe readinessProbe = ProbeCreatorFactory.createReadinessProbe(containerConfiguration, properties,
+				getProbeType(containerConfiguration));
 
-		Integer readinessProbePort = readinessProbe.getHttpGet().getPort().getIntVal();
+		Integer probePort = null;
 
-		if (readinessProbePort != null) {
+		if (readinessProbe.getHttpGet() != null) {
+			probePort = readinessProbe.getHttpGet().getPort().getIntVal();
+		}
+
+		if (readinessProbe.getTcpSocket() != null) {
+			probePort = readinessProbe.getTcpSocket().getPort().getIntVal();
+		}
+
+		if (probePort != null || (containerConfiguration.getExternalPort() != null && readinessProbe.getExec() != null)) {
 			containerBuilder.withReadinessProbe(readinessProbe);
-			ports.add(readinessProbePort);
+		}
+
+		if (probePort != null) {
+			ports.add(probePort);
 		}
 	}
 
 	private void configureLivenessProbe(ContainerConfiguration containerConfiguration,
 						ContainerBuilder containerBuilder, Set<Integer> ports) {
-		Probe livenessProbe = new LivenessProbeCreator(properties, containerConfiguration).create();
+		Probe livenessProbe = ProbeCreatorFactory.createLivenessProbe(containerConfiguration, properties,
+				getProbeType(containerConfiguration));
 
-		Integer livenessProbePort = livenessProbe.getHttpGet().getPort().getIntVal();
+		Integer probePort = null;
 
-		if (livenessProbePort != null) {
-			containerBuilder.withLivenessProbe(livenessProbe);
-			ports.add(livenessProbePort);
+		if (livenessProbe.getHttpGet() != null) {
+			probePort = livenessProbe.getHttpGet().getPort().getIntVal();
 		}
+
+		if (livenessProbe.getTcpSocket() != null) {
+			probePort = livenessProbe.getTcpSocket().getPort().getIntVal();
+		}
+
+		if (probePort != null || (containerConfiguration.getExternalPort() != null && livenessProbe.getExec() != null)) {
+			containerBuilder.withLivenessProbe(livenessProbe);
+		}
+
+		if (probePort != null) {
+			ports.add(probePort);
+		}
+	}
+
+	private ProbeType getProbeType(ContainerConfiguration containerConfiguration) {
+		AppDeploymentRequest appDeploymentRequest = containerConfiguration.getAppDeploymentRequest();
+		Map<String, String> deploymentProperties = getDeploymentProperties(appDeploymentRequest);
+		DeploymentPropertiesResolver deploymentPropertiesResolver = getDeploymentPropertiesResolver(appDeploymentRequest);
+
+		return deploymentPropertiesResolver.determineProbeType(deploymentProperties);
 	}
 
 	/**
