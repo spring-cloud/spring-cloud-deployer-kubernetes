@@ -453,9 +453,74 @@ public class KubernetesDeployerProperties {
 	private Integer readinessProbePort = null;
 
 	/**
+	 * Delay in seconds when the liveness TCP check should start checking
+	 */
+	private int livenessTcpProbeDelay = 10;
+
+	/**
+	 * Period in seconds to perform the liveness TCP check
+	 */
+	private int livenessTcpProbePeriod = 60;
+
+	/**
+	 * The TCP port the liveness probe should check
+	 */
+	private Integer livenessTcpProbePort = null;
+
+	/**
+	 * Delay in seconds when the readiness TCP check should start checking
+	 */
+	private int readinessTcpProbeDelay = 10;
+
+	/**
+	 * Period in seconds to perform the readiness TCP check
+	 */
+	private int readinessTcpProbePeriod = 10;
+
+	/**
+	 * The TCP port the readiness probe should check
+	 */
+	private Integer readinessTcpProbePort = null;
+
+	/**
+	 * Delay in seconds when the readiness command check should start checking
+	 */
+	private int readinessCommandProbeDelay = 10;
+
+	/**
+	 * Period in seconds to perform the readiness command check
+	 */
+	private int readinessCommandProbePeriod = 10;
+
+	/**
+	 * The command the readiness probe should use to check
+	 */
+	private String readinessCommandProbeCommand = null;
+
+	/**
+	 * Delay in seconds when the liveness command check should start checking
+	 */
+	private int livenessCommandProbeDelay = 10;
+
+	/**
+	 * Period in seconds to perform the liveness command check
+	 */
+	private int livenessCommandProbePeriod = 10;
+
+	/**
+	 * The command the liveness probe should use to check
+	 */
+	private String livenessCommandProbeCommand = null;
+
+	/**
 	 * The secret name containing the credentials to use when accessing secured probe endpoints.
 	 */
 	private String probeCredentialsSecret;
+
+	/**
+	 * The probe type to use when doing health checks. Defaults to HTTP.
+	 */
+	private ProbeType probeType = ProbeType.HTTP;
 
 	/**
 	 * Memory and CPU limits (i.e. maximum needed values) to allocate for a Pod.
@@ -712,12 +777,116 @@ public class KubernetesDeployerProperties {
 		this.readinessProbePort = readinessProbePort;
 	}
 
+	public int getLivenessTcpProbeDelay() {
+		return livenessTcpProbeDelay;
+	}
+
+	public void setLivenessTcpProbeDelay(int livenessTcpProbeDelay) {
+		this.livenessTcpProbeDelay = livenessTcpProbeDelay;
+	}
+
+	public int getLivenessTcpProbePeriod() {
+		return livenessTcpProbePeriod;
+	}
+
+	public void setLivenessTcpProbePeriod(int livenessTcpProbePeriod) {
+		this.livenessTcpProbePeriod = livenessTcpProbePeriod;
+	}
+
+	public Integer getLivenessTcpProbePort() {
+		return livenessTcpProbePort;
+	}
+
+	public void setLivenessTcpProbePort(Integer livenessTcpProbePort) {
+		this.livenessTcpProbePort = livenessTcpProbePort;
+	}
+
+	public int getReadinessTcpProbeDelay() {
+		return readinessTcpProbeDelay;
+	}
+
+	public void setReadinessTcpProbeDelay(int readinessTcpProbeDelay) {
+		this.readinessTcpProbeDelay = readinessTcpProbeDelay;
+	}
+
+	public int getReadinessTcpProbePeriod() {
+		return readinessTcpProbePeriod;
+	}
+
+	public void setReadinessTcpProbePeriod(int readinessTcpProbePeriod) {
+		this.readinessTcpProbePeriod = readinessTcpProbePeriod;
+	}
+
+	public Integer getReadinessTcpProbePort() {
+		return readinessTcpProbePort;
+	}
+
+	public void setReadinessTcpProbePort(Integer readinessTcpProbePort) {
+		this.readinessTcpProbePort = readinessTcpProbePort;
+	}
+
+	public int getReadinessCommandProbeDelay() {
+		return readinessCommandProbeDelay;
+	}
+
+	public void setReadinessCommandProbeDelay(int readinessCommandProbeDelay) {
+		this.readinessCommandProbeDelay = readinessCommandProbeDelay;
+	}
+
+	public int getReadinessCommandProbePeriod() {
+		return readinessCommandProbePeriod;
+	}
+
+	public void setReadinessCommandProbePeriod(int readinessCommandProbePeriod) {
+		this.readinessCommandProbePeriod = readinessCommandProbePeriod;
+	}
+
+	public String getReadinessCommandProbeCommand() {
+		return readinessCommandProbeCommand;
+	}
+
+	public void setReadinessCommandProbeCommand(String readinessCommandProbeCommand) {
+		this.readinessCommandProbeCommand = readinessCommandProbeCommand;
+	}
+
+	public int getLivenessCommandProbeDelay() {
+		return livenessCommandProbeDelay;
+	}
+
+	public void setLivenessCommandProbeDelay(int livenessCommandProbeDelay) {
+		this.livenessCommandProbeDelay = livenessCommandProbeDelay;
+	}
+
+	public int getLivenessCommandProbePeriod() {
+		return livenessCommandProbePeriod;
+	}
+
+	public void setLivenessCommandProbePeriod(int livenessCommandProbePeriod) {
+		this.livenessCommandProbePeriod = livenessCommandProbePeriod;
+	}
+
+	public String getLivenessCommandProbeCommand() {
+		return livenessCommandProbeCommand;
+	}
+
+	public void setLivenessCommandProbeCommand(String livenessCommandProbeCommand) {
+		this.livenessCommandProbeCommand = livenessCommandProbeCommand;
+	}
+
 	public String getProbeCredentialsSecret() {
 		return probeCredentialsSecret;
 	}
 
 	public void setProbeCredentialsSecret(String probeCredentialsSecret) {
 		this.probeCredentialsSecret = probeCredentialsSecret;
+	}
+
+	public ProbeType getProbeType() {
+		return probeType;
+	}
+
+	public void setProbeType(ProbeType probeType) {
+		this.probeType = probeType;
 	}
 
 	public StatefulSet getStatefulSet() {

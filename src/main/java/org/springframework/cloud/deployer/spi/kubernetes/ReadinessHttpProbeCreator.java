@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 the original author or authors.
+ * Copyright 2018-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,33 +20,32 @@ import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.StringUtils;
 
 /**
- * Creates a Liveness Probe.
+ * Creates an HTTP Readiness Probe.
  *
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  */
-class LivenessProbeCreator extends ProbeCreator {
+class ReadinessHttpProbeCreator extends HttpProbeCreator {
+	private final String propertyPrefix;
 
-	private final String probPropertyPrefix;
-
-	public LivenessProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
-			ContainerConfiguration containerConfiguration) {
+	public ReadinessHttpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
+									 ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.probPropertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.liveness" : "spring.cloud.deployer.kubernetes.liveness";
+		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
+				"spring.cloud.scheduler.kubernetes.readiness" : "spring.cloud.deployer.kubernetes.readiness";
 	}
 
 	@Override
 	public Integer getPort() {
-		String probePortKey = this.probPropertyPrefix + "ProbePort";
+		String probePortKey = this.propertyPrefix + "ProbePort";
 		String probePortValue = getDeploymentPropertyValue(probePortKey);
 
 		if (StringUtils.hasText(probePortValue)) {
 			return Integer.parseInt(probePortValue);
 		}
 
-		if (getKubernetesDeployerProperties().getLivenessProbePort() != null) {
-			return getKubernetesDeployerProperties().getLivenessProbePort();
+		if (getKubernetesDeployerProperties().getReadinessProbePort() != null) {
+			return getKubernetesDeployerProperties().getReadinessProbePort();
 		}
 
 		if (getDefaultPort() != null) {
@@ -58,57 +57,57 @@ class LivenessProbeCreator extends ProbeCreator {
 
 	@Override
 	protected String getProbePath() {
-		String probePathKey = this.probPropertyPrefix + "ProbePath";
-		String probePathValue =  getDeploymentPropertyValue(probePathKey);
+		String probePathKey = this.propertyPrefix + "ProbePath";
+		String probePathValue = getDeploymentPropertyValue(probePathKey);
 
 		if (StringUtils.hasText(probePathValue)) {
 			return probePathValue;
 		}
 
-		if (getKubernetesDeployerProperties().getLivenessProbePath() != null) {
-			return getKubernetesDeployerProperties().getLivenessProbePath();
+		if (getKubernetesDeployerProperties().getReadinessProbePath() != null) {
+			return getKubernetesDeployerProperties().getReadinessProbePath();
 		}
 
 		if (useBoot1ProbePath()) {
-			return BOOT_1_LIVENESS_PROBE_PATH;
+			return BOOT_1_READINESS_PROBE_PATH;
 		}
 
-		return BOOT_2_LIVENESS_PROBE_PATH;
+		return BOOT_2_READINESS_PROBE_PATH;
 	}
 
 	@Override
 	protected int getTimeout() {
-		String probeTimeoutKey = this.probPropertyPrefix + "ProbeTimeout";
+		String probeTimeoutKey = this.propertyPrefix + "ProbeTimeout";
 		String probeTimeoutValue = getDeploymentPropertyValue(probeTimeoutKey);
 
 		if (StringUtils.hasText(probeTimeoutValue)) {
 			return Integer.valueOf(probeTimeoutValue);
 		}
 
-		return getKubernetesDeployerProperties().getLivenessProbeTimeout();
+		return getKubernetesDeployerProperties().getReadinessProbeTimeout();
 	}
 
 	@Override
 	protected int getInitialDelay() {
-		String probeDelayKey = this.probPropertyPrefix + "ProbeDelay";
+		String probeDelayKey = this.propertyPrefix + "ProbeDelay";
 		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
 		}
 
-		return getKubernetesDeployerProperties().getLivenessProbeDelay();
+		return getKubernetesDeployerProperties().getReadinessProbeDelay();
 	}
 
 	@Override
 	protected int getPeriod() {
-		String probePeriodKey = this.probPropertyPrefix + "ProbePeriod";
+		String probePeriodKey = this.propertyPrefix + "ProbePeriod";
 		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
 		}
 
-		return getKubernetesDeployerProperties().getLivenessProbePeriod();
+		return getKubernetesDeployerProperties().getReadinessProbePeriod();
 	}
 }
