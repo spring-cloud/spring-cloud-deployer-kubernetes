@@ -24,6 +24,7 @@ import io.fabric8.kubernetes.api.model.ProbeBuilder;
  * Base class for command based probe creators
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 abstract class CommandProbeCreator extends ProbeCreator {
 	CommandProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,

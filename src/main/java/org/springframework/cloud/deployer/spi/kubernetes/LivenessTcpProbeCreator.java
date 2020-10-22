@@ -16,27 +16,22 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.StringUtils;
 
 /**
  * Creates a TCP liveness probe
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 class LivenessTcpProbeCreator extends TcpProbeCreator {
-	private final String propertyPrefix;
-
 	LivenessTcpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties, ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.liveness" : "spring.cloud.deployer.kubernetes.liveness";
 	}
 
 	@Override
 	int getInitialDelay() {
-		String probeDelayKey = this.propertyPrefix + "TcpProbeDelay";
-		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
+		String probeDelayValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
@@ -47,8 +42,7 @@ class LivenessTcpProbeCreator extends TcpProbeCreator {
 
 	@Override
 	int getPeriod() {
-		String probePeriodKey = this.propertyPrefix + "TcpProbePeriod";
-		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
+		String probePeriodValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
@@ -59,8 +53,7 @@ class LivenessTcpProbeCreator extends TcpProbeCreator {
 
 	@Override
 	Integer getPort() {
-		String probePortKey = this.propertyPrefix + "TcpProbePort";
-		String probePortValue = getDeploymentPropertyValue(probePortKey);
+		String probePortValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbePort");
 
 		if (StringUtils.hasText(probePortValue)) {
 			if (!probePortValue.chars().allMatch(Character :: isDigit)) {
@@ -74,6 +67,6 @@ class LivenessTcpProbeCreator extends TcpProbeCreator {
 			return getKubernetesDeployerProperties().getLivenessTcpProbePort();
 		}
 
-		throw new IllegalArgumentException("A livenessTcpProbePort property must be set.");
+		throw new IllegalArgumentException("The livenessTcpProbePort property must be set.");
 	}
 }

@@ -16,28 +16,23 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
 import org.springframework.util.StringUtils;
 
 /**
- * Creates a command based readinness probe
+ * Creates a command based readiness probe
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 class ReadinessCommandProbeCreator extends CommandProbeCreator {
-	private final String propertyPrefix;
-
 	ReadinessCommandProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties, ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.readiness" : "spring.cloud.deployer.kubernetes.readiness";
 	}
 
 	@Override
 	int getInitialDelay() {
-		String probeDelayKey = this.propertyPrefix + "CommandProbeDelay";
-		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
+		String probeDelayValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
@@ -48,8 +43,7 @@ class ReadinessCommandProbeCreator extends CommandProbeCreator {
 
 	@Override
 	int getPeriod() {
-		String probePeriodKey = this.propertyPrefix + "CommandProbePeriod";
-		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
+		String probePeriodValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
@@ -60,8 +54,7 @@ class ReadinessCommandProbeCreator extends CommandProbeCreator {
 
 	@Override
 	String[] getCommand() {
-		String probeCommandKey = this.propertyPrefix + "CommandProbeCommand";
-		String probeCommandValue = getDeploymentPropertyValue(probeCommandKey);
+		String probeCommandValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbeCommand");
 
 		if (StringUtils.hasText(probeCommandValue)) {
 			return new CommandLineTokenizer(probeCommandValue).getArgs().toArray(new String[0]);
@@ -72,6 +65,6 @@ class ReadinessCommandProbeCreator extends CommandProbeCreator {
 					.getArgs().toArray(new String[0]);
 		}
 
-		throw new IllegalArgumentException("A readinessCommandProbeCommand property must be set.");
+		throw new IllegalArgumentException("The readinessCommandProbeCommand property must be set.");
 	}
 }

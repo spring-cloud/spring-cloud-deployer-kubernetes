@@ -726,7 +726,7 @@ public class DefaultContainerFactoryTests {
 			defaultContainerFactory.create(containerConfiguration);
 		} catch (IllegalArgumentException e) {
 			assertTrue("Expected livenessTcpProbePort to be set", e.getMessage()
-					.contains("A livenessTcpProbePort property must be set"));
+					.contains("The livenessTcpProbePort property must be set"));
 		}
 	}
 
@@ -1014,8 +1014,8 @@ public class DefaultContainerFactoryTests {
 		try {
 			defaultContainerFactory.create(containerConfiguration);
 		} catch (IllegalArgumentException e) {
-			assertTrue("A readinessCommandProbeCommand property must be set.", e.getMessage()
-					.contains("A readinessCommandProbeCommand property must be set."));
+			assertTrue("The readinessCommandProbeCommand property must be set.", e.getMessage()
+					.contains("The readinessCommandProbeCommand property must be set."));
 		}
 	}
 

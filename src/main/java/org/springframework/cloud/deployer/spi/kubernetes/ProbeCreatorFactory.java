@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.api.model.Probe;
  * Creates health check probes
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 class ProbeCreatorFactory {
 	static Probe createReadinessProbe(ContainerConfiguration containerConfiguration,

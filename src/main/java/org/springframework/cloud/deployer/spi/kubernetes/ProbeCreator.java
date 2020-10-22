@@ -32,6 +32,8 @@ import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
  */
 abstract class ProbeCreator {
 	static final String KUBERNETES_DEPLOYER_PREFIX = "spring.cloud.deployer.kubernetes";
+	static final String LIVENESS_DEPLOYER_PROPERTY_PREFIX = KUBERNETES_DEPLOYER_PREFIX + ".liveness";
+	static final String READINESS_DEPLOYER_PROPERTY_PREFIX = KUBERNETES_DEPLOYER_PREFIX + ".readiness";
 
 	private ContainerConfiguration containerConfiguration;
 	private KubernetesDeployerProperties kubernetesDeployerProperties;

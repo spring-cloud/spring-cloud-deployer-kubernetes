@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.StringUtils;
 
 /**
@@ -26,19 +25,14 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 class LivenessHttpProbeCreator extends HttpProbeCreator {
-	private final String propertyPrefix;
-
 	LivenessHttpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
 							 ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.liveness" : "spring.cloud.deployer.kubernetes.liveness";
 	}
 
 	@Override
 	public Integer getPort() {
-		String probePortKey = this.propertyPrefix + "ProbePort";
-		String probePortValue = getDeploymentPropertyValue(probePortKey);
+		String probePortValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "ProbePort");
 
 		if (StringUtils.hasText(probePortValue)) {
 			return Integer.parseInt(probePortValue);
@@ -57,8 +51,7 @@ class LivenessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected String getProbePath() {
-		String probePathKey = this.propertyPrefix + "ProbePath";
-		String probePathValue =  getDeploymentPropertyValue(probePathKey);
+		String probePathValue =  getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "ProbePath");
 
 		if (StringUtils.hasText(probePathValue)) {
 			return probePathValue;
@@ -77,8 +70,7 @@ class LivenessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected int getTimeout() {
-		String probeTimeoutKey = this.propertyPrefix + "ProbeTimeout";
-		String probeTimeoutValue = getDeploymentPropertyValue(probeTimeoutKey);
+		String probeTimeoutValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "ProbeTimeout");
 
 		if (StringUtils.hasText(probeTimeoutValue)) {
 			return Integer.valueOf(probeTimeoutValue);
@@ -89,8 +81,7 @@ class LivenessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected int getInitialDelay() {
-		String probeDelayKey = this.propertyPrefix + "ProbeDelay";
-		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
+		String probeDelayValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "ProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
@@ -101,8 +92,7 @@ class LivenessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected int getPeriod() {
-		String probePeriodKey = this.propertyPrefix + "ProbePeriod";
-		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
+		String probePeriodValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "ProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);

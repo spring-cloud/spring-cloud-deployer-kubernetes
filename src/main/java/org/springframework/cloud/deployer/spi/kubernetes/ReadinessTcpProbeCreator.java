@@ -16,27 +16,22 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.util.StringUtils;
 
 /**
  * Creates a TCP readiness probe
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 class ReadinessTcpProbeCreator extends TcpProbeCreator {
-	private final String propertyPrefix;
-
 	ReadinessTcpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties, ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.readiness" : "spring.cloud.deployer.kubernetes.readiness";
 	}
 
 	@Override
 	int getInitialDelay() {
-		String probeDelayKey = this.propertyPrefix + "TcpProbeDelay";
-		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
+		String probeDelayValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
@@ -47,8 +42,7 @@ class ReadinessTcpProbeCreator extends TcpProbeCreator {
 
 	@Override
 	int getPeriod() {
-		String probePeriodKey = this.propertyPrefix + "TcpProbePeriod";
-		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
+		String probePeriodValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
@@ -59,8 +53,7 @@ class ReadinessTcpProbeCreator extends TcpProbeCreator {
 
 	@Override
 	Integer getPort() {
-		String probePortKey = this.propertyPrefix + "TcpProbePort";
-		String probePortValue = getDeploymentPropertyValue(probePortKey);
+		String probePortValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "TcpProbePort");
 
 		if (StringUtils.hasText(probePortValue)) {
 			if (!probePortValue.chars().allMatch(Character :: isDigit)) {

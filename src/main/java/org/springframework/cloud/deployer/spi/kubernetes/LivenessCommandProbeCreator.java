@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
 import org.springframework.util.StringUtils;
 
@@ -24,20 +23,16 @@ import org.springframework.util.StringUtils;
  * Creates a command based liveness probe
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 class LivenessCommandProbeCreator extends CommandProbeCreator {
-	private final String propertyPrefix;
-
 	LivenessCommandProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties, ContainerConfiguration containerConfiguration) {
 		super(kubernetesDeployerProperties, containerConfiguration);
-		this.propertyPrefix = (containerConfiguration.getAppDeploymentRequest() instanceof ScheduleRequest) ?
-				"spring.cloud.scheduler.kubernetes.liveness" : "spring.cloud.deployer.kubernetes.liveness";
 	}
 
 	@Override
 	int getInitialDelay() {
-		String probeDelayKey = this.propertyPrefix + "CommandProbeDelay";
-		String probeDelayValue = getDeploymentPropertyValue(probeDelayKey);
+		String probeDelayValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
@@ -48,8 +43,7 @@ class LivenessCommandProbeCreator extends CommandProbeCreator {
 
 	@Override
 	int getPeriod() {
-		String probePeriodKey = this.propertyPrefix + "CommandProbePeriod";
-		String probePeriodValue = getDeploymentPropertyValue(probePeriodKey);
+		String probePeriodValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
@@ -60,8 +54,7 @@ class LivenessCommandProbeCreator extends CommandProbeCreator {
 
 	@Override
 	String[] getCommand() {
-		String probeCommandKey = this.propertyPrefix + "CommandProbeCommand";
-		String probeCommandValue = getDeploymentPropertyValue(probeCommandKey);
+		String probeCommandValue = getDeploymentPropertyValue(LIVENESS_DEPLOYER_PROPERTY_PREFIX + "CommandProbeCommand");
 
 		if (StringUtils.hasText(probeCommandValue)) {
 			return new CommandLineTokenizer(probeCommandValue).getArgs().toArray(new String[0]);
@@ -72,6 +65,6 @@ class LivenessCommandProbeCreator extends CommandProbeCreator {
 					.getArgs().toArray(new String[0]);
 		}
 
-		throw new IllegalArgumentException("A livenessCommandProbeCommand property must be set.");
+		throw new IllegalArgumentException("The livenessCommandProbeCommand property must be set.");
 	}
 }

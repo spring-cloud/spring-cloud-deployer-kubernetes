@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
  * Defines probe types.
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 enum ProbeType {
 	HTTP,

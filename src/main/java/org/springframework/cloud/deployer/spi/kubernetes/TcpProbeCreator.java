@@ -20,9 +20,10 @@ import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
 
 /**
- * Base class for HTTP based probe creators
+ * Base class for TCP based probe creators
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 abstract class TcpProbeCreator extends ProbeCreator {
 	TcpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,

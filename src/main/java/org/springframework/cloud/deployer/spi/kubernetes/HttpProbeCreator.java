@@ -31,6 +31,7 @@ import java.util.List;
  * Base class for HTTP based probe creators
  *
  * @author Chris Schaefer
+ * @since 2.5
  */
 public abstract class HttpProbeCreator extends ProbeCreator {
 	private static final int BOOT_1_MAJOR_VERSION = 1;
