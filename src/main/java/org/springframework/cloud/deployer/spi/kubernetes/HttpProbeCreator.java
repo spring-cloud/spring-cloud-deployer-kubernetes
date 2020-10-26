@@ -120,4 +120,16 @@ public abstract class HttpProbeCreator extends ProbeCreator {
 
 		return false;
 	}
+
+	// used to resolve deprecated HTTP probe property names that do not include "Http" in them
+	// can be removed when deprecated HTTP probes without "Http" in them get removed
+	String getProbePropertyName(String propertyPrefix, String propertySuffix) {
+		String propertyName = getDeploymentPropertyValue(propertyPrefix + propertySuffix);
+
+		if (StringUtils.hasText(propertyName)) {
+			return propertyName;
+		}
+
+		return getDeploymentPropertyValue(propertyPrefix + "Http" + propertySuffix);
+	}
 }

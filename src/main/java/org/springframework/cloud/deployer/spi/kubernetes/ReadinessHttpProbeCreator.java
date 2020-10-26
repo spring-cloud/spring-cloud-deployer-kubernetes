@@ -32,7 +32,7 @@ class ReadinessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	public Integer getPort() {
-		String probePortValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "ProbePort");
+		String probePortValue = getProbePropertyName(READINESS_DEPLOYER_PROPERTY_PREFIX, "ProbePort");
 
 		if (StringUtils.hasText(probePortValue)) {
 			if (!probePortValue.chars().allMatch(Character :: isDigit)) {
@@ -42,8 +42,8 @@ class ReadinessHttpProbeCreator extends HttpProbeCreator {
 			return Integer.parseInt(probePortValue);
 		}
 
-		if (getKubernetesDeployerProperties().getReadinessProbePort() != null) {
-			return getKubernetesDeployerProperties().getReadinessProbePort();
+		if (getKubernetesDeployerProperties().getReadinessHttpProbePort() != null) {
+			return getKubernetesDeployerProperties().getReadinessHttpProbePort();
 		}
 
 		if (getDefaultPort() != null) {
@@ -55,14 +55,14 @@ class ReadinessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected String getProbePath() {
-		String probePathValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "ProbePath");
+		String probePathValue = getProbePropertyName(READINESS_DEPLOYER_PROPERTY_PREFIX, "ProbePath");
 
 		if (StringUtils.hasText(probePathValue)) {
 			return probePathValue;
 		}
 
-		if (getKubernetesDeployerProperties().getReadinessProbePath() != null) {
-			return getKubernetesDeployerProperties().getReadinessProbePath();
+		if (getKubernetesDeployerProperties().getReadinessHttpProbePath() != null) {
+			return getKubernetesDeployerProperties().getReadinessHttpProbePath();
 		}
 
 		if (useBoot1ProbePath()) {
@@ -74,34 +74,34 @@ class ReadinessHttpProbeCreator extends HttpProbeCreator {
 
 	@Override
 	protected int getTimeout() {
-		String probeTimeoutValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "ProbeTimeout");
+		String probeTimeoutValue = getProbePropertyName(READINESS_DEPLOYER_PROPERTY_PREFIX, "ProbeTimeout");
 
 		if (StringUtils.hasText(probeTimeoutValue)) {
 			return Integer.valueOf(probeTimeoutValue);
 		}
 
-		return getKubernetesDeployerProperties().getReadinessProbeTimeout();
+		return getKubernetesDeployerProperties().getReadinessHttpProbeTimeout();
 	}
 
 	@Override
 	protected int getInitialDelay() {
-		String probeDelayValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "ProbeDelay");
+		String probeDelayValue = getProbePropertyName(READINESS_DEPLOYER_PROPERTY_PREFIX, "ProbeDelay");
 
 		if (StringUtils.hasText(probeDelayValue)) {
 			return Integer.valueOf(probeDelayValue);
 		}
 
-		return getKubernetesDeployerProperties().getReadinessProbeDelay();
+		return getKubernetesDeployerProperties().getReadinessHttpProbeDelay();
 	}
 
 	@Override
 	protected int getPeriod() {
-		String probePeriodValue = getDeploymentPropertyValue(READINESS_DEPLOYER_PROPERTY_PREFIX + "ProbePeriod");
+		String probePeriodValue = getProbePropertyName(READINESS_DEPLOYER_PROPERTY_PREFIX, "ProbePeriod");
 
 		if (StringUtils.hasText(probePeriodValue)) {
 			return Integer.valueOf(probePeriodValue);
 		}
 
-		return getKubernetesDeployerProperties().getReadinessProbePeriod();
+		return getKubernetesDeployerProperties().getReadinessHttpProbePeriod();
 	}
 }

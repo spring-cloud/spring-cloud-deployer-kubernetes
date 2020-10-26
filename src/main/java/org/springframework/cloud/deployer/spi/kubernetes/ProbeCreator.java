@@ -20,9 +20,7 @@ import java.util.Map;
 
 import io.fabric8.kubernetes.api.model.Probe;
 
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 
 /**
  * Base class for creating Probe's
@@ -55,9 +53,7 @@ abstract class ProbeCreator {
 	}
 
 	private Map<String, String> getDeploymentProperties() {
-		AppDeploymentRequest appDeploymentRequest = this.containerConfiguration.getAppDeploymentRequest();
-		return (appDeploymentRequest instanceof ScheduleRequest) ?
-				((ScheduleRequest) appDeploymentRequest).getSchedulerProperties() : appDeploymentRequest.getDeploymentProperties();
+		return this.containerConfiguration.getAppDeploymentRequest().getDeploymentProperties();
 	}
 
 	String getDeploymentPropertyValue(String propertyName) {
