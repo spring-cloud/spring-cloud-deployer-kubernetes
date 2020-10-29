@@ -346,6 +346,7 @@ public class KubernetesDeployerProperties {
 		private String imageName;
 		private String containerName;
 		private List<String> commands;
+		private List<VolumeMount> volumeMounts;
 
 		public String getImageName() {
 			return imageName;
@@ -369,6 +370,14 @@ public class KubernetesDeployerProperties {
 
 		public void setCommands(List<String> commands) {
 			this.commands = commands;
+		}
+
+		public List<VolumeMount> getVolumeMounts() {
+			return volumeMounts;
+		}
+
+		public void setVolumeMounts(List<VolumeMount> volumeMounts) {
+			this.volumeMounts = volumeMounts;
 		}
 	}
 

@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,6 +43,7 @@ import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,6 +60,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 
 /**
  * Class that resolves the appropriate deployment properties based on the property prefix being used.
@@ -480,11 +483,14 @@ class DeploymentPropertiesResolver {
 			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".initContainer.commands");
 
+			List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
+
 			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
 				container = new ContainerBuilder()
 						.withName(containerName)
 						.withImage(imageName)
 						.withCommand(commands)
+						.addAllToVolumeMounts(vms)
 						.build();
 			}
 		}
@@ -496,6 +502,7 @@ class DeploymentPropertiesResolver {
 						.withName(initContainer.getContainerName())
 						.withImage(initContainer.getImageName())
 						.withCommand(initContainer.getCommands())
+						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(emptyList()))
 						.build();
 			}
 		}
@@ -644,14 +651,36 @@ class DeploymentPropertiesResolver {
 	 * @return the configured volume mounts
 	 */
 	List<VolumeMount> getVolumeMounts(Map<String, String> deploymentProperties) {
-		List<VolumeMount> volumeMounts = new ArrayList<>();
-		String volumeMountDeploymentProperty = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
-				this.propertyPrefix + ".volumeMounts");
+		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".volumeMounts"));
+	}
 
-		if (!StringUtils.isEmpty(volumeMountDeploymentProperty)) {
+	/**
+	 * Init Containers volume mount properties are specified in YAML format:
+	 * <p>
+	 * <code>
+	 * spring.cloud.deployer.kubernetes.initContainer.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'},
+	 * {name: 'testpvc', mountPath: '/test/pvc'}, {name: 'testnfs', mountPath: '/test/nfs'}]
+	 * </code>
+	 * <p>
+	 * They can be specified as deployer properties as well as app deployment properties.
+	 * The later overrides deployer properties.
+	 *
+	 * @param deploymentProperties the deployment properties from {@link AppDeploymentRequest}
+	 * @return the configured volume mounts
+	 */
+	private List<VolumeMount> getInitContainerVolumeMounts(Map<String, String> deploymentProperties) {
+		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".initContainer.volumeMounts"));
+	}
+
+	private List<VolumeMount> getVolumeMounts(String propertyValue) {
+		List<VolumeMount> volumeMounts = new ArrayList<>();
+
+		if (!StringUtils.isEmpty(propertyValue)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
-				String tmpYaml = "{ volume-mounts: " + volumeMountDeploymentProperty + " }";
+				String tmpYaml = "{ volume-mounts: " + propertyValue + " }";
 				properties.setResources(new ByteArrayResource(tmpYaml.getBytes()));
 				Properties yaml = properties.getObject();
 				MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
@@ -660,7 +689,7 @@ class DeploymentPropertiesResolver {
 				volumeMounts.addAll(deployerProperties.getVolumeMounts());
 			} catch (Exception e) {
 				throw new IllegalArgumentException(
-						String.format("Invalid volume mount '%s'", volumeMountDeploymentProperty), e);
+						String.format("Invalid volume mount '%s'", propertyValue), e);
 			}
 		}
 

@@ -45,6 +45,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import okhttp3.Response;
 import org.assertj.core.api.Assertions;
@@ -837,8 +839,6 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
 
-		
-		
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 
 		List<Deployment> deployments = kubernetesClient.apps().deployments().withLabels(selector).list().getItems();
@@ -856,7 +856,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
 	}
-	
+
 	@Test
 	public void testDeploymentLabelsStatefulSet() {
 		log.info("Testing {}...", "DeploymentLabelsForStatefulSet");
@@ -878,9 +878,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Timeout timeout = deploymentTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
-		
 		Map<String, String> idMap = deployer.createIdMap(deploymentId, appDeploymentRequest);
-		
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 
 		StatefulSet statefulSet = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems().get(0);
@@ -894,14 +892,14 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertEquals("Unexpected value in stateful-set metadata label for stateful-label1", "stateful-value1", setLabels.get("stateful-label1"));
 		assertTrue("Label 'stateful-label2' not found in StatefulSet metadata", setLabels.containsKey("stateful-label2"));
 		assertEquals("Unexpected value in stateful-set metadata label for stateful-label2","stateful-value2", setLabels.get("stateful-label2"));
-		
+
 		//verify pod template labels
 		Map<String, String> specLabels = statefulSetSpec.getTemplate().getMetadata().getLabels();
 		assertTrue("Label 'stateful-label1' not found in template metadata", specLabels.containsKey("stateful-label1"));
 		assertEquals("Unexpected value for statefulSet metadata stateful-label1", "stateful-value1", specLabels.get("stateful-label1"));
 		assertTrue("Label 'stateful-label2' not found in statefulSet template", specLabels.containsKey("stateful-label2"));
 		assertEquals("Unexpected value for statefulSet metadata stateful-label2", "stateful-value2", specLabels.get("stateful-label2"));
-		
+
 		//verify that labels got replicated to one of the deployments
 		List<Pod> pods =  kubernetesClient.pods().withLabels(selector).list().getItems();
 		Map<String, String> podLabels = pods.get(0).getMetadata().getLabels();
@@ -1136,6 +1134,72 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertEquals("sh", commands.get(0));
 		assertEquals("-c", commands.get(1));
 		assertEquals("echo hello", commands.get(2));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testCreateInitContainerWithVolumeMounts() {
+		log.info("Testing {}...", "CreateInitContainerWithVolumeMounts");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		Map<String, String> props = Stream.of(new String[][]{
+				{
+						"spring.cloud.deployer.kubernetes.volumes",
+						"[{name: 'test-volume', emptyDir: {}}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.volumeMounts",
+						"[{name: 'test-volume', mountPath: '/tmp'}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.initContainer",
+						"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello'], " +
+								"volumeMounts: [{name: 'test-volume', mountPath: '/tmp', readOnly: true}]}",
+				}
+		}).collect(Collectors.toMap(data -> data[0], data -> data[1]));
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication(), props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Deployment deployment = kubernetesClient.apps().deployments().withName(request.getDefinition().getName()).get();
+		List<Container> initContainers = deployment.getSpec().getTemplate().getSpec().getInitContainers();
+
+		Optional<Container> initContainer = initContainers.stream().filter(i -> i.getName().equals("test")).findFirst();
+		assertTrue("Init container not found", initContainer.isPresent());
+
+		Container testInitContainer = initContainer.get();
+
+		assertEquals("Unexpected init container name", testInitContainer.getName(), "test");
+		assertEquals("Unexpected init container image", testInitContainer.getImage(), "busybox:latest");
+
+		List<String> commands = testInitContainer.getCommand();
+
+		assertTrue("Init container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of init container commands", 3, commands.size());
+		assertEquals("sh", commands.get(0));
+		assertEquals("-c", commands.get(1));
+		assertEquals("echo hello", commands.get(2));
+
+		List<VolumeMount> volumeMounts = testInitContainer.getVolumeMounts();
+		assertTrue("Init container volumeMounts missing", volumeMounts != null && !volumeMounts.isEmpty());
+		assertEquals("Unexpected init container volume mounts size", 1, volumeMounts.size());
+
+		VolumeMount vm = volumeMounts.get(0);
+		assertEquals("Unexpected init container volume mount name", "test-volume", vm.getName());
+		assertEquals("Unexpected init container volume mount path", "/tmp", vm.getMountPath());
+		assertTrue("Expected read only volume mount", vm.getReadOnly());
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
