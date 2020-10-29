@@ -16,18 +16,13 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import io.fabric8.kubernetes.api.model.NodeAffinity;
-import io.fabric8.kubernetes.api.model.PodAffinity;
-import io.fabric8.kubernetes.api.model.PodAntiAffinity;
-import io.fabric8.kubernetes.api.model.Volume;
-import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.Config;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
 
@@ -346,6 +341,7 @@ public class KubernetesDeployerProperties {
 		private String imageName;
 		private String containerName;
 		private List<String> commands;
+		private List<VolumeMount> volumeMounts;
 
 		public String getImageName() {
 			return imageName;
@@ -369,6 +365,14 @@ public class KubernetesDeployerProperties {
 
 		public void setCommands(List<String> commands) {
 			this.commands = commands;
+		}
+
+		public List<VolumeMount> getVolumeMounts() {
+			return volumeMounts;
+		}
+
+		public void setVolumeMounts(List<VolumeMount> volumeMounts) {
+			this.volumeMounts = volumeMounts;
 		}
 	}
 
