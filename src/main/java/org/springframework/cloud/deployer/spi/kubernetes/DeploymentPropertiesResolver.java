@@ -110,9 +110,9 @@ class DeploymentPropertiesResolver {
 	 * Volume deployment properties are specified in YAML format:
 	 *
 	 * <code>
-	 * spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
-	 * 	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
-	 * 	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+	 *      spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 * 		{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
+	 * 		{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>
 	 *
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
@@ -164,15 +164,13 @@ class DeploymentPropertiesResolver {
 			cpu = properties.getLimits().getCpu();
 		}
 
-		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".limits.gpuVendor");
+		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".limits.gpuVendor");
 
 		if (StringUtils.isEmpty(gpuVendor)) {
 			gpuVendor = properties.getLimits().getGpuVendor();
 		}
 
-		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".limits.gpuCount");
+		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".limits.gpuCount");
 
 		if (StringUtils.isEmpty(gpuCount)) {
 			gpuCount = properties.getLimits().getGpuCount();
@@ -203,8 +201,7 @@ class DeploymentPropertiesResolver {
 	 * @return The image pull policy to use for the container in the request.
 	 */
 	ImagePullPolicy deduceImagePullPolicy(Map<String, String> kubernetesDeployerProperties) {
-		String pullPolicyOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".imagePullPolicy");
+		String pullPolicyOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,  this.propertyPrefix + ".imagePullPolicy");
 
 		ImagePullPolicy pullPolicy;
 		if (pullPolicyOverride == null) {
@@ -302,8 +299,7 @@ class DeploymentPropertiesResolver {
 	 * @return Whether host networking is requested
 	 */
 	boolean getHostNetwork(Map<String, String> kubernetesDeployerProperties) {
-		String hostNetworkOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".hostNetwork");
+		String hostNetworkOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, this.propertyPrefix + ".hostNetwork");
 		boolean hostNetwork;
 
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
@@ -586,8 +582,7 @@ class DeploymentPropertiesResolver {
 	 * @param yamlLabel the label representing the field to bind to
 	 * @return a {@link KubernetesDeployerProperties} with the bound property data
 	 */
-	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
-															   String propertyKey, String yamlLabel) {
+	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties, String propertyKey, String yamlLabel) {
 		String deploymentPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, propertyKey);
 
 		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
@@ -776,8 +771,8 @@ class DeploymentPropertiesResolver {
 		if (deployerPropertyValue != null) {
 			try {
 				entryPointStyle = EntryPointStyle.valueOf(deployerPropertyValue.toLowerCase());
-			} catch (IllegalArgumentException ignore) {
-
+			}
+			catch (IllegalArgumentException ignore) {
 			}
 		}
 
