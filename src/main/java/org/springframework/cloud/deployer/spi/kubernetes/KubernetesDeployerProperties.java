@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.PodAntiAffinity;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -95,9 +96,10 @@ public class KubernetesDeployerProperties {
 
 		/**
 		 * 'All' args constructor
-		 * @deprecated This method should no longer be used to set all fields at construct time.
+		 * @deprecated
+		 * This method should no longer be used to set all fields at construct time.
 		 * <p> Use the default constructor and set() methods instead.
-		 * @param cpu    Container resource cpu limit
+		 * @param cpu Container resource cpu limit
 		 * @param memory Container resource memory limit
 		 */
 		@Deprecated

@@ -315,7 +315,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		log.info("Checking instance attributes of {}...", request.getDefinition().getName());
 		AppStatus status = lbAppDeployer.status(deploymentId);
-		for(String inst : status.getInstances().keySet()) {
+		for (String inst : status.getInstances().keySet()) {
 			assertThat(deploymentId, eventually(hasInstanceAttribute(Matchers.hasKey("url"), lbAppDeployer, inst),
 					timeout.maxAttempts, timeout.pause));
 		}
@@ -367,7 +367,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Pod pod = pods.get(0);
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
 		log.info("Number of annotations found" + annotations.size());
-		for(Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
+		for (Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
 			log.info("Annotation key: " + annotationsEntry.getKey());
 		}
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
@@ -537,7 +537,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		PodSpec spec = kubernetesClient.pods().withLabels(selector).list().getItems().get(0).getSpec();
 
 		Map<String, String> envVars = new HashMap<>();
-		for(EnvVar e : spec.getContainers().get(0).getEnv()) {
+		for (EnvVar e : spec.getContainers().get(0).getEnv()) {
 			envVars.put(e.getName(), e.getValue());
 		}
 		assertThat(envVars.get("SPRING_CLOUD_APPLICATION_GROUP"), is("foo"));
@@ -894,7 +894,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertTrue("Label 'stateful-label1' not found in StatefulSet metadata", setLabels.containsKey("stateful-label1"));
 		assertEquals("Unexpected value in stateful-set metadata label for stateful-label1", "stateful-value1", setLabels.get("stateful-label1"));
 		assertTrue("Label 'stateful-label2' not found in StatefulSet metadata", setLabels.containsKey("stateful-label2"));
-		assertEquals("Unexpected value in stateful-set metadata label for stateful-label2", "stateful-value2", setLabels.get("stateful-label2"));
+		assertEquals("Unexpected value in stateful-set metadata label for stateful-label2","stateful-value2", setLabels.get("stateful-label2"));
 
 		//verify pod template labels
 		Map<String, String> specLabels = statefulSetSpec.getTemplate().getMetadata().getLabels();

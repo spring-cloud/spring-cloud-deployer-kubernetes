@@ -110,9 +110,9 @@ class DeploymentPropertiesResolver {
 	 * Volume deployment properties are specified in YAML format:
 	 *
 	 * <code>
-	 * 		spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
-	 * {name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
-	 * {name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+	 * 	spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 * 	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
+	 * 	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>
 	 *
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
@@ -178,7 +178,7 @@ class DeploymentPropertiesResolver {
 			gpuCount = properties.getLimits().getGpuCount();
 		}
 
-		Map<String, Quantity> limits = new HashMap<String,Quantity>();
+		Map<String,Quantity> limits = new HashMap<String,Quantity>();
 
 		if (!StringUtils.isEmpty(memory)) {
 			limits.put("memory", new Quantity(memory));
@@ -356,7 +356,7 @@ class DeploymentPropertiesResolver {
 		String imagePullSecret = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".imagePullSecret", "");
 
-		if (StringUtils.isEmpty(imagePullSecret)) {
+		if(StringUtils.isEmpty(imagePullSecret)) {
 			imagePullSecret = this.properties.getImagePullSecret();
 		}
 
@@ -385,7 +385,8 @@ class DeploymentPropertiesResolver {
 					.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
 					.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
 					.build();
-		} else {
+		}
+		else {
 			String runAsUser = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".podSecurityContext.runAsUser");
 
@@ -491,7 +492,8 @@ class DeploymentPropertiesResolver {
 						.addAllToVolumeMounts(vms)
 						.build();
 			}
-		} else {
+		}
+		else {
 			KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
 
 			if (initContainer != null) {
