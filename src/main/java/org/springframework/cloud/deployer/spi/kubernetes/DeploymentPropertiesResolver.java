@@ -110,7 +110,7 @@ class DeploymentPropertiesResolver {
 	 * Volume deployment properties are specified in YAML format:
 	 *
 	 * <code>
-	 * 	spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 * spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
 	 * 	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
 	 * 	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>

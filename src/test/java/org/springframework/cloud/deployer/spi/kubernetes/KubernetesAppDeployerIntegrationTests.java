@@ -487,7 +487,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		String hostName = null;
 		String instanceIndex = null;
 
-		for(LinkedHashMap propertySource : propertySources) {
+		for (LinkedHashMap propertySource : propertySources) {
 			if (propertySource.get("name").equals("systemEnvironment")) {
 				LinkedHashMap s = (LinkedHashMap) propertySource.get("properties");
 				hostName = (String) ((LinkedHashMap) s.get("HOSTNAME")).get("value");
@@ -838,7 +838,6 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Timeout timeout = deploymentTimeout();
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
-
 
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 
