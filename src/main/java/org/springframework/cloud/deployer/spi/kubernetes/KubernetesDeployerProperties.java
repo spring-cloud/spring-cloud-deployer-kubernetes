@@ -16,13 +16,17 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import io.fabric8.kubernetes.api.model.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import io.fabric8.kubernetes.api.model.NodeAffinity;
+import io.fabric8.kubernetes.api.model.PodAffinity;
+import io.fabric8.kubernetes.api.model.PodAntiAffinity;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
 
@@ -91,11 +95,10 @@ public class KubernetesDeployerProperties {
 
 		/**
 		 * 'All' args constructor
-		 *
-		 * @param cpu    Container resource cpu limit
-		 * @param memory Container resource memory limit
 		 * @deprecated This method should no longer be used to set all fields at construct time.
 		 * <p> Use the default constructor and set() methods instead.
+		 * @param cpu    Container resource cpu limit
+		 * @param memory Container resource memory limit
 		 */
 		@Deprecated
 		public LimitsResources(String cpu, String memory) {

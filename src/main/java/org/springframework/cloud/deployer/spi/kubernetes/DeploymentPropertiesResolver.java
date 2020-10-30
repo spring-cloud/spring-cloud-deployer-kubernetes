@@ -15,7 +15,34 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import io.fabric8.kubernetes.api.model.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import io.fabric8.kubernetes.api.model.Affinity;
+import io.fabric8.kubernetes.api.model.AffinityBuilder;
+import io.fabric8.kubernetes.api.model.ConfigMapEnvSource;
+import io.fabric8.kubernetes.api.model.ConfigMapKeySelector;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvFromSource;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import io.fabric8.kubernetes.api.model.PodSecurityContext;
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.SecretEnvSource;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
@@ -30,12 +57,8 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 
 /**
  * Class that resolves the appropriate deployment properties based on the property prefix being used.
@@ -67,7 +90,7 @@ class DeploymentPropertiesResolver {
 		List<Toleration> tolerations = new ArrayList<>();
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
-				this.propertyPrefix + ".tolerations", "tolerations");
+				this.propertyPrefix + ".tolerations", "tolerations" );
 
 		deployerProperties.getTolerations().forEach(toleration -> tolerations.add(
 				new Toleration(toleration.getEffect(), toleration.getKey(), toleration.getOperator(),
@@ -87,11 +110,11 @@ class DeploymentPropertiesResolver {
 	 * Volume deployment properties are specified in YAML format:
 	 *
 	 * <code>
-	 * spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
+	 * 		spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
 	 * {name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
 	 * {name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>
-	 * <p>
+	 *
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
 	 * Deployment properties override deployer properties.
 	 *
@@ -155,7 +178,7 @@ class DeploymentPropertiesResolver {
 			gpuCount = properties.getLimits().getGpuCount();
 		}
 
-		Map<String, Quantity> limits = new HashMap<String, Quantity>();
+		Map<String, Quantity> limits = new HashMap<String,Quantity>();
 
 		if (!StringUtils.isEmpty(memory)) {
 			limits.put("memory", new Quantity(memory));
@@ -225,7 +248,7 @@ class DeploymentPropertiesResolver {
 
 		logger.debug("Using requests - cpu: " + cpuOverride + " mem: " + memOverride);
 
-		Map<String, Quantity> requests = new HashMap<String, Quantity>();
+		Map<String,Quantity> requests = new HashMap<String, Quantity>();
 
 		if (memOverride != null) {
 			requests.put("memory", new Quantity(memOverride));
@@ -285,7 +308,8 @@ class DeploymentPropertiesResolver {
 
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
 			hostNetwork = properties.isHostNetwork();
-		} else {
+		}
+		else {
 			hostNetwork = Boolean.valueOf(hostNetworkOverride);
 		}
 
@@ -373,7 +397,8 @@ class DeploymentPropertiesResolver {
 						.withRunAsUser(Long.valueOf(runAsUser))
 						.withFsGroup(Long.valueOf(fsGroup))
 						.build();
-			} else if (this.properties.getPodSecurityContext() != null) {
+			}
+			else if (this.properties.getPodSecurityContext() != null) {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
 						.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
@@ -476,7 +501,7 @@ class DeploymentPropertiesResolver {
 						.withCommand(initContainer.getCommands())
 						.addAllToVolumeMounts(
 								Optional.ofNullable(initContainer.getVolumeMounts())
-										.orElse(Collections.emptyList())
+										.orElse(emptyList())
 						)
 						.build();
 			}
@@ -555,8 +580,8 @@ class DeploymentPropertiesResolver {
 	 * Binds the YAML formatted value of a deployment property to a {@link KubernetesDeployerProperties} instance.
 	 *
 	 * @param kubernetesDeployerProperties the map of Kubernetes deployer properties
-	 * @param propertyKey                  the property key to obtain the value to bind for
-	 * @param yamlLabel                    the label representing the field to bind to
+	 * @param propertyKey the property key to obtain the value to bind for
+	 * @param yamlLabel the label representing the field to bind to
 	 * @return a {@link KubernetesDeployerProperties} with the bound property data
 	 */
 	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
@@ -724,7 +749,7 @@ class DeploymentPropertiesResolver {
 			Matcher m = pattern.matcher(value);
 
 			while (m.find()) {
-				String replacedVar = m.group(1).replaceAll("'", "");
+				String replacedVar = m.group(1).replaceAll("'","");
 
 				if (!StringUtils.isEmpty(replacedVar)) {
 					vars.add(replacedVar);
@@ -750,6 +775,7 @@ class DeploymentPropertiesResolver {
 			try {
 				entryPointStyle = EntryPointStyle.valueOf(deployerPropertyValue.toLowerCase());
 			} catch (IllegalArgumentException ignore) {
+
 			}
 		}
 
@@ -808,7 +834,7 @@ class DeploymentPropertiesResolver {
 		List<EnvVar> secretKeyRefs = new ArrayList<>();
 
 		KubernetesDeployerProperties deployerProperties = bindProperties(deploymentProperties,
-				this.propertyPrefix + ".secretKeyRefs", "secretKeyRefs");
+				this.propertyPrefix + ".secretKeyRefs", "secretKeyRefs" );
 
 		deployerProperties.getSecretKeyRefs().forEach(secretKeyRef ->
 				secretKeyRefs.add(buildSecretKeyRefEnvVar(secretKeyRef)));

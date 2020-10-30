@@ -315,7 +315,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		log.info("Checking instance attributes of {}...", request.getDefinition().getName());
 		AppStatus status = lbAppDeployer.status(deploymentId);
-		for (String inst : status.getInstances().keySet()) {
+		for(String inst : status.getInstances().keySet()) {
 			assertThat(deploymentId, eventually(hasInstanceAttribute(Matchers.hasKey("url"), lbAppDeployer, inst),
 					timeout.maxAttempts, timeout.pause));
 		}
@@ -367,7 +367,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Pod pod = pods.get(0);
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
 		log.info("Number of annotations found" + annotations.size());
-		for (Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
+		for(Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
 			log.info("Annotation key: " + annotationsEntry.getKey());
 		}
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
@@ -450,10 +450,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 					ip = svc.getStatus().getLoadBalancer().getIngress().get(0).getIp();
 					port = svc.getSpec().getPorts().get(0).getPort();
 					success = true;
-				} else {
+				}
+				else {
 					try {
 						Thread.sleep(5000L);
-					} catch (InterruptedException e) {
+					}
+					catch (InterruptedException e) {
 					}
 					svc = kubernetesClient.services().withName(appId).get();
 				}
@@ -485,7 +487,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		String hostName = null;
 		String instanceIndex = null;
 
-		for (LinkedHashMap propertySource : propertySources) {
+		for(LinkedHashMap propertySource : propertySources) {
 			if (propertySource.get("name").equals("systemEnvironment")) {
 				LinkedHashMap s = (LinkedHashMap) propertySource.get("properties");
 				hostName = (String) ((LinkedHashMap) s.get("HOSTNAME")).get("value");
@@ -535,7 +537,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		PodSpec spec = kubernetesClient.pods().withLabels(selector).list().getItems().get(0).getSpec();
 
 		Map<String, String> envVars = new HashMap<>();
-		for (EnvVar e : spec.getContainers().get(0).getEnv()) {
+		for(EnvVar e : spec.getContainers().get(0).getEnv()) {
 			envVars.put(e.getName(), e.getValue());
 		}
 		assertThat(envVars.get("SPRING_CLOUD_APPLICATION_GROUP"), is("foo"));
@@ -902,7 +904,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertEquals("Unexpected value for statefulSet metadata stateful-label2", "stateful-value2", specLabels.get("stateful-label2"));
 
 		//verify that labels got replicated to one of the deployments
-		List<Pod> pods = kubernetesClient.pods().withLabels(selector).list().getItems();
+		List<Pod> pods =  kubernetesClient.pods().withLabels(selector).list().getItems();
 		Map<String, String> podLabels = pods.get(0).getMetadata().getLabels();
 
 		assertTrue("Label 'stateful-label1' not found in podLabels", podLabels.containsKey("stateful-label1"));
@@ -1182,7 +1184,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		log.info("Deploying {}...", request.getDefinition().getName());
 		String deploymentId = kubernetesAppDeployer.deploy(request);
 
-		while (kubernetesClient.pods().withLabel("spring-deployment-id", deploymentId).list().getItems().isEmpty()) {
+		while(kubernetesClient.pods().withLabel("spring-deployment-id", deploymentId).list().getItems().isEmpty()) {
 			log.info("Waiting for deployed pod");
 			Thread.sleep(500);
 		}
@@ -1194,7 +1196,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 			Thread.sleep(500);
 		}
 
-		while (!"Unschedulable".equals(pod.getStatus().getConditions().get(0).getReason())) {
+		while(!"Unschedulable".equals(pod.getStatus().getConditions().get(0).getReason())) {
 			log.info("Waiting for deployed pod to become Unschedulable");
 		}
 
@@ -1251,7 +1253,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(secret.getData().size(), 2);
 
-		for (Map.Entry<String, String> secretData : secret.getData().entrySet()) {
+		for(Map.Entry<String, String> secretData : secret.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
 			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
 		}
@@ -1302,7 +1304,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(secret.getData().size(), 2);
 
-		for (Map.Entry<String, String> secretData : secret.getData().entrySet()) {
+		for(Map.Entry<String, String> secretData : secret.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
 			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
 		}
@@ -1355,12 +1357,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		String podEnvironment = getPodEnvironment(deploymentId);
 
-		for (Map.Entry<String, String> deployerPropertySecretData : deployerPropertySecret.getData().entrySet()) {
+		for(Map.Entry<String, String> deployerPropertySecretData : deployerPropertySecret.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(deployerPropertySecretData.getValue()));
 			assertTrue(podEnvironment.contains(deployerPropertySecretData.getKey() + "=" + decodedValue));
 		}
 
-		for (Map.Entry<String, String> propertySecretData : propertySecret.getData().entrySet()) {
+		for(Map.Entry<String, String> propertySecretData : propertySecret.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(propertySecretData.getValue()));
 			assertFalse(podEnvironment.contains(propertySecretData.getKey() + "=" + decodedValue));
 		}
@@ -1424,7 +1426,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(4, mergedSecretData.size());
 
-		for (Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
+		for(Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
 			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
 		}
@@ -1485,7 +1487,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(4, mergedSecretData.size());
 
-		for (Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
+		for(Map.Entry<String, String> secretData : secret1.getData().entrySet()) {
 			String decodedValue = new String(Base64.getDecoder().decode(secretData.getValue()));
 			assertTrue(podEnvironment.contains(secretData.getKey() + "=" + decodedValue));
 		}
@@ -1536,7 +1538,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(configMap.getData().size(), 2);
 
-		for (Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
+		for(Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
 			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
 		}
 
@@ -1586,7 +1588,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(configMap.getData().size(), 2);
 
-		for (Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
+		for(Map.Entry<String, String> configMapData : configMap.getData().entrySet()) {
 			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
 		}
 
@@ -1638,12 +1640,12 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		String podEnvironment = getPodEnvironment(deploymentId);
 
-		for (Map.Entry<String, String> deployerPropertyConfigMapData : deployerPropertyConfigMap.getData().entrySet()) {
+		for(Map.Entry<String, String> deployerPropertyConfigMapData : deployerPropertyConfigMap.getData().entrySet()) {
 			assertTrue(podEnvironment.contains(deployerPropertyConfigMapData.getKey() + "="
 					+ deployerPropertyConfigMapData.getValue()));
 		}
 
-		for (Map.Entry<String, String> propertyConfigMapData : propertyConfigMap.getData().entrySet()) {
+		for(Map.Entry<String, String> propertyConfigMapData : propertyConfigMap.getData().entrySet()) {
 			assertFalse(podEnvironment.contains(propertyConfigMapData.getKey() + "=" + propertyConfigMapData.getValue()));
 		}
 
@@ -1706,7 +1708,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(4, mergedConfigMapData.size());
 
-		for (Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
+		for(Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
 			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
 		}
 
@@ -1766,7 +1768,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		assertEquals(4, mergedConfigMapData.size());
 
-		for (Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
+		for(Map.Entry<String, String> configMapData : configMap1.getData().entrySet()) {
 			assertTrue(podEnvironment.contains(configMapData.getKey() + "=" + configMapData.getValue()));
 		}
 
