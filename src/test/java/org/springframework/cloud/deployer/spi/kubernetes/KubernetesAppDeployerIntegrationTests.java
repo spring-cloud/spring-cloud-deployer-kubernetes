@@ -839,6 +839,8 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertThat(deploymentId, eventually(hasStatusThat(
 				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
 
+
+
 		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
 
 		List<Deployment> deployments = kubernetesClient.apps().deployments().withLabels(selector).list().getItems();
@@ -1842,7 +1844,8 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	private Matcher<String> hasInstanceAttribute(final Matcher<Map<? extends String, ?>> mapMatcher,
-												 final KubernetesAppDeployer appDeployer, final String inst) {
+			final KubernetesAppDeployer appDeployer,
+			final String inst) {
 		return new BaseMatcher<String>() {
 			private Map<String, String> instanceAttributes;
 
