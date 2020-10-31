@@ -111,8 +111,8 @@ class DeploymentPropertiesResolver {
 	 *
 	 * <code>
 	 *     spring.cloud.deployer.kubernetes.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }},
-	 * 	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
-	 * 	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+	 *     	{name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }},
+	 *     	{name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
 	 * </code>
 	 *
 	 * Volumes can be specified as deployer properties as well as app deployment properties.
@@ -165,14 +165,14 @@ class DeploymentPropertiesResolver {
 		}
 
 		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".limits.gpuVendor");
+			this.propertyPrefix + ".limits.gpuVendor");
 
 		if (StringUtils.isEmpty(gpuVendor)) {
 			gpuVendor = properties.getLimits().getGpuVendor();
 		}
 
 		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".limits.gpuCount");
+			this.propertyPrefix + ".limits.gpuCount");
 
 		if (StringUtils.isEmpty(gpuCount)) {
 			gpuCount = properties.getLimits().getGpuCount();
@@ -204,7 +204,7 @@ class DeploymentPropertiesResolver {
 	 */
 	ImagePullPolicy deduceImagePullPolicy(Map<String, String> kubernetesDeployerProperties) {
 		String pullPolicyOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".imagePullPolicy");
+						this.propertyPrefix + ".imagePullPolicy");
 
 		ImagePullPolicy pullPolicy;
 		if (pullPolicyOverride == null) {
@@ -303,7 +303,7 @@ class DeploymentPropertiesResolver {
 	 */
 	boolean getHostNetwork(Map<String, String> kubernetesDeployerProperties) {
 		String hostNetworkOverride = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-				this.propertyPrefix + ".hostNetwork");
+						this.propertyPrefix + ".hostNetwork");
 		boolean hostNetwork;
 
 		if (StringUtils.isEmpty(hostNetworkOverride)) {
@@ -481,8 +481,7 @@ class DeploymentPropertiesResolver {
 			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".initContainer.commands");
 
-			List<VolumeMount> vms = this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".initContainer.volumeMounts"));
+			List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
 
 			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
 				container = new ContainerBuilder()
@@ -501,10 +500,7 @@ class DeploymentPropertiesResolver {
 						.withName(initContainer.getContainerName())
 						.withImage(initContainer.getImageName())
 						.withCommand(initContainer.getCommands())
-						.addAllToVolumeMounts(
-								Optional.ofNullable(initContainer.getVolumeMounts())
-										.orElse(emptyList())
-						)
+						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(emptyList()))
 						.build();
 			}
 		}
@@ -587,7 +583,7 @@ class DeploymentPropertiesResolver {
 	 * @return a {@link KubernetesDeployerProperties} with the bound property data
 	 */
 	private static KubernetesDeployerProperties bindProperties(Map<String, String> kubernetesDeployerProperties,
-															   String propertyKey, String yamlLabel) {
+			String propertyKey, String yamlLabel) {
 		String deploymentPropertyValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties, propertyKey);
 
 		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
@@ -655,6 +651,25 @@ class DeploymentPropertiesResolver {
 	List<VolumeMount> getVolumeMounts(Map<String, String> deploymentProperties) {
 		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".volumeMounts"));
+	}
+
+	/**
+	 * Init Containers volume mount properties are specified in YAML format:
+	 * <p>
+	 * <code>
+	 * spring.cloud.deployer.kubernetes.initContainer.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'},
+	 * {name: 'testpvc', mountPath: '/test/pvc'}, {name: 'testnfs', mountPath: '/test/nfs'}]
+	 * </code>
+	 * <p>
+	 * They can be specified as deployer properties as well as app deployment properties.
+	 * The later overrides deployer properties.
+	 *
+	 * @param deploymentProperties the deployment properties from {@link AppDeploymentRequest}
+	 * @return the configured volume mounts
+	 */
+	List<VolumeMount> getInitContainerVolumeMounts(Map<String, String> deploymentProperties) {
+		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".initContainer.volumeMounts"));
 	}
 
 	private List<VolumeMount> getVolumeMounts(String propertyValue) {
