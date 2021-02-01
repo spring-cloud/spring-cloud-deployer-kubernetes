@@ -365,6 +365,18 @@ class DeploymentPropertiesResolver {
 		return imagePullSecret;
 	}
 
+	List<String> getImagePullSecrets(Map<String, String> kubernetesDeployerProperties) {
+
+		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
+				this.propertyPrefix + ".imagePullSecrets", "imagePullSecrets");
+
+		if (deployerProperties.getImagePullSecrets() == null || deployerProperties.getImagePullSecrets().isEmpty()) {
+			return properties.getImagePullSecrets();
+		} else {
+			return deployerProperties.getImagePullSecrets();
+		}
+	}
+
 	String getDeploymentServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
 		String deploymentServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".deploymentServiceAccountName");

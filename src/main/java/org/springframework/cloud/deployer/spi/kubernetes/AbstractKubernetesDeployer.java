@@ -17,6 +17,7 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -186,6 +187,12 @@ public class AbstractKubernetesDeployer {
 
 		if (imagePullSecret != null) {
 			podSpec.addNewImagePullSecret(imagePullSecret);
+		}
+		
+		List<String> imagePullSecrets = this.deploymentPropertiesResolver.getImagePullSecrets(deploymentProperties);
+
+		if (imagePullSecrets != null) {			
+			imagePullSecrets.forEach(imgPullsecret -> podSpec.addNewImagePullSecret(imgPullsecret));
 		}
 
 		boolean hostNetwork = this.deploymentPropertiesResolver.getHostNetwork(deploymentProperties);
