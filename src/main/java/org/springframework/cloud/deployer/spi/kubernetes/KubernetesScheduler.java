@@ -193,6 +193,9 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 	protected String getExceptionMessageForField(KubernetesClientException clientException,
 			String fieldName) {
+		if (clientException.getStatus() == null || clientException.getStatus().getDetails() == null) {
+			return null;
+		}
 		List<StatusCause> statusCauses = clientException.getStatus().getDetails().getCauses();
 
 		if (!CollectionUtils.isEmpty(statusCauses)) {
