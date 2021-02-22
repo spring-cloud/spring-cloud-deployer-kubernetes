@@ -398,6 +398,11 @@ public class KubernetesDeployerProperties {
 	 * Secrets for a access a private registry to pull images.
 	 */
 	private String imagePullSecret;
+	
+	/**
+	 * List of Secrets for a access a private registry to pull images.
+	 */
+	private List<String> imagePullSecrets;
 
 	/**
 	 * Delay in seconds when the Kubernetes liveness check of the app container
@@ -696,6 +701,14 @@ public class KubernetesDeployerProperties {
 
 	public void setImagePullSecret(String imagePullSecret) {
 		this.imagePullSecret = imagePullSecret;
+	}
+	
+	public List<String> getImagePullSecrets() {
+		return imagePullSecrets;
+	}
+
+	public void setImagePullSecrets(List<String> imagePullSecrets) {
+		this.imagePullSecrets = imagePullSecrets;
 	}
 
 	/**
