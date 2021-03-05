@@ -579,6 +579,16 @@ public class KubernetesDeployerProperties {
 	private EntryPointStyle entryPointStyle = EntryPointStyle.exec;
 
 	/**
+	 * Use Kubernetes Deployment feature instead of deploying one pod.
+	 */
+	private boolean useDeployment = false;
+
+	/**
+	 * Kubernetes deployment yaml name
+	 */
+	private String deploymentYaml;
+
+	/**
 	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
 	 */
 	private boolean createLoadBalancer = false;
@@ -1127,6 +1137,15 @@ public class KubernetesDeployerProperties {
 	public void setEntryPointStyle(EntryPointStyle entryPointStyle) {
 		this.entryPointStyle = entryPointStyle;
 	}
+
+
+	public boolean getUseDeployment() { return useDeployment; }
+
+	public void setUseDeployment(boolean useDeployment) { this.useDeployment = useDeployment; }
+
+	public String getDeploymentYaml() { return  deploymentYaml; }
+
+	public void setDeploymentYaml(String deploymentYaml) { this.deploymentYaml = deploymentYaml; }
 
 	public boolean isCreateLoadBalancer() {
 		return createLoadBalancer;

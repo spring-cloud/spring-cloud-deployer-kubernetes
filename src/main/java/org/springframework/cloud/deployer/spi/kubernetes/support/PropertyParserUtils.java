@@ -16,14 +16,15 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes.support;
 
+import static java.lang.String.format;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import static java.lang.String.format;
 
 /**
  * Utility methods for formatting and parsing properties
@@ -67,5 +68,30 @@ public class PropertyParserUtils {
 			}
 		}
 		return defaultValue;
+	}
+
+	public static Map<String, String> getEnvironmentVariables(AppDeploymentRequest request){
+		Map<String, String> envVarsMap = new HashMap<>();
+
+		for (String key : request.getDefinition().getProperties().keySet()) {
+			String envVar = key.replace('.', '_').toUpperCase();
+			envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
+		}
+		// Push all the command line arguments as environment properties
+		// The task app name(in case of Composed Task), platform_name and executionId are expected to be updated.
+		// This will also override any of the existing app properties that match the provided cmdline args.
+		for (String cmdLineArg: request.getCommandlineArguments()) {
+			String cmdLineArgKey;
+
+			if (cmdLineArg.startsWith("--")) {
+				cmdLineArgKey = cmdLineArg.substring(2, cmdLineArg.indexOf("="));
+			} else {
+				cmdLineArgKey = cmdLineArg.substring(0, cmdLineArg.indexOf("="));
+			}
+
+			String cmdLineArgValue = cmdLineArg.substring(cmdLineArg.indexOf("=") + 1);
+			envVarsMap.put(cmdLineArgKey.replace('.', '_').toUpperCase(), cmdLineArgValue);
+		}
+		return envVarsMap;
 	}
 }

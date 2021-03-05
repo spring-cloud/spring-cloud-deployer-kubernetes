@@ -377,6 +377,16 @@ class DeploymentPropertiesResolver {
 		}
 	}
 
+	String getDeploymentYaml(Map<String, String> kubernetesDeployerProperties){
+		String deploymentYaml = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".deploymentYaml", "");
+
+		if(StringUtils.isEmpty(deploymentYaml)) {
+			deploymentYaml = this.properties.getDeploymentYaml();
+		}
+
+		return deploymentYaml;
+	}
 	String getDeploymentServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
 		String deploymentServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".deploymentServiceAccountName");

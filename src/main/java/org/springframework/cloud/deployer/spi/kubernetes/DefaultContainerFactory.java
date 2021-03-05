@@ -26,8 +26,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvFromSource;
@@ -35,14 +45,6 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Probe;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 /**
  * Create a Kubernetes {@link Container} that will be started as part of a
@@ -95,8 +97,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 		//image supports it.
 		envVarsMap.putAll(deploymentPropertiesResolver.getAppEnvironmentVariables(deploymentProperties));
 
-		List<String> appArgs = new ArrayList<>();
 
+		List<String> appArgs = new ArrayList<>();
 		switch (entryPointStyle) {
 		case exec:
 			appArgs = createCommandArgs(request);
@@ -118,25 +120,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 			break;
 		case shell:
-			for (String key : request.getDefinition().getProperties().keySet()) {
-				String envVar = key.replace('.', '_').toUpperCase();
-				envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
-			}
-			// Push all the command line arguments as environment properties
-			// The task app name(in case of Composed Task), platform_name and executionId are expected to be updated.
-			// This will also override any of the existing app properties that match the provided cmdline args.
-			for (String cmdLineArg: request.getCommandlineArguments()) {
-				String cmdLineArgKey;
-
-				if (cmdLineArg.startsWith("--")) {
-					cmdLineArgKey = cmdLineArg.substring(2, cmdLineArg.indexOf("="));
-				} else {
-					cmdLineArgKey = cmdLineArg.substring(0, cmdLineArg.indexOf("="));
-				}
-
-				String cmdLineArgValue = cmdLineArg.substring(cmdLineArg.indexOf("=") + 1);
-				envVarsMap.put(cmdLineArgKey.replace('.', '_').toUpperCase(), cmdLineArgValue);
-			}
+			envVarsMap.putAll(PropertyParserUtils.getEnvironmentVariables(request));
 			break;
 		}
 
