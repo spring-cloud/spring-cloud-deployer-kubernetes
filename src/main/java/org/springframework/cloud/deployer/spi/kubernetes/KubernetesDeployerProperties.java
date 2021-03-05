@@ -16,8 +16,13 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import io.fabric8.kubernetes.api.model.NodeAffinity;
 import io.fabric8.kubernetes.api.model.PodAffinity;
@@ -25,11 +30,6 @@ import io.fabric8.kubernetes.api.model.PodAntiAffinity;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.client.Config;
-
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
-
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
 
 /**
  * @author Florian Rosenberg
@@ -574,6 +574,16 @@ public class KubernetesDeployerProperties {
 	private EntryPointStyle entryPointStyle = EntryPointStyle.exec;
 
 	/**
+	 * Use Kubernetes Deployment feature instead of deploying one pod.
+	 */
+	private boolean useDeployment = false;
+
+	/**
+	 * Kubernetes deployment yaml name
+	 */
+	private String deploymentYaml;
+
+	/**
 	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
 	 */
 	private boolean createLoadBalancer = false;
@@ -1114,6 +1124,14 @@ public class KubernetesDeployerProperties {
 	public void setEntryPointStyle(EntryPointStyle entryPointStyle) {
 		this.entryPointStyle = entryPointStyle;
 	}
+
+	public boolean getUseDeployment() { return useDeployment; }
+
+	public void setUseDeployment(boolean useDeployment) { this.useDeployment = useDeployment; }
+
+	public String getDeploymentYaml() { return  deploymentYaml; }
+
+	public void setDeploymentYaml(String deploymentYaml) { this.deploymentYaml = deploymentYaml; }
 
 	public boolean isCreateLoadBalancer() {
 		return createLoadBalancer;

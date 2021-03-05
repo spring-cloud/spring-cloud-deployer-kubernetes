@@ -15,6 +15,9 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import static java.lang.String.format;
+import static java.util.Collections.emptyList;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,6 +28,20 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
+import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.AffinityBuilder;
@@ -43,24 +60,6 @@ import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
-import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
-import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
 
 /**
  * Class that resolves the appropriate deployment properties based on the property prefix being used.
@@ -363,6 +362,17 @@ class DeploymentPropertiesResolver {
 		}
 
 		return imagePullSecret;
+	}
+
+	String getDeploymentYaml(Map<String, String> kubernetesDeployerProperties){
+		String deploymentYaml = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".deploymentYaml", "");
+
+		if(StringUtils.isEmpty(deploymentYaml)) {
+			deploymentYaml = this.properties.getDeploymentYaml();
+		}
+
+		return deploymentYaml;
 	}
 
 	String getDeploymentServiceAccountName(Map<String, String> kubernetesDeployerProperties) {

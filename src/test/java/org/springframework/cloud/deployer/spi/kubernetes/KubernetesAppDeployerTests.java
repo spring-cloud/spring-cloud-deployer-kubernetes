@@ -261,6 +261,40 @@ public class KubernetesAppDeployerTests {
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
 		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcred");
 	}
+	
+	@Test
+	public void deployWithImagePullSecretsDeploymentProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.imagePullSecrets", "['regcredone','regcredtwo']");
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+
+		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(2);
+		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcredone");
+		assertThat(podSpec.getImagePullSecrets().get(1).getName()).isEqualTo("regcredtwo");
+	}
+
+	@Test
+	public void deployWithImagePullSecretsDeployerProperty() {
+		AppDefinition definition = new AppDefinition("app-test", null);
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setImagePullSecrets(Arrays.asList("regcredone","regcredtwo"));
+
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+
+		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(2);
+		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcredone");
+		assertThat(podSpec.getImagePullSecrets().get(1).getName()).isEqualTo("regcredtwo");
+	}
 
 	@Test
 	public void deployWithDeploymentServiceAccountNameDeploymentProperties() {
