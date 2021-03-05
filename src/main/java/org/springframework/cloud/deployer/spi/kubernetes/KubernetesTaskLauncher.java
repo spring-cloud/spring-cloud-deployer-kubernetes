@@ -24,6 +24,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.hashids.Hashids;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+import org.springframework.cloud.deployer.spi.task.LaunchState;
+import org.springframework.cloud.deployer.spi.task.TaskLauncher;
+import org.springframework.cloud.deployer.spi.task.TaskStatus;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -33,6 +46,8 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.api.model.batch.JobList;
 import io.fabric8.kubernetes.api.model.batch.JobSpec;
@@ -44,18 +59,6 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.PodResource;
-import org.hashids.Hashids;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
-import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
-import org.springframework.cloud.deployer.spi.task.LaunchState;
-import org.springframework.cloud.deployer.spi.task.TaskLauncher;
-import org.springframework.cloud.deployer.spi.task.TaskStatus;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * A task launcher that targets Kubernetes.
@@ -101,27 +104,34 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	@Override
 	public String launch(AppDeploymentRequest request) {
-		String appId = createDeploymentId(request);
-		TaskStatus status = status(appId);
-
-		if (!status.getState().equals(LaunchState.unknown)) {
-			throw new IllegalStateException("Task " + appId + " already exists with a state of " + status);
+		if( properties.getUseDeployment() ) {
+			return launchWithDeploymentConfig(request);
 		}
+		else {
+			String appId = createDeploymentId(request);
+			TaskStatus status = status(appId);
 
-		if (this.maxConcurrentExecutionsReached()) {
-			throw new IllegalStateException(
-				String.format("Cannot launch task %s. The maximum concurrent task executions is at its limit [%d].",
-					request.getDefinition().getName(), this.getMaximumConcurrentTasks())
-			);
-		}
+			if (!status.getState().equals(LaunchState.unknown)) {
+				throw new IllegalStateException(
+						"Task " + appId + " already exists with a state of " + status);
+			}
 
-		logPossibleDownloadResourceMessage(request.getResource());
-		try {
-			launch(appId, request);
-			return appId;
-		} catch (RuntimeException e) {
-			logger.error(e.getMessage(), e);
-			throw e;
+			if (this.maxConcurrentExecutionsReached()) {
+				throw new IllegalStateException(
+						String.format(
+								"Cannot launch task %s. The maximum concurrent task executions is at its limit [%d].",
+								request.getDefinition().getName(), this.getMaximumConcurrentTasks())
+				);
+			}
+
+			logPossibleDownloadResourceMessage(request.getResource());
+			try {
+				launch(appId, request);
+				return appId;
+			} catch (RuntimeException e) {
+				logger.error(e.getMessage(), e);
+				throw e;
+			}
 		}
 	}
 
@@ -135,10 +145,14 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	@Override
 	public void cleanup(String id) {
 		try {
-			if (properties.isCreateJob()) {
-				deleteJob(id);
-			} else {
-				deletePod(id);
+			if(properties.getUseDeployment()){
+				decreasePod(getDeploymentByAppId(id));
+			}else {
+				if (properties.isCreateJob()) {
+					deleteJob(id);
+				} else {
+					deletePod(id);
+				}
 			}
 		} catch (RuntimeException e) {
 			logger.error(e.getMessage(), e);
@@ -226,9 +240,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 	private void launch(String appId, AppDeploymentRequest request) {
 		Map<String, String> idMap = createIdMap(appId, request);
-		Map<String, String> podLabelMap = new HashMap<>();
-		podLabelMap.put("task-name", request.getDefinition().getName());
-		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+		Map<String, String> podLabelMap = getPodLabelMap(request);
 
 		Map<String, String> deploymentProperties = request.getDeploymentProperties();
 		Map<String, String> deploymentLabels = this.deploymentPropertiesResolver.getDeploymentLabels(deploymentProperties);
@@ -278,6 +290,111 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.withSpec(podSpec)
 					.done();
 		}
+	}
+
+	private String launchWithDeploymentConfig(AppDeploymentRequest request){
+
+		logger.debug("All of pod configurations are managed by Deployment Yaml.");
+
+		Map<String, String> deploymentProperties = request.getDeploymentProperties();
+		String deploymentName = this.deploymentPropertiesResolver.getDeploymentYaml(deploymentProperties);
+
+		Deployment deployment = getDeploymentByName(deploymentName);
+
+		String previousAppId = getAppId(deployment);
+		decreasePod(deployment);
+		increasePod(request, deployment);
+
+		String appId = getAppId(deployment);
+
+		while(appId.equals(previousAppId)){
+			appId = getAppId(deployment);
+		}
+		Map<String, String> labelMap = createIdMap(appId,request);
+		configureLabels(deploymentName, labelMap);
+		return appId;
+	}
+
+	private void configureLabels(String deploymentName, Map<String, String> labelMap){
+   client.apps().deployments()
+			  .inNamespace(properties.getNamespace())
+				.withName(deploymentName)
+			  .edit().editOrNewMetadata()
+			  .addToLabels(labelMap)
+			  .endMetadata()
+			  .done();
+	}
+
+	private String getAppId(Deployment deployment){
+		PodList podList = getPodList(deployment);
+		if(podList.getItems().isEmpty())
+			return "";
+		return podList.getItems().get(0).getMetadata().getName();
+	}
+
+	private void decreasePod(Deployment deployment){
+		DeploymentSpec deploymentSpec = deployment.getSpec();
+		deploymentSpec.setReplicas(0);
+		deployment.setSpec(deploymentSpec);
+		this.client.apps().deployments().inNamespace(properties.getNamespace())
+				.createOrReplace(deployment);
+
+	}
+	private void increasePod(AppDeploymentRequest request, Deployment deployment ){
+		DeploymentSpec deploymentSpec = deployment.getSpec();
+		deploymentSpec.setReplicas(1);
+		Map<String, String> envVarsMap = PropertyParserUtils.getEnvironmentVariables(request);
+		List<EnvVar> envVarList =  deploymentSpec.getTemplate().getSpec().getContainers().get(0).getEnv();
+
+		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
+
+			boolean isExist = false;
+			boolean isUpdate = false;
+			int indexOfUpdate = 0;
+
+			for(int i = 0 ; i < envVarList.size() ; i++){
+
+				if(envVarList.get(i).getName().equals(e.getKey())){
+					if(envVarList.get(i).getValue().equals(e.getValue())){
+						isExist = true;
+					}
+					else {
+						isUpdate = true;
+						indexOfUpdate = i;
+					}
+					break;
+				}
+
+			}
+
+			if(isExist){
+				continue;
+			}
+
+			if(isUpdate){
+				envVarList.set(indexOfUpdate, new EnvVar(e.getKey(), e.getValue(), null));
+			}else{
+				envVarList.add(new EnvVar(e.getKey(), e.getValue(), null));
+			}
+
+		}
+		deploymentSpec.getTemplate().getSpec().getContainers().get(0).setEnv(envVarList);
+		deployment.setSpec(deploymentSpec);
+		this.client.apps().deployments().inNamespace(properties.getNamespace())
+				.createOrReplace(deployment);
+	}
+
+
+	private PodList getPodList(Deployment deployment){
+		return this.client.pods().inNamespace(properties.getNamespace())
+				.withLabels(deployment.getSpec().getTemplate().getMetadata().getLabels()).list();
+	}
+
+	private Map<String, String> getPodLabelMap(AppDeploymentRequest request){
+		Map<String, String> podLabelMap = new HashMap<>();
+		podLabelMap.put("task-name", request.getDefinition().getName());
+		podLabelMap.put(SPRING_MARKER_KEY, SPRING_MARKER_VALUE);
+		return podLabelMap;
 	}
 
 	private List<String> getIdsForTasks(Optional<String> taskName, boolean isCreateJob) {
@@ -393,6 +510,21 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			logger.debug(String.format("Pod deleted for: %s - %b", id, podsDeleted));
 		}
 	}
+
+	private Deployment getDeploymentByName(String deploymentName){
+		return client.apps()
+				.deployments()
+				.inNamespace(properties.getNamespace())
+				.withName(deploymentName).get();
+	}
+
+	private Deployment getDeploymentByAppId(String appId){
+		return client.apps()
+				.deployments()
+				.inNamespace(properties.getNamespace())
+				.withLabel(SPRING_APP_KEY, appId).list().getItems().get(0);
+	}
+
 
 	private Job getJob(String jobName) {
 		List<Job> jobs = client.batch().jobs().withLabel(SPRING_APP_KEY, jobName).list().getItems();
