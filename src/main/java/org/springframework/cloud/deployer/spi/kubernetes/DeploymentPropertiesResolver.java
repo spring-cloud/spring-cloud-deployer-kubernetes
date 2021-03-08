@@ -522,6 +522,48 @@ class DeploymentPropertiesResolver {
 		return container;
 	}
 
+	Container getSidecarContainer(Map<String, String> kubernetesDeployerProperties) {
+		Container container = null;
+		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
+				this.propertyPrefix + ".sidecarContainer", "sidecarContainer");
+
+		if (deployerProperties.getSidecarContainer() == null) {
+			String containerName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".sidecarContainer.containerName");
+
+			String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".sidecarContainer.imageName");
+
+			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".sidecarContainer.commands");
+
+			List<VolumeMount> vms = this.getSidecarContainerVolumeMounts(kubernetesDeployerProperties);
+
+			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
+				container = new ContainerBuilder()
+						.withName(containerName)
+						.withImage(imageName)
+						.withCommand(commands)
+						.addAllToVolumeMounts(vms)
+						.build();
+			}
+		}
+		else {
+			KubernetesDeployerProperties.SidecarContainer sidecarContainer = deployerProperties.getSidecarContainer();
+
+			if (sidecarContainer != null) {
+				container = new ContainerBuilder()
+						.withName(sidecarContainer.getContainerName())
+						.withImage(sidecarContainer.getImageName())
+						.withCommand(sidecarContainer.getCommands())
+						.addAllToVolumeMounts(Optional.ofNullable(sidecarContainer.getVolumeMounts()).orElse(emptyList()))
+						.build();
+			}
+		}
+
+		return container;
+	}
+
 	Map<String, String> getPodAnnotations(Map<String, String> kubernetesDeployerProperties) {
 		String annotationsValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".podAnnotations", "");
@@ -684,6 +726,11 @@ class DeploymentPropertiesResolver {
 	private List<VolumeMount> getInitContainerVolumeMounts(Map<String, String> deploymentProperties) {
 		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
 				this.propertyPrefix + ".initContainer.volumeMounts"));
+	}
+
+	private List<VolumeMount> getSidecarContainerVolumeMounts(Map<String, String> deploymentProperties) {
+		return this.getVolumeMounts(PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".sidecarContainer.volumeMounts"));
 	}
 
 	private List<VolumeMount> getVolumeMounts(String propertyValue) {
