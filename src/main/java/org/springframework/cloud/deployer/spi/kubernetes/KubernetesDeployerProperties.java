@@ -342,7 +342,14 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
-	public static class InitContainer {
+	public static class InitContainer extends ContainerProperties {
+	}
+
+	public static class SidecarContainer extends ContainerProperties {
+	}
+
+
+	public static class ContainerProperties {
 		private String imageName;
 		private String containerName;
 		private List<String> commands;
@@ -686,6 +693,11 @@ public class KubernetesDeployerProperties {
 	 * A custom init container to apply.
 	 */
 	private InitContainer initContainer;
+
+	/**
+	 * A side car container one can add to the main application container.
+	 */
+	private SidecarContainer sidecarContainer;
 
 	public String getNamespace() {
 		return namespace;
@@ -1310,5 +1322,13 @@ public class KubernetesDeployerProperties {
 
 	public void setInitContainer(InitContainer initContainer) {
 		this.initContainer = initContainer;
+	}
+
+	public SidecarContainer getSidecarContainer() {
+		return this.sidecarContainer;
+	}
+
+	public void setSidecarContainer(SidecarContainer sidecarContainer) {
+		this.sidecarContainer = sidecarContainer;
 	}
 }

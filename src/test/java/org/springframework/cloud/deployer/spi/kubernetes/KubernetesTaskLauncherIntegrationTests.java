@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 the original author or authors.
+ * Copyright 2016-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.hamcrest.Matchers;
@@ -44,6 +46,7 @@ import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
@@ -186,6 +189,66 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		assertTrue(labels.get("label1").equals("value1"));
 		assertTrue(labels.containsKey("label2"));
 		assertTrue(labels.get("label2").equals("value2"));
+
+		log.info("Destroying {}...", taskName);
+
+		timeout = undeploymentTimeout();
+		kubernetesTaskLauncher.destroy(taskName);
+
+		assertThat(taskName, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
+				timeout.pause));
+	}
+
+	@Test
+	public void testTaskSidecarContainer() {
+		log.info("Testing {}...", "TaskSidecarContainer");
+
+		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(new KubernetesDeployerProperties(),
+				new KubernetesTaskLauncherProperties(), kubernetesClient);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.sidecarContainer",
+				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Launching {}...", request.getDefinition().getName());
+
+		String launchId = kubernetesTaskLauncher.launch(request);
+		Timeout timeout = deploymentTimeout();
+
+		assertThat(launchId, eventually(hasStatusThat(
+				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
+				timeout.pause));
+
+		String taskName = request.getDefinition().getName();
+
+		log.info("Checking job pod spec annotations of {}...", taskName);
+
+		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+
+		assertThat(pods.size(), is(1));
+
+		Pod pod = pods.get(0);
+
+		assertTrue(pod.getSpec().getContainers().size() == 2);
+
+		Optional<Container> sidecarContainer = pod.getSpec().getContainers().stream().filter(i -> i.getName().equals("test")).findFirst();
+		assertTrue("Sidecar container not found", sidecarContainer.isPresent());
+
+		Container testSidecarContainer = sidecarContainer.get();
+
+		assertEquals("Unexpected sidecar container name", testSidecarContainer.getName(), "test");
+		assertEquals("Unexpected sidecar container image", testSidecarContainer.getImage(), "busybox:latest");
+
+		List<String> commands = testSidecarContainer.getCommand();
+
+		assertTrue("Sidecar container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of sidecar container commands", 3, commands.size());
+		assertEquals("sh", commands.get(0));
+		assertEquals("-c", commands.get(1));
+		assertEquals("echo hello", commands.get(2));
 
 		log.info("Destroying {}...", taskName);
 

@@ -1275,6 +1275,50 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
+	public void testCreateSidecarContainer() {
+		log.info("Testing {}...", "CreateSidecarContainer");
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.sidecarContainer",
+				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication(), props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Deployment deployment = kubernetesClient.apps().deployments().withName(request.getDefinition().getName()).get();
+		List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
+
+		Optional<Container> sidecarContainer = containers.stream().filter(i -> i.getName().equals("test")).findFirst();
+		assertTrue("Sidecar container not found", sidecarContainer.isPresent());
+
+		Container testSidecarContainer = sidecarContainer.get();
+
+		assertEquals("Unexpected sidecar container name", testSidecarContainer.getName(), "test");
+		assertEquals("Unexpected sidecar container image", testSidecarContainer.getImage(), "busybox:latest");
+
+		List<String> commands = testSidecarContainer.getCommand();
+
+		assertTrue("Sidecar container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of sidecar container commands", 3, commands.size());
+		assertEquals("sh", commands.get(0));
+		assertEquals("-c", commands.get(1));
+		assertEquals("echo hello", commands.get(2));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
 	public void testUnknownStatusOnPendingResources() throws InterruptedException {
 		log.info("Testing {}...", "UnknownStatusOnPendingResources");
 		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
