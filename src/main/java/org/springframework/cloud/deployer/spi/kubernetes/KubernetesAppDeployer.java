@@ -293,13 +293,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		podSpec.getInitContainers().add(createStatefulSetInitContainer(statefulSetInitContainerImageName));
 
 		Map<String, String> deploymentLabels=  this.deploymentPropertiesResolver.getDeploymentLabels(request.getDeploymentProperties());
+		Map<String, String> annotations = this.deploymentPropertiesResolver.getPodAnnotations(kubernetesDeployerProperties);
 
 		StatefulSetSpec spec = new StatefulSetSpecBuilder().withNewSelector().addToMatchLabels(idMap)
 				.addToMatchLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endSelector()
 				.withVolumeClaimTemplates(persistentVolumeClaimBuilder.build()).withServiceName(appId)
 				.withPodManagementPolicy("Parallel").withReplicas(replicas).withNewTemplate().withNewMetadata()
 				.withLabels(idMap).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels)
-				.endMetadata().withSpec(podSpec).endTemplate().build();
+				.addToAnnotations(annotations).endMetadata().withSpec(podSpec).endTemplate().build();
 
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels).endMetadata().withSpec(spec).build();
