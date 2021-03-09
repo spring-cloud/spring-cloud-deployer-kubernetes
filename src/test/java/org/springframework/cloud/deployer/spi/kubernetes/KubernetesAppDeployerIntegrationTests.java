@@ -821,6 +821,56 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
+	public void testStatefulSetPodAnnotations() {
+		log.info("Testing {}...", "ScaleStatefulSet");
+		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
+
+		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
+		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
+				containerFactory);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+		props.put("spring.cloud.deployer.kubernetes.podAnnotations",
+				"iam.amazonaws.com/role:role-arn,foo:bar");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		Timeout timeout = deploymentTimeout();
+		String deploymentId = appDeployer.deploy(request);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(appInstanceCount(is(3))));
+
+		// Ensure that a StatefulSet is deployed
+		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
+		assertNotNull(statefulSets);
+		assertEquals(1, statefulSets.size());
+		StatefulSet statefulSet = statefulSets.get(0);
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
+		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(3);
+		Assertions.assertThat(statefulSetSpec.getServiceName()).isEqualTo(deploymentId);
+		Assertions.assertThat(statefulSet.getMetadata().getName()).isEqualTo(deploymentId);
+
+		Map<String, String> annotations = statefulSetSpec.getTemplate().getMetadata().getAnnotations();
+		log.info("Number of annotations found" + annotations.size());
+		for (Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
+			log.info("Annotation key: " + annotationsEntry.getKey());
+		}
+		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
+		assertEquals("role-arn", annotations.get("iam.amazonaws.com/role"));
+		assertTrue(annotations.containsKey("foo"));
+		assertEquals("bar", annotations.get("foo"));
+		appDeployer.undeploy(deploymentId);
+	}
+
+	@Test
 	public void testDeploymentLabels() {
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
 				"label1:value1,label2:value2");
