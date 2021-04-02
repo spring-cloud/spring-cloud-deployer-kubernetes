@@ -18,3 +18,4 @@ _site/
 .factorypath
 .apt_generated
 artifacts
+.jfrog/
