@@ -138,6 +138,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Before
 	public void setup() {
+		kubernetesClient = KubernetesClientFactory.getKubernetesClient(originalProperties);
 		if (kubernetesClient.getNamespace() == null) {
 			kubernetesClient.getConfiguration().setNamespace("default");
 		}
@@ -494,6 +495,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		String url = String.format("http://%s:%d/actuator/env", ip, port);
 		log.debug("getting app environment from " + url);
+
 		restTemplate = new RestTemplate();
 
 		ResponseEntity<LinkedHashMap<String, ArrayList<LinkedHashMap>>> response = restTemplate.exchange(url,

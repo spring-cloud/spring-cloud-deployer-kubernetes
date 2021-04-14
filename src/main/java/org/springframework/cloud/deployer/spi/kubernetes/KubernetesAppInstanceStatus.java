@@ -144,6 +144,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 					if(externalIp == null) {
 						externalIp = service.getStatus().getLoadBalancer().getIngress().get(0).getHostname();
 					}
+
 					result.put("service.external.ip", externalIp);
 					List<ServicePort> ports = service.getSpec().getPorts();
 					int port = 0;

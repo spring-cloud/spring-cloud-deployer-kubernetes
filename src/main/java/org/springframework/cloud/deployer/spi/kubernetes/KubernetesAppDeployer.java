@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
@@ -389,10 +390,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		} else {
 			spec.withSelector(idMap);
 		}
-
-		client.services().createOrReplaceWithNew().withNewMetadata().withName(serviceName)
-			.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
-			.endMetadata().withSpec(spec.build()).done();
+		Service service = new ServiceBuilder().withNewMetadata().withName(serviceName)
+				.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
+				.endMetadata().withSpec(spec.build()).build();
+		client.services().createOrReplace(service);
 	}
 
 	// logic to support using un-versioned service names when called from skipper
@@ -493,7 +494,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteService(Map<String, String> labels) {
-		FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> servicesToDelete =
+		FilterWatchListDeletable<Service, ServiceList> servicesToDelete =
 				client.services().withLabels(labels);
 
 		if (servicesToDelete != null && servicesToDelete.list().getItems() != null) {
@@ -503,7 +504,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteDeployment(Map<String, String> labels) {
-		FilterWatchListDeletable<Deployment, DeploymentList, Boolean, Watch, Watcher<Deployment>> deploymentsToDelete =
+		FilterWatchListDeletable<Deployment, DeploymentList> deploymentsToDelete =
 				client.apps().deployments().withLabels(labels);
 
 		if (deploymentsToDelete != null && deploymentsToDelete.list().getItems() != null) {
@@ -513,7 +514,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteStatefulSet(Map<String, String> labels) {
-		FilterWatchListDeletable<StatefulSet, StatefulSetList, Boolean, Watch, Watcher<StatefulSet>> ssToDelete =
+		FilterWatchListDeletable<StatefulSet, StatefulSetList> ssToDelete =
 				client.apps().statefulSets().withLabels(labels);
 
 		if (ssToDelete != null && ssToDelete.list().getItems() != null) {
@@ -523,7 +524,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deletePod(Map<String, String> labels) {
-		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+		FilterWatchListDeletable<Pod, PodList> podsToDelete = client.pods()
 				.withLabels(labels);
 
 		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
@@ -533,8 +534,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deletePvc(Map<String, String> labels) {
-		FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList, Boolean, Watch,
-				Watcher<PersistentVolumeClaim>> pvcsToDelete = client.persistentVolumeClaims()
+		FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList> pvcsToDelete = client.persistentVolumeClaims()
 				.withLabels(labels);
 
 		if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {

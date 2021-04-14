@@ -29,11 +29,13 @@ import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.Job;
+import io.fabric8.kubernetes.api.model.batch.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.JobList;
 import io.fabric8.kubernetes.api.model.batch.JobSpec;
 import io.fabric8.kubernetes.api.model.batch.JobSpecBuilder;
@@ -252,23 +254,20 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.withTemplate(podTemplateSpec)
 					.withBackoffLimit(getBackoffLimit(request))
 					.build();
-
-			this.client.batch().jobs()
-					.createNew()
-					.withNewMetadata()
+			Job job = new JobBuilder().withNewMetadata()
 					.withName(appId)
 					.withLabels(Collections.singletonMap("task-name", podLabelMap.get("task-name")))
 					.addToLabels(idMap)
 					.withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(deploymentProperties))
 					.endMetadata()
 					.withSpec(jobSpec)
-					.done();
+					.build();
+			this.client.batch().jobs()
+					.create(job);
 		}
 		else {
 			logger.debug(String.format("Launching Pod for task: %s", appId));
-			this.client.pods()
-					.createNew()
-					.withNewMetadata()
+			Pod pod = new PodBuilder().withNewMetadata()
 					.withName(appId)
 					.withLabels(podLabelMap)
 					.addToLabels(deploymentLabels)
@@ -276,7 +275,9 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.addToLabels(idMap)
 					.endMetadata()
 					.withSpec(podSpec)
-					.done();
+					.build();
+			this.client.pods()
+					.create(pod);
 		}
 	}
 
@@ -373,7 +374,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 
 	private void deleteJob(String id) {
-		FilterWatchListDeletable<Job, JobList, Boolean, Watch, Watcher<Job>> jobsToDelete = client.batch().jobs()
+		FilterWatchListDeletable<Job, JobList> jobsToDelete = client.batch().jobs()
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (jobsToDelete != null && jobsToDelete.list().getItems() != null) {
@@ -384,7 +385,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	private void deletePod(String id) {
-		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+		FilterWatchListDeletable<Pod, PodList> podsToDelete = client.pods()
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
