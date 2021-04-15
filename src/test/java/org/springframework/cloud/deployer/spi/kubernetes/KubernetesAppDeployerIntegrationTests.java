@@ -822,7 +822,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 	@Test
 	public void testStatefulSetPodAnnotations() {
-		log.info("Testing {}...", "ScaleStatefulSet");
+		log.info("Testing {}...", "StatefulSetPodAnnotations");
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
@@ -853,16 +853,8 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		assertEquals(1, statefulSets.size());
 		StatefulSet statefulSet = statefulSets.get(0);
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
-		Assertions.assertThat(statefulSetSpec.getPodManagementPolicy()).isEqualTo("Parallel");
-		Assertions.assertThat(statefulSetSpec.getReplicas()).isEqualTo(3);
-		Assertions.assertThat(statefulSetSpec.getServiceName()).isEqualTo(deploymentId);
-		Assertions.assertThat(statefulSet.getMetadata().getName()).isEqualTo(deploymentId);
 
 		Map<String, String> annotations = statefulSetSpec.getTemplate().getMetadata().getAnnotations();
-		log.info("Number of annotations found" + annotations.size());
-		for (Map.Entry<String, String> annotationsEntry : annotations.entrySet()) {
-			log.info("Annotation key: " + annotationsEntry.getKey());
-		}
 		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
 		assertEquals("role-arn", annotations.get("iam.amazonaws.com/role"));
 		assertTrue(annotations.containsKey("foo"));
