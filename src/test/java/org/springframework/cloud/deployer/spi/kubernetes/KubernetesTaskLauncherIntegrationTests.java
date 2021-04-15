@@ -201,16 +201,16 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 	}
 
 	@Test
-	public void testTaskSidecarContainer() {
-		log.info("Testing {}...", "TaskSidecarContainer");
+	public void testTaskAdditionalContainer() {
+		log.info("Testing {}...", "TaskAdditionalContainer");
 
 		KubernetesTaskLauncher kubernetesTaskLauncher = new KubernetesTaskLauncher(new KubernetesDeployerProperties(),
 				new KubernetesTaskLauncherProperties(), kubernetesClient);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
-		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.sidecarContainer",
-				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
+		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.additionalContainers",
+				"[{name: 'test', image: 'busybox:latest', command: ['sh', '-c', 'echo hello']}]");
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 
 		log.info("Launching {}...", request.getDefinition().getName());
@@ -234,18 +234,18 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 
 		assertTrue(pod.getSpec().getContainers().size() == 2);
 
-		Optional<Container> sidecarContainer = pod.getSpec().getContainers().stream().filter(i -> i.getName().equals("test")).findFirst();
-		assertTrue("Sidecar container not found", sidecarContainer.isPresent());
+		Optional<Container> additionalContainer = pod.getSpec().getContainers().stream().filter(i -> i.getName().equals("test")).findFirst();
+		assertTrue("Additional container not found", additionalContainer.isPresent());
 
-		Container testSidecarContainer = sidecarContainer.get();
+		Container testAdditionalContainer = additionalContainer.get();
 
-		assertEquals("Unexpected sidecar container name", testSidecarContainer.getName(), "test");
-		assertEquals("Unexpected sidecar container image", testSidecarContainer.getImage(), "busybox:latest");
+		assertEquals("Unexpected additional container name", testAdditionalContainer.getName(), "test");
+		assertEquals("Unexpected additional container image", testAdditionalContainer.getImage(), "busybox:latest");
 
-		List<String> commands = testSidecarContainer.getCommand();
+		List<String> commands = testAdditionalContainer.getCommand();
 
-		assertTrue("Sidecar container commands missing", commands != null && !commands.isEmpty());
-		assertEquals("Invalid number of sidecar container commands", 3, commands.size());
+		assertTrue("Additional container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, commands.size());
 		assertEquals("sh", commands.get(0));
 		assertEquals("-c", commands.get(1));
 		assertEquals("echo hello", commands.get(2));

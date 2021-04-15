@@ -345,9 +345,8 @@ public class KubernetesDeployerProperties {
 	public static class InitContainer extends ContainerProperties {
 	}
 
-	public static class SidecarContainer extends ContainerProperties {
+	static class Container extends io.fabric8.kubernetes.api.model.Container {
 	}
-
 
 	public static class ContainerProperties {
 		private String imageName;
@@ -697,7 +696,7 @@ public class KubernetesDeployerProperties {
 	/**
 	 * A side car container one can add to the main application container.
 	 */
-	private SidecarContainer sidecarContainer;
+	private List<Container> additionalContainers;
 
 	public String getNamespace() {
 		return namespace;
@@ -1324,11 +1323,11 @@ public class KubernetesDeployerProperties {
 		this.initContainer = initContainer;
 	}
 
-	public SidecarContainer getSidecarContainer() {
-		return this.sidecarContainer;
+	public List<Container> getAdditionalContainers() {
+		return this.additionalContainers;
 	}
 
-	public void setSidecarContainer(SidecarContainer sidecarContainer) {
-		this.sidecarContainer = sidecarContainer;
+	public void setAdditionalContainers(List<Container> additionalContainers) {
+		this.additionalContainers = additionalContainers;
 	}
 }
