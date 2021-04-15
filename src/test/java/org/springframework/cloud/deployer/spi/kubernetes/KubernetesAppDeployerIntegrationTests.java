@@ -36,6 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1275,13 +1276,25 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 	}
 
 	@Test
-	public void testCreateSidecarContainer() {
-		log.info("Testing {}...", "CreateSidecarContainer");
+	public void testCreateAdditionalContainers() {
+		log.info("Testing {}...", "CreateAdditionalContainers");
 		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
 				kubernetesClient);
 
-		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.sidecarContainer",
-				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
+		Map<String, String> props = Stream.of(new String[][]{
+				{
+						"spring.cloud.deployer.kubernetes.volumes",
+						"[{name: 'test-volume', emptyDir: {}}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.volumeMounts",
+						"[{name: 'test-volume', mountPath: '/tmp'}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.additional-containers",
+						"[{name: 'c1', image: 'busybox:latest', command: ['sh', '-c', 'echo hello1'], volumeMounts: [{name: 'test-volume', mountPath: '/tmp', readOnly: true}]},"
+								+ "{name: 'c2', image: 'busybox:1.26.1', command: ['sh', '-c', 'echo hello2']}]"
+				}}).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication(), props);
@@ -1295,21 +1308,155 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		Deployment deployment = kubernetesClient.apps().deployments().withName(request.getDefinition().getName()).get();
 		List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
 
-		Optional<Container> sidecarContainer = containers.stream().filter(i -> i.getName().equals("test")).findFirst();
-		assertTrue("Sidecar container not found", sidecarContainer.isPresent());
+		assertTrue("Number of containers is incorrect", containers.size() == 3);
 
-		Container testSidecarContainer = sidecarContainer.get();
+		Optional<Container> additionalContainer1 = containers.stream().filter(i -> i.getName().equals("c1")).findFirst();
+		assertTrue("Additional container c1 not found", additionalContainer1.isPresent());
 
-		assertEquals("Unexpected sidecar container name", testSidecarContainer.getName(), "test");
-		assertEquals("Unexpected sidecar container image", testSidecarContainer.getImage(), "busybox:latest");
+		Container testAdditionalContainer1 = additionalContainer1.get();
 
-		List<String> commands = testSidecarContainer.getCommand();
+		assertEquals("Unexpected additional container name", testAdditionalContainer1.getName(), "c1");
+		assertEquals("Unexpected additional container image", testAdditionalContainer1.getImage(), "busybox:latest");
 
-		assertTrue("Sidecar container commands missing", commands != null && !commands.isEmpty());
-		assertEquals("Invalid number of sidecar container commands", 3, commands.size());
+		List<String> commands = testAdditionalContainer1.getCommand();
+
+		assertTrue("Additional container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, commands.size());
 		assertEquals("sh", commands.get(0));
 		assertEquals("-c", commands.get(1));
-		assertEquals("echo hello", commands.get(2));
+		assertEquals("echo hello1", commands.get(2));
+
+		List<VolumeMount> volumeMounts = testAdditionalContainer1.getVolumeMounts();
+
+		assertTrue("Volume mount size is incorrect", volumeMounts.size() == 1);
+		assertEquals("test-volume", volumeMounts.get(0).getName());
+		assertEquals("/tmp", volumeMounts.get(0).getMountPath());
+		assertEquals(Boolean.TRUE, volumeMounts.get(0).getReadOnly());
+
+		Optional<Container> additionalContainer2 = containers.stream().filter(i -> i.getName().equals("c2")).findFirst();
+		assertTrue("Additional container c2 not found", additionalContainer2.isPresent());
+
+		Container testAdditionalContainer2 = additionalContainer2.get();
+
+		assertEquals("Unexpected additional container name", testAdditionalContainer2.getName(), "c2");
+		assertEquals("Unexpected additional container image", testAdditionalContainer2.getImage(), "busybox:1.26.1");
+
+		List<String> container2Commands = testAdditionalContainer2.getCommand();
+
+		assertTrue("Additional container commands missing", container2Commands != null && !container2Commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, container2Commands.size());
+		assertEquals("sh", container2Commands.get(0));
+		assertEquals("-c", container2Commands.get(1));
+		assertEquals("echo hello2", container2Commands.get(2));
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		kubernetesAppDeployer.undeploy(deploymentId);
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(unknown))), timeout.maxAttempts, timeout.pause));
+	}
+
+	@Test
+	public void testCreateAdditionalContainersOverride() {
+		log.info("Testing {}...", "CreateAdditionalContainersOverride");
+		KubernetesDeployerProperties.Container container1 = new KubernetesDeployerProperties.Container();
+		container1.setName("c1");
+		container1.setImage("busybox:1.31.0");
+		container1.setCommand(Arrays.asList("sh", "-c", "echo hello-from-original-properties"));
+		KubernetesDeployerProperties.Container container2 = new KubernetesDeployerProperties.Container();
+		container2.setName("container2");
+		container2.setImage("busybox:1.31.0");
+		container2.setCommand(Arrays.asList("sh", "-c", "echo hello-from-original-properties"));
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setAdditionalContainers(Arrays.asList(container1, container2));
+		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
+				kubernetesClient);
+
+		Map<String, String> props = Stream.of(new String[][]{
+				{
+						"spring.cloud.deployer.kubernetes.volumes",
+						"[{name: 'test-volume', emptyDir: {}}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.volumeMounts",
+						"[{name: 'test-volume', mountPath: '/tmp'}]",
+				},
+				{
+						"spring.cloud.deployer.kubernetes.additional-containers",
+						"[{name: 'c1', image: 'busybox:latest', command: ['sh', '-c', 'echo hello1'], volumeMounts: [{name: 'test-volume', mountPath: '/tmp', readOnly: true}]},"
+								+ "{name: 'c2', image: 'busybox:1.26.1', command: ['sh', '-c', 'echo hello2']}]"
+				}}).collect(Collectors.toMap(data -> data[0], data -> data[1]));
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication(), props);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = kubernetesAppDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		assertThat(deploymentId, eventually(hasStatusThat(
+				Matchers.hasProperty("state", is(deployed))), timeout.maxAttempts, timeout.pause));
+
+		Deployment deployment = kubernetesClient.apps().deployments().withName(request.getDefinition().getName()).get();
+		List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
+
+		assertTrue("Number of containers is incorrect", containers.size() == 4);
+
+		// c1 from the deployment properties should have overridden the c1 from the original deployer properties
+		Optional<Container> additionalContainer1 = containers.stream().filter(i -> i.getName().equals("c1")).findFirst();
+		assertTrue("Additional container c1 not found", additionalContainer1.isPresent());
+
+		Container testAdditionalContainer1 = additionalContainer1.get();
+
+		assertEquals("Unexpected additional container name", testAdditionalContainer1.getName(), "c1");
+		assertEquals("Unexpected additional container image", testAdditionalContainer1.getImage(), "busybox:latest");
+
+		List<String> commands = testAdditionalContainer1.getCommand();
+
+		assertTrue("Additional container commands missing", commands != null && !commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, commands.size());
+		assertEquals("sh", commands.get(0));
+		assertEquals("-c", commands.get(1));
+		assertEquals("echo hello1", commands.get(2));
+
+		List<VolumeMount> volumeMounts = testAdditionalContainer1.getVolumeMounts();
+
+		assertTrue("Volume mount size is incorrect", volumeMounts.size() == 1);
+		assertEquals("test-volume", volumeMounts.get(0).getName());
+		assertEquals("/tmp", volumeMounts.get(0).getMountPath());
+		assertEquals(Boolean.TRUE, volumeMounts.get(0).getReadOnly());
+
+		Optional<Container> additionalContainer2 = containers.stream().filter(i -> i.getName().equals("c2")).findFirst();
+		assertTrue("Additional container c2 not found", additionalContainer2.isPresent());
+
+		Container testAdditionalContainer2 = additionalContainer2.get();
+
+		assertEquals("Unexpected additional container name", testAdditionalContainer2.getName(), "c2");
+		assertEquals("Unexpected additional container image", testAdditionalContainer2.getImage(), "busybox:1.26.1");
+
+		List<String> container2Commands = testAdditionalContainer2.getCommand();
+
+		assertTrue("Additional container commands missing", container2Commands != null && !container2Commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, container2Commands.size());
+		assertEquals("sh", container2Commands.get(0));
+		assertEquals("-c", container2Commands.get(1));
+		assertEquals("echo hello2", container2Commands.get(2));
+
+		// Verifying the additional container passed from the root deployer properties
+		Optional<Container> additionalContainer3 = containers.stream().filter(i -> i.getName().equals("container2")).findFirst();
+		assertTrue("Additional container c2 not found", additionalContainer3.isPresent());
+
+		Container testAdditionalContainer3 = additionalContainer3.get();
+
+		assertEquals("Unexpected additional container name", testAdditionalContainer3.getName(), "container2");
+		assertEquals("Unexpected additional container image", testAdditionalContainer3.getImage(), "busybox:1.31.0");
+
+		List<String> container3Commands = testAdditionalContainer3.getCommand();
+
+		assertTrue("Additional container commands missing", container3Commands != null && !container3Commands.isEmpty());
+		assertEquals("Invalid number of additional container commands", 3, container3Commands.size());
+		assertEquals("sh", container3Commands.get(0));
+		assertEquals("-c", container3Commands.get(1));
+		assertEquals("echo hello-from-original-properties", container3Commands.get(2));
 
 		log.info("Undeploying {}...", deploymentId);
 		timeout = undeploymentTimeout();
