@@ -75,6 +75,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -439,6 +440,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 		boolean success = false;
 
 		Service svc = kubernetesClient.services().withName(appId).get();
+		RestTemplate restTemplate = new RestTemplate();
 
 		if (svc != null && "LoadBalancer".equals(svc.getSpec().getType())) {
 			int tries = 0;
@@ -448,8 +450,30 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 						svc.getStatus().getLoadBalancer().getIngress() != null &&
 						!(svc.getStatus().getLoadBalancer().getIngress().isEmpty())) {
 					ip = svc.getStatus().getLoadBalancer().getIngress().get(0).getIp();
+					if (ip == null) {
+						ip = svc.getStatus().getLoadBalancer().getIngress().get(0).getHostname();
+					}
 					port = svc.getSpec().getPorts().get(0).getPort();
 					success = true;
+					try {
+						String url = String.format("http://%s:%d/actuator/env", ip, port);
+						restTemplate.exchange(url,
+								HttpMethod.GET, HttpEntity.EMPTY,
+								new ParameterizedTypeReference<LinkedHashMap<String, ArrayList<LinkedHashMap>>>() {
+									@Override
+									public Type getType() {
+										return Map.class;
+									}
+								});
+					}
+					catch(ResourceAccessException rae) {
+						success = false;
+						try {
+							Thread.sleep(5000L);
+						}
+						catch (InterruptedException e) {
+						}
+					}
 				}
 				else {
 					try {
@@ -470,7 +494,7 @@ public class KubernetesAppDeployerIntegrationTests extends AbstractAppDeployerIn
 
 		String url = String.format("http://%s:%d/actuator/env", ip, port);
 		log.debug("getting app environment from " + url);
-		RestTemplate restTemplate = new RestTemplate();
+		restTemplate = new RestTemplate();
 
 		ResponseEntity<LinkedHashMap<String, ArrayList<LinkedHashMap>>> response = restTemplate.exchange(url,
 				HttpMethod.GET, HttpEntity.EMPTY,
