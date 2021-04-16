@@ -258,10 +258,7 @@ public class AbstractKubernetesDeployer {
 		if (initContainer != null) {
 			podSpec.addToInitContainers(initContainer);
 		}
-		List<Container> additionalContainers = this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties);
-		for (Container additionalContainer: additionalContainers) {
-			podSpec.addToContainers(additionalContainer);
-		}
+		podSpec.addAllToContainers(this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties));
 		return podSpec.build();
 	}
 

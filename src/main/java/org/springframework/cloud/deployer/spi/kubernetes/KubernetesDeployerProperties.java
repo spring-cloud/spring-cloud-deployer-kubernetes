@@ -694,7 +694,7 @@ public class KubernetesDeployerProperties {
 	private InitContainer initContainer;
 
 	/**
-	 * A side car container one can add to the main application container.
+	 * The additional containers one can add to the main application container.
 	 */
 	private List<Container> additionalContainers;
 

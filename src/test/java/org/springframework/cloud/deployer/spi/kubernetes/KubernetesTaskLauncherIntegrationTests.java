@@ -224,8 +224,6 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 
 		String taskName = request.getDefinition().getName();
 
-		log.info("Checking job pod spec annotations of {}...", taskName);
-
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
 		assertThat(pods.size(), is(1));
