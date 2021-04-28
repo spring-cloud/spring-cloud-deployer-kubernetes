@@ -12,6 +12,7 @@ A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer)
 | **2.3.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
 | **2.4.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
 | **2.5.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
+| **2.6.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
 | **MASTER**            | ✕    | ✕    | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |
 
 - `✓` Fully supported version.
