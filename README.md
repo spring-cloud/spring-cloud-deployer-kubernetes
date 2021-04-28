@@ -12,8 +12,8 @@ A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer)
 | **2.3.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
 | **2.4.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
 | **2.5.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
-| **2.6.x**             | ✕    | ✕    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |
-| **MASTER**            | ✕    | ✕    | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |
+| **2.6.x**             | ✕    | ✕    | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |
+| **MAIN**              | ✕    | ✕    | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |
 
 - `✓` Fully supported version.
 - `?` Due to breaking changes between Kubernetes API versions, some features might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
