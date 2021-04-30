@@ -42,6 +42,7 @@ public abstract class HttpProbeCreator extends ProbeCreator {
 	static final String BOOT_1_LIVENESS_PROBE_PATH = "/health";
 	static final String BOOT_2_READINESS_PROBE_PATH = "/actuator" + BOOT_1_READINESS_PROBE_PATH;
 	static final String BOOT_2_LIVENESS_PROBE_PATH = "/actuator" + BOOT_1_LIVENESS_PROBE_PATH;
+	static final String DEFAULT_PROBE_SCHEME = "HTTP";
 
 	HttpProbeCreator(KubernetesDeployerProperties kubernetesDeployerProperties,
 					 ContainerConfiguration containerConfiguration) {
@@ -52,12 +53,15 @@ public abstract class HttpProbeCreator extends ProbeCreator {
 
 	protected abstract Integer getPort();
 
+	protected abstract String getScheme();
+
 	protected abstract int getTimeout();
 
 	protected Probe create() {
 		HTTPGetActionBuilder httpGetActionBuilder = new HTTPGetActionBuilder()
 				.withPath(getProbePath())
-				.withNewPort(getPort());
+				.withNewPort(getPort())
+				.withScheme(getScheme());
 
 		List<HTTPHeader> httpHeaders = getHttpHeaders();
 

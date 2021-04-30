@@ -69,6 +69,21 @@ class LivenessHttpProbeCreator extends HttpProbeCreator {
 	}
 
 	@Override
+	protected String getScheme() {
+		String probeSchemeValue = getProbePropertyName(LIVENESS_DEPLOYER_PROPERTY_PREFIX, "ProbeScheme");
+
+		if (StringUtils.hasText(probeSchemeValue)) {
+			return probeSchemeValue;
+		}
+
+		if (getKubernetesDeployerProperties().getLivenessHttpProbeScheme() != null) {
+			return getKubernetesDeployerProperties().getLivenessHttpProbeScheme();
+		}
+
+		return DEFAULT_PROBE_SCHEME;
+	}
+
+	@Override
 	protected int getTimeout() {
 		String probeTimeoutValue = getProbePropertyName(LIVENESS_DEPLOYER_PROPERTY_PREFIX, "ProbeTimeout");
 
