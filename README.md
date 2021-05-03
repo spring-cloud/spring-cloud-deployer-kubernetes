@@ -80,8 +80,4 @@ kubectl create clusterrolebinding default-ca --clusterrole=cluster-admin --servi
    export KUBERNETES_MASTER=<url obtained from kubectl cluster-info command above>
    export KUBERNETES_TRUST_CERTIFICATES=true
    ```
-3. Unset KUBECONFIG environment variable
-```bash
-unset KUBECONFIG
-```
 
