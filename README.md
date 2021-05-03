@@ -42,7 +42,7 @@ gcloud config set compute/zone us-central1-b
 gcloud container clusters get-credentials spring-test
 ```
 
-#### Running the tests
+#### Running the tests on GCP
 
 Once the test cluster has been created, you can run all integration tests.
 
@@ -63,4 +63,25 @@ $export KUBERNETES_AUTH_BASIC_PASSWORD=
 $export KUBERNETES_AUTH_BASIC_USERNAME=
 ```
 
+#### If running on Kubernetes cluster deployed on Amazon via TMC
+1. Setup Cluster Role Binding to cluster-main Binding for binding.   Not ideal, as it opens up security, so delete after test.
+```
+kubectl create clusterrolebinding default-ca --clusterrole=cluster-admin --serviceaccount=default:default
+```
+
+2. Setup Environment variables 
+   
+   a. Get the location of the Kubernetes cluster by executing the `kubectl cluster-info` command.  Copy the URL from the `Kubernetes master` result, be sure to leave off the port.
+   
+   b. Execute the following to setup the variables. 
+   ```bash
+   export TOKEN=$(kubectl get secret $(kubectl get serviceaccount default -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode )
+   export KUBERNETES_AUTH_TOKEN=$TOKEN
+   export KUBERNETES_MASTER=<url obtained from kubectl cluster-info command above>
+   export KUBERNETES_TRUST_CERTIFICATES=true
+   ```
+3. Unset KUBECONFIG environment variable
+```bash
+unset KUBECONFIG
+```
 
