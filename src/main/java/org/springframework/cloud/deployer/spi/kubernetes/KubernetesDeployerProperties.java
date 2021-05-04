@@ -19,6 +19,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.NodeAffinity;
 import io.fabric8.kubernetes.api.model.PodAffinity;
 import io.fabric8.kubernetes.api.model.PodAntiAffinity;
@@ -436,6 +437,16 @@ public class KubernetesDeployerProperties {
 	 * Port that app container has to respond on for liveness check.
 	 */
 	private Integer livenessHttpProbePort = null;
+
+	/**
+	 * Schema that app container has to respond on for liveness check.
+	 */
+	private String livenessHttpProbeScheme = "HTTP";
+
+	/**
+	 * Schema that app container has to respond to for readiness check.
+	 */
+	private String readinessHttpProbeScheme = "HTTP";
 
 	/**
 	 * Delay in seconds when the readiness check of the app container
@@ -1329,5 +1340,21 @@ public class KubernetesDeployerProperties {
 
 	public void setAdditionalContainers(List<Container> additionalContainers) {
 		this.additionalContainers = additionalContainers;
+	}
+
+	public String getLivenessHttpProbeScheme() {
+		return livenessHttpProbeScheme;
+	}
+
+	public void setLivenessHttpProbeScheme(String livenessHttpProbeScheme) {
+		this.livenessHttpProbeScheme = livenessHttpProbeScheme;
+	}
+
+	public String getReadinessHttpProbeScheme() {
+		return readinessHttpProbeScheme;
+	}
+
+	public void setReadinessHttpProbeScheme(String readinessHttpProbeScheme) {
+		this.readinessHttpProbeScheme = readinessHttpProbeScheme;
 	}
 }

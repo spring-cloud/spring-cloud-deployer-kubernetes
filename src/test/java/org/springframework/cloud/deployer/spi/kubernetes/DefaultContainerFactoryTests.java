@@ -369,6 +369,93 @@ public class DefaultContainerFactoryTests {
 		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
 	}
 
+	@Test
+	public void createCustomLivenessHttpProbeSchemeFromProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setLivenessHttpProbeScheme("HTTPS");
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withExternalPort(8080)
+				.withHostNetwork(true);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8080, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("HTTPS", container.getLivenessProbe().getHttpGet().getScheme());
+	}
+
+	@Test
+	public void createCustomReadinessHttpSchemeFromProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		kubernetesDeployerProperties.setReadinessHttpProbeScheme("HTTPS");
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		AppDefinition definition = new AppDefinition("app-test", null);
+		Resource resource = getResource();
+		Map<String, String> props = new HashMap<>();
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, props);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+		Container container = defaultContainerFactory.create(containerConfiguration);
+		assertNotNull(container);
+
+		List<ContainerPort> containerPorts = container.getPorts();
+		assertNotNull(containerPorts);
+
+		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
+		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
+		assertEquals(8080, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertEquals("HTTPS", container.getReadinessProbe().getHttpGet().getScheme());
+	}
+
+	@Test
+	public void createCustomLivenessAndReadinessHttpProbeSchemeFromAppRequest() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+
+		Map<String,String> appProperties = new HashMap<>();
+		appProperties.put("spring.cloud.deployer.kubernetes.livenessHttpProbeScheme", "HTTPS");
+		appProperties.put("spring.cloud.deployer.kubernetes.readinessHttpProbeScheme", "HTTPS");
+
+		AppDefinition definition = new AppDefinition("app-test", appProperties);
+		Resource resource = getResource();
+
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition,
+				resource, appProperties);
+
+		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
+				.withHostNetwork(true)
+				.withExternalPort(8080);
+
+		Container container = defaultContainerFactory.create(containerConfiguration);
+
+		assertNotNull(container);
+
+		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
+		assertEquals("HTTPS", container.getReadinessProbe().getHttpGet().getScheme());
+
+		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
+		assertEquals("HTTPS", container.getLivenessProbe().getHttpGet().getScheme());
+	}
+
 	/**
 	 * @deprecated {@see {@link #createCustomLivenessHttpPortFromAppRequest()}}
 	 */
