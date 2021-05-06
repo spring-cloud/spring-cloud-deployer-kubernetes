@@ -493,7 +493,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteService(Map<String, String> labels) {
-		FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> servicesToDelete =
+		FilterWatchListDeletable<Service, ServiceList, Boolean, Watch> servicesToDelete =
 				client.services().withLabels(labels);
 
 		if (servicesToDelete != null && servicesToDelete.list().getItems() != null) {
@@ -503,7 +503,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteDeployment(Map<String, String> labels) {
-		FilterWatchListDeletable<Deployment, DeploymentList, Boolean, Watch, Watcher<Deployment>> deploymentsToDelete =
+		FilterWatchListDeletable<Deployment, DeploymentList, Boolean, Watch> deploymentsToDelete =
 				client.apps().deployments().withLabels(labels);
 
 		if (deploymentsToDelete != null && deploymentsToDelete.list().getItems() != null) {
@@ -513,7 +513,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deleteStatefulSet(Map<String, String> labels) {
-		FilterWatchListDeletable<StatefulSet, StatefulSetList, Boolean, Watch, Watcher<StatefulSet>> ssToDelete =
+		FilterWatchListDeletable<StatefulSet, StatefulSetList, Boolean, Watch> ssToDelete =
 				client.apps().statefulSets().withLabels(labels);
 
 		if (ssToDelete != null && ssToDelete.list().getItems() != null) {
@@ -523,7 +523,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deletePod(Map<String, String> labels) {
-		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+		FilterWatchListDeletable<Pod, PodList, Boolean, Watch> podsToDelete = client.pods()
 				.withLabels(labels);
 
 		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
@@ -533,8 +533,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	}
 
 	private void deletePvc(Map<String, String> labels) {
-		FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList, Boolean, Watch,
-				Watcher<PersistentVolumeClaim>> pvcsToDelete = client.persistentVolumeClaims()
+		FilterWatchListDeletable<PersistentVolumeClaim, PersistentVolumeClaimList, Boolean, Watch> pvcsToDelete = client.persistentVolumeClaims()
 				.withLabels(labels);
 
 		if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {
