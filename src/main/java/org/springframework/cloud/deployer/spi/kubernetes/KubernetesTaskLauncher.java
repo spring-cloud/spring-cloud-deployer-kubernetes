@@ -373,7 +373,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 
 
 	private void deleteJob(String id) {
-		FilterWatchListDeletable<Job, JobList, Boolean, Watch, Watcher<Job>> jobsToDelete = client.batch().jobs()
+		FilterWatchListDeletable<Job, JobList, Boolean, Watch> jobsToDelete = client.batch().jobs()
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (jobsToDelete != null && jobsToDelete.list().getItems() != null) {
@@ -384,7 +384,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 	}
 
 	private void deletePod(String id) {
-		FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> podsToDelete = client.pods()
+		FilterWatchListDeletable<Pod, PodList, Boolean, Watch> podsToDelete = client.pods()
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (podsToDelete != null && podsToDelete.list().getItems() != null) {

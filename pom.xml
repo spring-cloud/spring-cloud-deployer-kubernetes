@@ -18,28 +18,12 @@
 
 	<properties>
 		<java.version>1.8</java.version>
-		<kubernetes-client.version>4.10.2</kubernetes-client.version>
-		<kubernetes-assertions.version>4.0.0</kubernetes-assertions.version>
 		<spring-cloud-deployer.version>2.6.0-SNAPSHOT</spring-cloud-deployer.version>
 		<java-semver.version>0.9.0</java-semver.version>
 		<maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
 		<powermock.version>2.0.2</powermock.version>
 	</properties>
 
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>io.fabric8</groupId>
-				<artifactId>kubernetes-client</artifactId>
-				<version>${kubernetes-client.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.fabric8</groupId>
-				<artifactId>kubernetes-model</artifactId>
-				<version>${kubernetes-client.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
