@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 the original author or authors.
+ * Copyright 2020-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -61,6 +60,11 @@ import org.springframework.util.StringUtils;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.ConfigMapKeyRef;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.InitContainer;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.Lifecycle;
+import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SecretKeyRef;
 
 /**
  * Class that resolves the appropriate deployment properties based on the property prefix being used.
@@ -155,42 +159,42 @@ class DeploymentPropertiesResolver {
 		String memory = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".limits.memory");
 
-		if (StringUtils.isEmpty(memory)) {
+		if (!StringUtils.hasText(memory)) {
 			memory = properties.getLimits().getMemory();
 		}
 
 		String cpu = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".limits.cpu");
 
-		if (StringUtils.isEmpty(cpu)) {
+		if (!StringUtils.hasText(cpu)) {
 			cpu = properties.getLimits().getCpu();
 		}
 
 		String gpuVendor = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 			this.propertyPrefix + ".limits.gpuVendor");
 
-		if (StringUtils.isEmpty(gpuVendor)) {
+		if (!StringUtils.hasText(gpuVendor)) {
 			gpuVendor = properties.getLimits().getGpuVendor();
 		}
 
 		String gpuCount = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 			this.propertyPrefix + ".limits.gpuCount");
 
-		if (StringUtils.isEmpty(gpuCount)) {
+		if (!StringUtils.hasText(gpuCount)) {
 			gpuCount = properties.getLimits().getGpuCount();
 		}
 
 		Map<String,Quantity> limits = new HashMap<String,Quantity>();
 
-		if (!StringUtils.isEmpty(memory)) {
+		if (StringUtils.hasText(memory)) {
 			limits.put("memory", new Quantity(memory));
 		}
 
-		if (!StringUtils.isEmpty(cpu)) {
+		if (StringUtils.hasText(cpu)) {
 			limits.put("cpu", new Quantity(cpu));
 		}
 
-		if (!StringUtils.isEmpty(gpuVendor) && !StringUtils.isEmpty(gpuCount)) {
+		if (StringUtils.hasText(gpuVendor) && StringUtils.hasText(gpuCount)) {
 			limits.put(gpuVendor + "/gpu", new Quantity(gpuCount));
 		}
 
@@ -308,7 +312,7 @@ class DeploymentPropertiesResolver {
 						this.propertyPrefix + ".hostNetwork");
 		boolean hostNetwork;
 
-		if (StringUtils.isEmpty(hostNetworkOverride)) {
+		if (!StringUtils.hasText(hostNetworkOverride)) {
 			hostNetwork = properties.isHostNetwork();
 		}
 		else {
@@ -332,7 +336,7 @@ class DeploymentPropertiesResolver {
 		String nodeSelector = this.properties.getNodeSelector();
 
 		String nodeSelectorDeploymentProperty = deploymentProperties
-				.getOrDefault(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
+				.getOrDefault(KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
 
 		boolean hasGlobalNodeSelector = StringUtils.hasText(properties.getNodeSelector());
 		boolean hasDeployerPropertyNodeSelector = StringUtils.hasText(nodeSelectorDeploymentProperty);
@@ -358,7 +362,7 @@ class DeploymentPropertiesResolver {
 		String imagePullSecret = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".imagePullSecret", "");
 
-		if(StringUtils.isEmpty(imagePullSecret)) {
+		if(!StringUtils.hasText(imagePullSecret)) {
 			imagePullSecret = this.properties.getImagePullSecret();
 		}
 
@@ -381,7 +385,7 @@ class DeploymentPropertiesResolver {
 		String deploymentServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".deploymentServiceAccountName");
 
-		if (StringUtils.isEmpty(deploymentServiceAccountName)) {
+		if (!StringUtils.hasText(deploymentServiceAccountName)) {
 			deploymentServiceAccountName = properties.getDeploymentServiceAccountName();
 		}
 
@@ -407,7 +411,7 @@ class DeploymentPropertiesResolver {
 			String fsGroup = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".podSecurityContext.fsGroup");
 
-			if (!StringUtils.isEmpty(runAsUser) && !StringUtils.isEmpty(fsGroup)) {
+			if (StringUtils.hasText(runAsUser) && StringUtils.hasText(fsGroup)) {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(Long.valueOf(runAsUser))
 						.withFsGroup(Long.valueOf(fsGroup))
@@ -497,7 +501,7 @@ class DeploymentPropertiesResolver {
 
 			List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
 
-			if (!StringUtils.isEmpty(containerName) && !StringUtils.isEmpty(imageName)) {
+			if (StringUtils.hasText(containerName) && StringUtils.hasText(imageName)) {
 				container = new ContainerBuilder()
 						.withName(containerName)
 						.withImage(imageName)
@@ -507,7 +511,7 @@ class DeploymentPropertiesResolver {
 			}
 		}
 		else {
-			KubernetesDeployerProperties.InitContainer initContainer = deployerProperties.getInitContainer();
+			InitContainer initContainer = deployerProperties.getInitContainer();
 
 			if (initContainer != null) {
 				container = new ContainerBuilder()
@@ -550,7 +554,7 @@ class DeploymentPropertiesResolver {
 		String annotationsValue = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".podAnnotations", "");
 
-		if (StringUtils.isEmpty(annotationsValue)) {
+		if (!StringUtils.hasText(annotationsValue)) {
 			annotationsValue = properties.getPodAnnotations();
 		}
 
@@ -561,7 +565,7 @@ class DeploymentPropertiesResolver {
 		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".serviceAnnotations", "");
 
-		if (StringUtils.isEmpty(annotationsProperty)) {
+		if (!StringUtils.hasText(annotationsProperty)) {
 			annotationsProperty = this.properties.getServiceAnnotations();
 		}
 
@@ -626,7 +630,7 @@ class DeploymentPropertiesResolver {
 
 		KubernetesDeployerProperties deployerProperties = new KubernetesDeployerProperties();
 
-		if (!StringUtils.isEmpty(deploymentPropertyValue)) {
+		if (StringUtils.hasText(deploymentPropertyValue)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
 				String tmpYaml = "{ " + yamlLabel + ": " + deploymentPropertyValue + " }";
@@ -665,7 +669,7 @@ class DeploymentPropertiesResolver {
 		String annotationsProperty = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".jobAnnotations", "");
 
-		if (StringUtils.isEmpty(annotationsProperty)) {
+		if (!StringUtils.hasText(annotationsProperty)) {
 			annotationsProperty = this.properties.getJobAnnotations();
 		}
 
@@ -713,7 +717,7 @@ class DeploymentPropertiesResolver {
 	private List<VolumeMount> getVolumeMounts(String propertyValue) {
 		List<VolumeMount> volumeMounts = new ArrayList<>();
 
-		if (!StringUtils.isEmpty(propertyValue)) {
+		if (StringUtils.hasText(propertyValue)) {
 			try {
 				YamlPropertiesFactoryBean properties = new YamlPropertiesFactoryBean();
 				String tmpYaml = "{ volume-mounts: " + propertyValue + " }";
@@ -749,6 +753,40 @@ class DeploymentPropertiesResolver {
 				this.propertyPrefix + ".containerCommand", "");
 
 		return new CommandLineTokenizer(containerCommand).getArgs();
+	}
+
+	/**
+	 * Parse Lifecycle hooks.
+	 * @param deploymentProperties the kubernetes deployer properties map
+	 * @return Lifecycle spec
+	 */
+	Lifecycle getLifeCycle(Map<String,String> deploymentProperties) {
+		Lifecycle lifecycle = properties.getLifecycle();
+
+		if (deploymentProperties.keySet().stream()
+				.noneMatch(s -> s.startsWith(propertyPrefix + ".lifecycle"))) {
+			return lifecycle;
+		}
+		String postStart = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".lifecycle.postStart.exec.command");
+		if (StringUtils.hasText(postStart)) {
+			lifecycle.setPostStart(lifecycleHook(postStart));
+		}
+
+		String preStop = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".lifecycle.preStop.exec.command");
+		if (StringUtils.hasText(preStop)) {
+			lifecycle.setPreStop(lifecycleHook(preStop));
+		}
+		return lifecycle;
+	}
+
+	private Lifecycle.Hook lifecycleHook(String command) {
+		Lifecycle.Hook hook = new Lifecycle.Hook();
+		Lifecycle.Exec exec = new Lifecycle.Exec();
+		exec.setCommand(Arrays.asList(command.split(",")));
+		hook.setExec(exec);
+		return hook;
 	}
 
 	/**
@@ -806,14 +844,14 @@ class DeploymentPropertiesResolver {
 			while (m.find()) {
 				String replacedVar = m.group(1).replaceAll("'","");
 
-				if (!StringUtils.isEmpty(replacedVar)) {
+				if (StringUtils.hasText(replacedVar)) {
 					vars.add(replacedVar);
 				}
 			}
 
 			String nonQuotedVars = value.replaceAll(pattern.pattern(), "");
 
-			if (!StringUtils.isEmpty(nonQuotedVars)) {
+			if (StringUtils.hasText(nonQuotedVars)) {
 				vars.addAll(Arrays.asList(nonQuotedVars.split(",")));
 			}
 
@@ -870,7 +908,7 @@ class DeploymentPropertiesResolver {
 		return configMapKeyRefs;
 	}
 
-	private EnvVar buildConfigMapKeyRefEnvVar(KubernetesDeployerProperties.ConfigMapKeyRef configMapKeyRef) {
+	private EnvVar buildConfigMapKeyRefEnvVar(ConfigMapKeyRef configMapKeyRef) {
 		ConfigMapKeySelector configMapKeySelector = new ConfigMapKeySelector();
 
 		EnvVarSource envVarSource = new EnvVarSource();
@@ -903,7 +941,7 @@ class DeploymentPropertiesResolver {
 		return secretKeyRefs;
 	}
 
-	private EnvVar buildSecretKeyRefEnvVar(KubernetesDeployerProperties.SecretKeyRef secretKeyRef) {
+	private EnvVar buildSecretKeyRefEnvVar(SecretKeyRef secretKeyRef) {
 		SecretKeySelector secretKeySelector = new SecretKeySelector();
 
 		EnvVarSource envVarSource = new EnvVarSource();
