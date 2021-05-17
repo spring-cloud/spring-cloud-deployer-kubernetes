@@ -25,6 +25,12 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.ExecActionBuilder;
+import io.fabric8.kubernetes.api.model.HandlerBuilder;
+import io.fabric8.kubernetes.api.model.HandlerFluent;
+import io.fabric8.kubernetes.api.model.Lifecycle;
+import io.fabric8.kubernetes.api.model.LifecycleBuilder;
+import io.fabric8.kubernetes.api.model.LifecycleFluent;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
@@ -214,6 +220,25 @@ public class AbstractKubernetesDeployer {
 		container.setResources(req);
 		ImagePullPolicy pullPolicy = this.deploymentPropertiesResolver.deduceImagePullPolicy(deploymentProperties);
 		container.setImagePullPolicy(pullPolicy.name());
+
+		KubernetesDeployerProperties.Lifecycle lifecycle =
+				this.deploymentPropertiesResolver.getLifeCycle(deploymentProperties);
+
+		Lifecycle f8Lifecycle = new Lifecycle();
+		if (lifecycle.getPostStart() != null) {
+			f8Lifecycle.setPostStart(new HandlerBuilder()
+					.withNewExec()
+					.addAllToCommand(lifecycle.getPostStart().getExec().getCommand()).and().build());
+		}
+		if (lifecycle.getPreStop() != null) {
+			f8Lifecycle.setPreStop(new HandlerBuilder()
+					.withNewExec()
+					.addAllToCommand(lifecycle.getPreStop().getExec().getCommand()).and().build());
+		}
+
+		if (f8Lifecycle.getPostStart() != null || f8Lifecycle.getPreStop() != null) {
+			container.setLifecycle(f8Lifecycle);
+		}
 
 		Map<String, String> nodeSelectors = this.deploymentPropertiesResolver.getNodeSelectors(deploymentProperties);
 		if (nodeSelectors.size() > 0) {

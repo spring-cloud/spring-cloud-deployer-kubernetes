@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.NodeAffinity;
 import io.fabric8.kubernetes.api.model.PodAffinity;
 import io.fabric8.kubernetes.api.model.PodAntiAffinity;
@@ -47,7 +46,8 @@ public class KubernetesDeployerProperties {
 	static final String KUBERNETES_DEPLOYER_PROPERTIES_PREFIX = "spring.cloud.deployer.kubernetes";
 
 	/**
-	 * Constants for app deployment properties that don't have a deployer level default property.
+	 * Constants for app deployment properties that don't have a deployer level default
+	 * property.
 	 */
 	static final String KUBERNETES_DEPLOYMENT_NODE_SELECTOR = "spring.cloud.deployer.kubernetes.deployment.nodeSelector";
 
@@ -97,9 +97,9 @@ public class KubernetesDeployerProperties {
 
 		/**
 		 * 'All' args constructor
-		 * @deprecated
-		 * This method should no longer be used to set all fields at construct time.
-		 * <p> Use the default constructor and set() methods instead.
+		 * @deprecated This method should no longer be used to set all fields at construct time.
+		 * <p>
+		 * Use the default constructor and set() methods instead.
 		 * @param cpu Container resource cpu limit
 		 * @param memory Container resource memory limit
 		 */
@@ -279,6 +279,7 @@ public class KubernetesDeployerProperties {
 
 	static class KeyRef {
 		private String envVarName;
+
 		private String dataKey;
 
 		public void setEnvVarName(String envVarName) {
@@ -324,6 +325,7 @@ public class KubernetesDeployerProperties {
 
 	public static class PodSecurityContext {
 		private Long runAsUser;
+
 		private Long fsGroup;
 
 		public void setRunAsUser(Long runAsUser) {
@@ -343,6 +345,52 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
+	public static class Lifecycle {
+		private Hook postStart;
+		private Hook preStop;
+
+		Hook getPreStop() {
+			return preStop;
+		}
+
+		Hook getPostStart() {
+			return postStart;
+		}
+
+		void setPostStart(Hook postStart) {
+			this.postStart = postStart;
+		}
+
+		void setPreStop(Hook preStop) {
+			this.preStop = preStop;
+
+		}
+
+		public static class Hook {
+			private Exec exec;
+
+			Exec getExec() {
+				return exec;
+			}
+
+			void setExec(Exec exec) {
+				this.exec = exec;
+			}
+		}
+
+		public static class Exec {
+			private List<String> command;
+
+			List<String> getCommand() {
+				return command;
+			}
+
+			void setCommand(List<String> command) {
+				this.command = command;
+			}
+		}
+	}
+
 	public static class InitContainer extends ContainerProperties {
 	}
 
@@ -351,8 +399,11 @@ public class KubernetesDeployerProperties {
 
 	public static class ContainerProperties {
 		private String imageName;
+
 		private String containerName;
+
 		private List<String> commands;
+
 		private List<VolumeMount> volumeMounts;
 
 		public String getImageName() {
@@ -388,7 +439,6 @@ public class KubernetesDeployerProperties {
 		}
 	}
 
-
 	/**
 	 * Name of the environment variable that can define the Kubernetes namespace to use.
 	 */
@@ -405,15 +455,15 @@ public class KubernetesDeployerProperties {
 	 * Secrets for a access a private registry to pull images.
 	 */
 	private String imagePullSecret;
-	
+
 	/**
 	 * List of Secrets for a access a private registry to pull images.
 	 */
 	private List<String> imagePullSecrets;
 
 	/**
-	 * Delay in seconds when the Kubernetes liveness check of the app container
-	 * should start checking its health status.
+	 * Delay in seconds when the Kubernetes liveness check of the app container should start
+	 * checking its health status.
 	 */
 	private int livenessHttpProbeDelay = 10;
 
@@ -423,8 +473,8 @@ public class KubernetesDeployerProperties {
 	private int livenessHttpProbePeriod = 60;
 
 	/**
-	 * Timeout in seconds for the Kubernetes liveness check of the app container.
-	 * If the health check takes longer than this value to return it is assumed as 'unavailable'.
+	 * Timeout in seconds for the Kubernetes liveness check of the app container. If the
+	 * health check takes longer than this value to return it is assumed as 'unavailable'.
 	 */
 	private int livenessHttpProbeTimeout = 2;
 
@@ -449,8 +499,8 @@ public class KubernetesDeployerProperties {
 	private String readinessHttpProbeScheme = "HTTP";
 
 	/**
-	 * Delay in seconds when the readiness check of the app container
-	 * should start checking if the module is fully up and running.
+	 * Delay in seconds when the readiness check of the app container should start checking if
+	 * the module is fully up and running.
 	 */
 	private int readinessHttpProbeDelay = 10;
 
@@ -460,8 +510,8 @@ public class KubernetesDeployerProperties {
 	private int readinessHttpProbePeriod = 10;
 
 	/**
-	 * Timeout in seconds that the app container has to respond to its
-	 * health status during the readiness check.
+	 * Timeout in seconds that the app container has to respond to its health status during
+	 * the readiness check.
 	 */
 	private int readinessHttpProbeTimeout = 2;
 
@@ -536,7 +586,8 @@ public class KubernetesDeployerProperties {
 	private String livenessCommandProbeCommand = null;
 
 	/**
-	 * The secret name containing the credentials to use when accessing secured probe endpoints.
+	 * The secret name containing the credentials to use when accessing secured probe
+	 * endpoints.
 	 */
 	private String probeCredentialsSecret;
 
@@ -581,22 +632,26 @@ public class KubernetesDeployerProperties {
 	private List<String> secretRefs = new ArrayList<>();
 
 	/**
-	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside StatefulSet.
+	 * Resources to assign for VolumeClaimTemplates (identified by metadata name) inside
+	 * StatefulSet.
 	 */
 	private StatefulSet statefulSet = new StatefulSet();
 
 	/**
-	 * Environment variables to set for any deployed app container. To be used for service binding.
+	 * Environment variables to set for any deployed app container. To be used for service
+	 * binding.
 	 */
-	private String[] environmentVariables = new String[]{};
+	private String[] environmentVariables = new String[] {};
 
 	/**
-	 * Entry point style used for the Docker image. To be used to determine how to pass in properties.
+	 * Entry point style used for the Docker image. To be used to determine how to pass in
+	 * properties.
 	 */
 	private EntryPointStyle entryPointStyle = EntryPointStyle.exec;
 
 	/**
-	 * Create a "LoadBalancer" for the service created for each app. This facilitates assignment of external IP to app.
+	 * Create a "LoadBalancer" for the service created for each app. This facilitates
+	 * assignment of external IP to app.
 	 */
 	private boolean createLoadBalancer = false;
 
@@ -616,7 +671,8 @@ public class KubernetesDeployerProperties {
 	private String jobAnnotations;
 
 	/**
-	 * Time to wait for load balancer to be available before attempting delete of service (in minutes).
+	 * Time to wait for load balancer to be available before attempting delete of service (in
+	 * minutes).
 	 */
 	private int minutesToWaitForLoadBalancer = 5;
 
@@ -636,31 +692,31 @@ public class KubernetesDeployerProperties {
 	private ImagePullPolicy imagePullPolicy = ImagePullPolicy.IfNotPresent;
 
 	/**
-	 * Volume mounts that a container is requesting.
-	 * This can be specified as a deployer property or as an app deployment property.
-	 * Deployment properties will override deployer properties.
+	 * Volume mounts that a container is requesting. This can be specified as a deployer
+	 * property or as an app deployment property. Deployment properties will override deployer
+	 * properties.
 	 */
 	private List<VolumeMount> volumeMounts = new ArrayList<>();
 
 	/**
-	 * The volumes that a Kubernetes instance supports.
-	 * See https://kubernetes.io/docs/user-guide/volumes/#types-of-volumes
-	 * This can be specified as a deployer property or as an app deployment property.
-	 * Deployment properties will override deployer properties.
+	 * The volumes that a Kubernetes instance supports. See
+	 * https://kubernetes.io/docs/user-guide/volumes/#types-of-volumes This can be specified
+	 * as a deployer property or as an app deployment property. Deployment properties will
+	 * override deployer properties.
 	 */
 	private List<Volume> volumes = new ArrayList<>();
 
 	/**
-	 * The hostNetwork setting for the deployments.
-	 * See https://kubernetes.io/docs/api-reference/v1/definitions/#_v1_podspec
-	 * This can be specified as a deployer property or as an app deployment property.
-	 * Deployment properties will override deployer properties.
+	 * The hostNetwork setting for the deployments. See
+	 * https://kubernetes.io/docs/api-reference/v1/definitions/#_v1_podspec This can be
+	 * specified as a deployer property or as an app deployment property. Deployment
+	 * properties will override deployer properties.
 	 */
 	private boolean hostNetwork = false;
 
 	/**
-	 * Create a "Job" instead of just a "Pod" when launching tasks.
-	 * See https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+	 * Create a "Job" instead of just a "Pod" when launching tasks. See
+	 * https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 	 */
 	private boolean createJob = false;
 
@@ -705,6 +761,11 @@ public class KubernetesDeployerProperties {
 	private InitContainer initContainer;
 
 	/**
+	 * Lifecycle spec to apply.
+	 */
+	private Lifecycle lifecycle = new Lifecycle();
+
+	/**
 	 * The additional containers one can add to the main application container.
 	 */
 	private List<Container> additionalContainers;
@@ -724,7 +785,7 @@ public class KubernetesDeployerProperties {
 	public void setImagePullSecret(String imagePullSecret) {
 		this.imagePullSecret = imagePullSecret;
 	}
-	
+
 	public List<String> getImagePullSecrets() {
 		return imagePullSecrets;
 	}
@@ -1356,5 +1417,13 @@ public class KubernetesDeployerProperties {
 
 	public void setReadinessHttpProbeScheme(String readinessHttpProbeScheme) {
 		this.readinessHttpProbeScheme = readinessHttpProbeScheme;
+	}
+
+	Lifecycle getLifecycle() {
+		return lifecycle;
+	}
+
+	void setLifecycle(Lifecycle lifecycle) {
+		this.lifecycle = lifecycle;
 	}
 }

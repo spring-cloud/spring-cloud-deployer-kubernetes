@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1360,6 +1360,118 @@ public class KubernetesAppDeployerTests {
 		assertNotNull("Pod anti-affinity should not be null", podAntiAffinityTest);
 		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
 		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+	}
+
+	@Test
+	public void testWithLifecyclePostStart() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.lifecycle.postStart.exec.command",
+				"/bin/sh,-c,echo Hello from the postStart handler > /usr/share/message");
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
+				.containsExactlyInAnyOrder("/bin/sh","-c","echo Hello from the postStart handler > /usr/share/message");
+	}
+
+	@Test
+	public void testWithLifecyclePreStop() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.lifecycle.preStop.exec.command",
+				"/bin/sh,-c,nginx -s quit; while killall -0 nginx; do sleep 1; done");
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPreStop().getExec().getCommand())
+				.containsExactlyInAnyOrder(
+						"/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done");
+	}
+
+	@Test
+	public void testLifecyclePostStartOverridesGlobalPostStart() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.lifecycle.postStart.exec.command",
+				"/bin/sh,-c,nginx -s quit; while killall -0 nginx; do sleep 1; done");
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		KubernetesDeployerProperties.Lifecycle lifecycle = new KubernetesDeployerProperties.Lifecycle();
+		lifecycle.setPostStart(new KubernetesDeployerProperties.Lifecycle.Hook(){
+			@Override
+			KubernetesDeployerProperties.Lifecycle.Exec getExec() {
+				return new KubernetesDeployerProperties.Lifecycle.Exec() {
+					@Override
+					List<String> getCommand() {
+						return Arrays.asList("echo","postStart");
+					}
+				};
+			}
+		});
+		lifecycle.setPreStop(new KubernetesDeployerProperties.Lifecycle.Hook(){
+			@Override
+			KubernetesDeployerProperties.Lifecycle.Exec getExec() {
+				return new KubernetesDeployerProperties.Lifecycle.Exec() {
+					@Override
+					List<String> getCommand() {
+						return Arrays.asList("echo","preStop");
+					}
+				};
+			}
+		});
+		kubernetesDeployerProperties.setLifecycle(lifecycle);
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
+				.containsExactlyInAnyOrder(
+						"/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done");
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPreStop().getExec().getCommand())
+				.containsExactlyInAnyOrder("echo", "preStop");
+	}
+
+
+	@Test
+	public void testLifecyclePrestopOverridesGlobalPrestop() {
+		Map<String, String> props = new HashMap<>();
+		props.put("spring.cloud.deployer.kubernetes.lifecycle.preStop.exec.command",
+				"/bin/sh,-c,nginx -s quit; while killall -0 nginx; do sleep 1; done");
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		KubernetesDeployerProperties.Lifecycle lifecycle = new KubernetesDeployerProperties.Lifecycle();
+		lifecycle.setPostStart(new KubernetesDeployerProperties.Lifecycle.Hook(){
+			@Override
+			KubernetesDeployerProperties.Lifecycle.Exec getExec() {
+				return new KubernetesDeployerProperties.Lifecycle.Exec() {
+					@Override
+					List<String> getCommand() {
+						return Arrays.asList("echo","postStart");
+					}
+				};
+			}
+		});
+		lifecycle.setPreStop(new KubernetesDeployerProperties.Lifecycle.Hook(){
+			@Override
+			KubernetesDeployerProperties.Lifecycle.Exec getExec() {
+				return new KubernetesDeployerProperties.Lifecycle.Exec() {
+					@Override
+					List<String> getCommand() {
+						return Arrays.asList("echo","preStop");
+					}
+				};
+			}
+		});
+		kubernetesDeployerProperties.setLifecycle(lifecycle);
+		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPreStop().getExec().getCommand())
+				.containsExactlyInAnyOrder(
+						"/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done");
+		assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
+				.containsExactlyInAnyOrder("echo", "postStart");
 	}
 
 	private Resource getResource() {
