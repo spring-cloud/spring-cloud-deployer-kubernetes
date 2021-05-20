@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 the original author or authors.
+ * Copyright 2018-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for PropertyParserUtils
@@ -37,21 +37,21 @@ public class PropertyParserUtilsTests {
 	@Test
 	public void testAnnotationParseSingle() {
 		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation:value");
-		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 1);
-		assertTrue(annotations.containsKey("annotation"));
-		assertTrue(annotations.get("annotation").equals("value"));
+		assertThat(annotations.isEmpty()).isFalse();
+		assertThat(annotations.size() == 1).isTrue();
+		assertThat(annotations.containsKey("annotation")).isTrue();
+		assertThat(annotations.get("annotation").equals("value")).isTrue();
 	}
 
 	@Test
 	public void testAnnotationParseMultiple() {
 		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2:value2");
-		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 2);
-		assertTrue(annotations.containsKey("annotation1"));
-		assertTrue(annotations.get("annotation1").equals("value1"));
-		assertTrue(annotations.containsKey("annotation2"));
-		assertTrue(annotations.get("annotation2").equals("value2"));
+		assertThat(annotations.isEmpty()).isFalse();
+		assertThat(annotations.size() == 2).isTrue();
+		assertThat(annotations.containsKey("annotation1")).isTrue();
+		assertThat(annotations.get("annotation1").equals("value1")).isTrue();
+		assertThat(annotations.containsKey("annotation2")).isTrue();
+		assertThat(annotations.get("annotation2").equals("value2")).isTrue();
 	}
 
 	@Test
@@ -59,19 +59,21 @@ public class PropertyParserUtilsTests {
 		String annotation = "iam.amazonaws.com/role:arn:aws:iam::12345678:role/role-name,key1:val1:val2:val3," +
 				"key2:val4::val5:val6::val7:val8";
 		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap(annotation);
-		assertFalse(annotations.isEmpty());
-		assertTrue(annotations.size() == 3);
-		assertTrue(annotations.containsKey("iam.amazonaws.com/role"));
-		assertTrue(annotations.get("iam.amazonaws.com/role").equals("arn:aws:iam::12345678:role/role-name"));
-		assertTrue(annotations.containsKey("key1"));
-		assertTrue(annotations.get("key1").equals("val1:val2:val3"));
-		assertTrue(annotations.containsKey("key2"));
-		assertTrue(annotations.get("key2").equals("val4::val5:val6::val7:val8"));
+		assertThat(annotations.isEmpty()).isFalse();
+		assertThat(annotations.size() == 3).isTrue();
+		assertThat(annotations.containsKey("iam.amazonaws.com/role")).isTrue();
+		assertThat(annotations.get("iam.amazonaws.com/role").equals("arn:aws:iam::12345678:role/role-name")).isTrue();
+		assertThat(annotations.containsKey("key1")).isTrue();
+		assertThat(annotations.get("key1").equals("val1:val2:val3")).isTrue();
+		assertThat(annotations.containsKey("key2")).isTrue();
+		assertThat(annotations.get("key2").equals("val4::val5:val6::val7:val8")).isTrue();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testAnnotationParseInvalidValue() {
-		PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2,annotation3:value3");
+		assertThatThrownBy(() -> {
+			PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2,annotation3:value3");
+		}).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -83,10 +85,10 @@ public class PropertyParserUtilsTests {
 		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.image-name", "springcloud/openjdk");
 		deploymentProps.put("spring.cloud.deployer.kubernetes.initContainer.containerName", "test");
 		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.commands", "['sh','echo hello']");
-		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.podAnnotations").equals("key1:value1,key2:value2"));
-		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.serviceAnnotations").equals("key3:value3,key4:value4"));
-		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk"));
-		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk"));
-		assertTrue(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.imagePullPolicy").equals("Never"));
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.podAnnotations").equals("key1:value1,key2:value2")).isTrue();
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.serviceAnnotations").equals("key3:value3,key4:value4")).isTrue();
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk")).isTrue();
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk")).isTrue();
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.imagePullPolicy").equals("Never")).isTrue();
 	}
 }

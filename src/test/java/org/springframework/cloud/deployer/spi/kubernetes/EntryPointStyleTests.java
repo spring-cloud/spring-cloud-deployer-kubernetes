@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 the original author or authors.
+ * Copyright 2019-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link EntryPointStyle}
@@ -25,24 +25,25 @@ import static org.junit.Assert.assertEquals;
  * @author Chris Schaefer
  */
 public class EntryPointStyleTests {
+
 	@Test
 	public void testInvalidEntryPointStyleDefaulting() {
 		EntryPointStyle entryPointStyle = EntryPointStyle
 				.relaxedValueOf("unknown");
-		assertEquals(EntryPointStyle.exec, entryPointStyle);
+		assertThat(entryPointStyle).isEqualTo(EntryPointStyle.exec);
 	}
 
 	@Test
 	public void testMatchEntryPointStyle() {
 		EntryPointStyle entryPointStyle = EntryPointStyle
 				.relaxedValueOf("shell");
-		assertEquals(EntryPointStyle.shell, entryPointStyle);
+		assertThat(entryPointStyle).isEqualTo(EntryPointStyle.shell);
 	}
 
 	@Test
 	public void testMixedCaseEntryPointStyle() {
 		EntryPointStyle entryPointStyle = EntryPointStyle
 				.relaxedValueOf("bOOt");
-		assertEquals(EntryPointStyle.boot, entryPointStyle);
+		assertThat(entryPointStyle).isEqualTo(EntryPointStyle.boot);
 	}
 }

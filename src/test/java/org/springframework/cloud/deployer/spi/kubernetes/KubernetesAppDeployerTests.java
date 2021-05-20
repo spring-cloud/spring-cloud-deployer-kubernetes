@@ -44,7 +44,7 @@ import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.WeightedPodAffinityTerm;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -57,11 +57,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link KubernetesAppDeployer}
@@ -261,7 +258,7 @@ public class KubernetesAppDeployerTests {
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
 		assertThat(podSpec.getImagePullSecrets().get(0).getName()).isEqualTo("regcred");
 	}
-	
+
 	@Test
 	public void deployWithImagePullSecretsDeploymentProperty() {
 		AppDefinition definition = new AppDefinition("app-test", null);
@@ -308,7 +305,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName()).isNotNull();
 		assertThat(podSpec.getServiceAccountName().equals("myserviceaccount"));
 	}
 
@@ -324,7 +321,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName()).isNotNull();
 		assertThat(podSpec.getServiceAccountName().equals("myserviceaccount"));
 	}
 
@@ -343,7 +340,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getServiceAccountName());
+		assertThat(podSpec.getServiceAccountName()).isNotNull();
 		assertThat(podSpec.getServiceAccountName().equals("overridesan"));
 	}
 
@@ -373,7 +370,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations()).isNotNull();
 		assertThat(podSpec.getTolerations().size() == 2);
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test", "Equal", 5L, "true")));
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
@@ -403,7 +400,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations()).isNotNull();
 		assertThat(podSpec.getTolerations().size() == 2);
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test", "Equal", 5L, "true")));
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
@@ -432,7 +429,7 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations()).isNotNull();
 		assertThat(podSpec.getTolerations().size() == 1);
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "false")));
 	}
@@ -466,22 +463,25 @@ public class KubernetesAppDeployerTests {
 		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
-		assertNotNull(podSpec.getTolerations());
+		assertThat(podSpec.getTolerations()).isNotNull();
 		assertThat(podSpec.getTolerations().size() == 1);
 		assertThat(podSpec.getTolerations().contains(new Toleration("NoSchedule", "test2", "Equal", 5L, "true")));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidDeploymentLabelDelimiter() {
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
 				"label1|value1");
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
-		this.deploymentPropertiesResolver.getDeploymentLabels(appDeploymentRequest.getDeploymentProperties());
+
+		assertThatThrownBy(() -> {
+			this.deploymentPropertiesResolver.getDeploymentLabels(appDeploymentRequest.getDeploymentProperties());
+		}).isInstanceOf(IllegalArgumentException.class);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidMultipleDeploymentLabelDelimiter() {
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.deploymentLabels",
 				"label1:value1 label2:value2");
@@ -489,7 +489,9 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		this.deploymentPropertiesResolver.getDeploymentLabels(appDeploymentRequest.getDeploymentProperties());
+		assertThatThrownBy(() -> {
+			this.deploymentPropertiesResolver.getDeploymentLabels(appDeploymentRequest.getDeploymentProperties());
+		}).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -502,12 +504,12 @@ public class KubernetesAppDeployerTests {
 
 		Map<String, String> deploymentLabels = this.deploymentPropertiesResolver.getDeploymentLabels(appDeploymentRequest.getDeploymentProperties());
 
-		assertTrue("Deployment labels should not be empty", !deploymentLabels.isEmpty());
-		assertEquals("Invalid number of labels", 2, deploymentLabels.size());
-		assertTrue("Expected label 'label1' not found", deploymentLabels.containsKey("label1"));
-		assertEquals("Invalid value for 'label1'", "value1", deploymentLabels.get("label1"));
-		assertTrue("Expected label 'label2' not found", deploymentLabels.containsKey("label2"));
-		assertEquals("Invalid value for 'label2'", "value2", deploymentLabels.get("label2"));
+		assertThat(deploymentLabels).isNotEmpty();
+		assertThat(deploymentLabels.size()).as("Invalid number of labels").isEqualTo(2);
+		assertThat(deploymentLabels).containsKey("label1");
+		assertThat(deploymentLabels.get("label1")).as("Invalid value for 'label1'").isEqualTo("value1");
+		assertThat(deploymentLabels).containsKey("label2");
+		assertThat(deploymentLabels.get("label2")).as("Invalid value for 'label2'").isEqualTo("value2");
 	}
 
 	@Test
@@ -524,13 +526,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 2, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(2);
 
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_PASSWORD");
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("password");
 	}
 
 	@Test
@@ -548,19 +550,19 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 3, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(3);
 
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_PASSWORD");
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("password");
 
 		secretKeyRefEnvVar = envVars.get(1);
-		assertEquals("Unexpected env var name", "SECRET_USERNAME", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_USERNAME");
 		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret2", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "username", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret2");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("username");
 	}
 
 	@Test
@@ -580,13 +582,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 2, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(2);
 
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "SECRET_PASSWORD_GLOBAL", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_PASSWORD_GLOBAL");
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecretGlobal", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "passwordGlobal", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecretGlobal");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("passwordGlobal");
 	}
 
 	@Test
@@ -622,28 +624,28 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 4, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(4);
 
 		// deploy prop overrides global
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "SECRET_PASSWORD_GLOBAL", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_PASSWORD_GLOBAL");
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "password", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("password");
 
 		// unique deploy prop
 		secretKeyRefEnvVar = envVars.get(1);
-		assertEquals("Unexpected env var name", "SECRET_USERNAME", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_USERNAME");
 		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret2", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "username", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret2");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("username");
 
 		// unique, non-overridden global prop
 		secretKeyRefEnvVar = envVars.get(2);
-		assertEquals("Unexpected env var name", "SECRET_USERNAME_GLOBAL", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_USERNAME_GLOBAL");
 		secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecretGlobal", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "usernameGlobal", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecretGlobal");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("usernameGlobal");
 	}
 
 	@Test
@@ -656,13 +658,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 3, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(3);
 
 		EnvVar secretKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "SECRET_PASSWORD", secretKeyRefEnvVar.getName());
+		assertThat(secretKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("SECRET_PASSWORD");
 		SecretKeySelector secretKeySelector = secretKeyRefEnvVar.getValueFrom().getSecretKeyRef();
-		assertEquals("Unexpected secret name", "mySecret", secretKeySelector.getName());
-		assertEquals("Unexpected secret data key", "myPassword", secretKeySelector.getKey());
+		assertThat(secretKeySelector.getName()).as("Unexpected secret name").isEqualTo("mySecret");
+		assertThat(secretKeySelector.getKey()).as("Unexpected secret data key").isEqualTo("myPassword");
 	}
 
 	@Test
@@ -679,13 +681,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 2, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(2);
 
 		EnvVar configMapKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_ENV");
 		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("envName");
 	}
 
 	@Test
@@ -703,19 +705,19 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 3, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(3);
 
 		EnvVar configMapKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_ENV");
 		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("envName");
 
 		configMapKeyRefEnvVar = envVars.get(1);
-		assertEquals("Unexpected env var name", "ENV_VALUES", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("ENV_VALUES");
 		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myOtherConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "diskType", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myOtherConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("diskType");
 	}
 
 	@Test
@@ -735,13 +737,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 2, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(2);
 
 		EnvVar configMapKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "MY_ENV_GLOBAL", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_ENV_GLOBAL");
 		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myConfigMapGlobal", configMapKeySelector.getName());
-		assertEquals("Unexpected config data key", "envGlobal", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myConfigMapGlobal");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config data key").isEqualTo("envGlobal");
 	}
 
 	@Test
@@ -777,28 +779,28 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 4, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(4);
 
 		// deploy prop overrides global
 		EnvVar configMapKeyRefEnvVar = envVars.get(0);
-		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_ENV");
 		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("envName");
 
 		// unique deploy prop
 		configMapKeyRefEnvVar = envVars.get(1);
-		assertEquals("Unexpected env var name", "ENV_VALUES", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("ENV_VALUES");
 		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myOtherConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "diskType", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myOtherConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("diskType");
 
 		// unique, non-overridden global prop
 		configMapKeyRefEnvVar = envVars.get(2);
-		assertEquals("Unexpected env var name", "MY_VALS_GLOBAL", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_VALS_GLOBAL");
 		configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myValsGlobal", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "valsGlobal", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myValsGlobal");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("valsGlobal");
 	}
 
 	@Test
@@ -811,13 +813,13 @@ public class KubernetesAppDeployerTests {
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
 
-		assertEquals("Invalid number of env vars", 3, envVars.size());
+		assertThat(envVars.size()).as("Invalid number of env vars").isEqualTo(3);
 
 		EnvVar configMapKeyRefEnvVar = envVars.get(1);
-		assertEquals("Unexpected env var name", "MY_ENV", configMapKeyRefEnvVar.getName());
+		assertThat(configMapKeyRefEnvVar.getName()).as("Unexpected env var name").isEqualTo("MY_ENV");
 		ConfigMapKeySelector configMapKeySelector = configMapKeyRefEnvVar.getValueFrom().getConfigMapKeyRef();
-		assertEquals("Unexpected config map name", "myConfigMap", configMapKeySelector.getName());
-		assertEquals("Unexpected config map data key", "envName", configMapKeySelector.getKey());
+		assertThat(configMapKeySelector.getName()).as("Unexpected config map name").isEqualTo("myConfigMap");
+		assertThat(configMapKeySelector.getKey()).as("Unexpected config map data key").isEqualTo("envName");
 	}
 
 	@Test
@@ -833,10 +835,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
-		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
 	}
 
 	@Test
@@ -866,9 +868,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
-		assertNotNull("Node affinity should not be null", nodeAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(nodeAffinity).as("Node affinity should not be null").isNotNull();
+		assertThat(nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -901,9 +903,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
-		assertNotNull("Pod affinity should not be null", podAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAffinity).as("Pod affinity should not be null").isNotNull();
+		assertThat(podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -936,9 +938,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
-		assertNotNull("Pod anti-affinity should not be null", podAntiAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAntiAffinity).as("Pod anti-affinity should not be null").isNotNull();
+		assertThat(podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -959,10 +961,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
-		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
 	}
 
 	@Test
@@ -1000,9 +1002,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
-		assertNotNull("Node affinity should not be null", nodeAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(nodeAffinityTest).as("Node affinity should not be null").isNotNull();
+		assertThat(nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1040,9 +1042,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
-		assertNotNull("Pod affinity should not be null", podAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAffinityTest).as("Pod affinity should not be null").isNotNull();
+		assertThat(podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1080,9 +1082,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
-		assertNotNull("Pod anti-affinity should not be null", podAntiAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAntiAffinityTest).as("Pod anti-affinity should not be null").isNotNull();
+		assertThat(podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1095,10 +1097,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
-		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
 	}
 
 	@Test
@@ -1110,9 +1112,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
-		assertNotNull("Node affinity should not be null", nodeAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(nodeAffinity).as("Node affinity should not be null").isNotNull();
+		assertThat(nodeAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(nodeAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1124,9 +1126,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
-		assertNotNull("Pod affinity should not be null", podAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAffinity).as("Pod affinity should not be null").isNotNull();
+		assertThat(podAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1138,9 +1140,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
-		assertNotNull("Pod anti-affinity should not be null", podAntiAffinity);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAntiAffinity).as("Pod anti-affinity should not be null").isNotNull();
+		assertThat(podAntiAffinity.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAntiAffinity.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1156,10 +1158,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
-		assertNull("Unexpected fs group", podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isNull();
 	}
 
 	@Test
@@ -1175,10 +1177,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertNull("Unexpected run as user", podSecurityContext.getRunAsUser());
-		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isNull();
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
 	}
 
 	@Test
@@ -1202,10 +1204,10 @@ public class KubernetesAppDeployerTests {
 
 		PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
 
-		assertNotNull("Pod security context should not be null", podSecurityContext);
+		assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
 
-		assertEquals("Unexpected run as user", Long.valueOf("65534"), podSecurityContext.getRunAsUser());
-		assertEquals("Unexpected fs group", Long.valueOf("65534"), podSecurityContext.getFsGroup());
+		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
+		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
 	}
 
 	@Test
@@ -1253,9 +1255,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
-		assertNotNull("Node affinity should not be null", nodeAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(nodeAffinityTest).as("Node affinity should not be null").isNotNull();
+		assertThat(nodeAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(nodeAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1305,9 +1307,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
-		assertNotNull("Pod affinity should not be null", podAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAffinityTest).as("Pod affinity should not be null").isNotNull();
+		assertThat(podAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test
@@ -1357,9 +1359,9 @@ public class KubernetesAppDeployerTests {
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
-		assertNotNull("Pod anti-affinity should not be null", podAntiAffinityTest);
-		assertNotNull("RequiredDuringSchedulingIgnoredDuringExecution should not be null", podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution());
-		assertEquals("PreferredDuringSchedulingIgnoredDuringExecution should have one element", 1, podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size());
+		assertThat(podAntiAffinityTest).as("Pod anti-affinity should not be null").isNotNull();
+		assertThat(podAntiAffinityTest.getRequiredDuringSchedulingIgnoredDuringExecution()).as("RequiredDuringSchedulingIgnoredDuringExecution should not be null").isNotNull();
+		assertThat(podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
 	@Test

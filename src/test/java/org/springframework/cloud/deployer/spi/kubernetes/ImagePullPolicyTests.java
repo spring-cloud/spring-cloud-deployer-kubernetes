@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 the original author or authors.
+ * Copyright 2016-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link ImagePullPolicy}.
@@ -32,18 +30,18 @@ public class ImagePullPolicyTests {
 	@Test
 	public void relaxedValueOf_ignoresCase() throws Exception {
 		ImagePullPolicy pullPolicy = ImagePullPolicy.relaxedValueOf("aLWays");
-		assertThat(pullPolicy, is(ImagePullPolicy.Always));
+		assertThat(pullPolicy).isEqualTo(ImagePullPolicy.Always);
 	}
 
 	@Test
 	public void relaxedValueOf_parsesValueWithDashesInsteadOfCamelCase() throws Exception {
 		ImagePullPolicy pullPolicy = ImagePullPolicy.relaxedValueOf("if-not-present");
-		assertThat(pullPolicy, is(ImagePullPolicy.IfNotPresent));
+		assertThat(pullPolicy).isEqualTo(ImagePullPolicy.IfNotPresent);
 	}
 
 	@Test
 	public void relaxedValueOf_returnsNullIfValueNotParseable() throws Exception {
 		ImagePullPolicy pullPolicy = ImagePullPolicy.relaxedValueOf("not-a-real-policy");
-		assertThat(pullPolicy, is(nullValue()));
+		assertThat(pullPolicy).isNull();
 	}
 }

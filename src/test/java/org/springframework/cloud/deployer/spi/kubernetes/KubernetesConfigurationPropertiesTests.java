@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 the original author or authors.
+ * Copyright 2018-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Ilayaperumal Gopinathan
  * @author Chris Schaefer
  */
 public class KubernetesConfigurationPropertiesTests {
+
 	@Test
 	public void testFabric8Namespacing() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
@@ -38,10 +39,10 @@ public class KubernetesConfigurationPropertiesTests {
 		KubernetesClient kubernetesClient = KubernetesClientFactory
 				.getKubernetesClient(kubernetesDeployerProperties);
 
-		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-		assertEquals("testing", kubernetesClient.getNamespace());
-		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+		assertThat(kubernetesClient.getMasterUrl().toString()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getNamespace()).isEqualTo("testing");
+		assertThat(kubernetesClient.getConfiguration().getMasterUrl()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getConfiguration().isTrustCerts()).isTrue();
 	}
 
 	@Test
@@ -54,10 +55,10 @@ public class KubernetesConfigurationPropertiesTests {
 		KubernetesClient kubernetesClient = KubernetesClientFactory
 				.getKubernetesClient(kubernetesDeployerProperties);
 
-		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-		assertEquals("toplevel", kubernetesClient.getNamespace());
-		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+		assertThat(kubernetesClient.getMasterUrl().toString()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getNamespace()).isEqualTo("toplevel");
+		assertThat(kubernetesClient.getConfiguration().getMasterUrl()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getConfiguration().isTrustCerts()).isTrue();
 	}
 
 	@Test
@@ -71,9 +72,9 @@ public class KubernetesConfigurationPropertiesTests {
 		KubernetesClient kubernetesClient = KubernetesClientFactory
 				.getKubernetesClient(kubernetesDeployerProperties);
 
-		assertEquals("http://localhost:8090", kubernetesClient.getMasterUrl().toString());
-		assertEquals("toplevel", kubernetesClient.getNamespace());
-		assertEquals("http://localhost:8090", kubernetesClient.getConfiguration().getMasterUrl());
-		assertEquals(Boolean.TRUE, kubernetesClient.getConfiguration().isTrustCerts());
+		assertThat(kubernetesClient.getMasterUrl().toString()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getNamespace()).isEqualTo("toplevel");
+		assertThat(kubernetesClient.getConfiguration().getMasterUrl()).isEqualTo("http://localhost:8090");
+		assertThat(kubernetesClient.getConfiguration().isTrustCerts()).isTrue();
 	}
 }

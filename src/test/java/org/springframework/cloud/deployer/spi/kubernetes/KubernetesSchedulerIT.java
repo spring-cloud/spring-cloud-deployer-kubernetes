@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 the original author or authors.
+ * Copyright 2018-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,16 +44,14 @@ import io.fabric8.kubernetes.api.model.batch.JobTemplateSpec;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
@@ -61,19 +59,15 @@ import org.springframework.cloud.deployer.spi.scheduler.ScheduleInfo;
 import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.scheduler.Scheduler;
 import org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys;
-import org.springframework.cloud.deployer.spi.scheduler.test.AbstractSchedulerIntegrationTests;
+import org.springframework.cloud.deployer.spi.scheduler.test.AbstractSchedulerIntegrationJUnit5Tests;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE;
 import static org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys.CRON_EXPRESSION;
 
@@ -83,12 +77,11 @@ import static org.springframework.cloud.deployer.spi.scheduler.SchedulerProperty
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  */
-@RunWith(SpringRunner.class)
+// @RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = NONE)
-@ContextConfiguration(classes = { KubernetesSchedulerTests.Config.class })
-public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests {
-	@ClassRule
-	public static KubernetesTestSupport kubernetesTestSupport = new KubernetesTestSupport();
+@ContextConfiguration(classes = { KubernetesSchedulerIT.Config.class })
+public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tests {
 
 	@Autowired
 	private Scheduler scheduler;
@@ -147,24 +140,29 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		return new DockerResource("springcloud/spring-cloud-deployer-spi-scheduler-test-app:latest");
 	}
 
-	@Test(expected = CreateScheduleException.class)
+	@Test
+	public void test() {
+		super.testListFilter();
+	}
+
+	@Test
 	public void testMissingSchedule() {
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, null, testApplication());
 
-		scheduler.schedule(scheduleRequest);
-
-		fail();
+		assertThatThrownBy(() -> {
+			scheduler.schedule(scheduleRequest);
+		}).isInstanceOf(CreateScheduleException.class);
 	}
 
-	@Test(expected = CreateScheduleException.class)
+	@Test
 	public void testInvalidNameSchedule() {
 		AppDefinition appDefinition = new AppDefinition("AAAAAA", null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, null, null, null, "AAAAA", testApplication());
 
-		scheduler.schedule(scheduleRequest);
-
-		fail();
+		assertThatThrownBy(() -> {
+			scheduler.schedule(scheduleRequest);
+		}).isInstanceOf(CreateScheduleException.class);
 	}
 
 	@Test
@@ -182,8 +180,14 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Map<String, String> mergedProperties = KubernetesScheduler.mergeSchedulerProperties(scheduleRequest);
 
-		assertTrue("Expected value from Scheduler properties, but found in Deployer properties", mergedProperties.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".imagePullPolicy").equals("Never"));
-		assertTrue("Deployer property is expected to be merged as scheduler property", mergedProperties.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".environmentVariables").equals("MYVAR1=MYVAL1,MYVAR2=MYVAL2"));
+		assertThat(mergedProperties
+				.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".imagePullPolicy"))
+						.as("Expected value from Scheduler properties, but found in Deployer properties")
+						.isEqualTo("Never");
+		assertThat(mergedProperties
+				.get(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".environmentVariables"))
+						.as("Deployer property is expected to be merged as scheduler property")
+						.isEqualTo("MYVAR1=MYVAL1,MYVAR2=MYVAL2");
 	}
 
 	@Test
@@ -232,7 +236,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		assertThat(scheduleInfos.get(0).getScheduleName().equals("job1"));
 	}
 
-	@Test(expected = CreateScheduleException.class)
+	@Test
 	public void testInvalidCronSyntax() {
 		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "1 2 3 4");
 
@@ -240,9 +244,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
 				randomName(), testApplication());
 
-		scheduler.schedule(scheduleRequest);
-
-		fail();
+		assertThatThrownBy(() -> {
+			scheduler.schedule(scheduleRequest);
+		}).isInstanceOf(CreateScheduleException.class);
 	}
 
 	@Test
@@ -257,16 +261,12 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		//verify no validation fired.
 		scheduler.schedule(scheduleRequest);
 
-		scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
+		ScheduleRequest scheduleRequest2 = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
 				baseScheduleName + "1", testApplication());
-		try {
-			scheduler.schedule(scheduleRequest);
-		}
-		catch (CreateScheduleException createScheduleException) {
-			assertThat(createScheduleException.getMessage()).isEqualTo(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
-			return;
-		}
-		fail();
+		assertThatThrownBy(() -> {
+			scheduler.schedule(scheduleRequest2);
+		}).isInstanceOf(CreateScheduleException.class)
+			.hasMessage(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
 	}
 
 	@Test
@@ -292,9 +292,9 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertNotNull("Command line arguments should not be null", container.getArgs());
-		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertTrue("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID", container.getEnv().size() == 1);
+		assertThat(container.getArgs()).as("Command line arguments should not be null").isNotNull();
+		assertThat(container.getEnv()).as("Environment variables should not be null").isNotNull();
+		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID").hasSize(1);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -322,11 +322,11 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertNotNull("Command line arguments should not be null", container.getArgs());
-		assertEquals("Invalid number of command line arguments", 0, container.getArgs().size());
+		assertThat(container.getArgs()).as("Command line arguments should not be null").isNotNull();
+		assertThat(container.getArgs()).as("Invalid number of command line arguments").isEmpty();
 
-		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
+		assertThat(container.getEnv()).as("Environment variables should not be null").isNotNull();
+		assertThat(container.getEnv()).as("Invalid number of environment variables").hasSizeGreaterThan(1);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -353,11 +353,11 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertNotNull("Command line arguments should not be null", container.getArgs());
-		assertEquals("Invalid number of command line arguments", 2, container.getArgs().size());
+		assertThat(container.getArgs()).as("Command line arguments should not be null").isNotNull();
+		assertThat(container.getArgs()).as("Invalid number of command line arguments").hasSize(2);
 
-		assertNotNull("Environment variables should not be null", container.getEnv());
-		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
+		assertThat(container.getEnv()).as("Environment variables should not be null").isNotNull();
+		assertThat(container.getEnv()).as("Invalid number of environment variables").hasSizeGreaterThan(1);
 
 		String springApplicationJson = container.getEnv().get(0).getValue();
 
@@ -365,8 +365,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 				new TypeReference<HashMap<String, String>>() {
 				});
 
-		assertNotNull("SPRING_APPLICATION_JSON should not be null", springApplicationJsonValues);
-		assertEquals("Invalid number of SPRING_APPLICATION_JSON entries", 2, springApplicationJsonValues.size());
+		assertThat(springApplicationJsonValues).as("SPRING_APPLICATION_JSON should not be null").isNotNull();
+		assertThat(springApplicationJsonValues).as("Invalid number of SPRING_APPLICATION_JSON entries").hasSize(2);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -386,8 +386,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		String message = ((KubernetesScheduler) scheduler).getExceptionMessageForField(kubernetesClientException,
 				"spec.schedule");
 
-		assertNotNull("Field message should not be null", message);
-		assertEquals("Invalid message for field", "invalid cron expression", message);
+		assertThat(message).as("Field message should not be null").isNotNull();
+		assertThat(message).as("Invalid message for field").isEqualTo("invalid cron expression");
 	}
 
 	@Test
@@ -405,7 +405,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 		String message = ((KubernetesScheduler) scheduler).getExceptionMessageForField(kubernetesClientException,
 				"spec.restartpolicy");
 
-		assertNull("Field message should be null", message);
+		assertThat(message).as("Field message should be null").isNull();
 	}
 
 	@Test
@@ -434,8 +434,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertTrue("Environment variables should not be empty", !container.getEnv().isEmpty());
-		assertTrue("Invalid number of environment variables", container.getEnv().size() > 1);
+		assertThat(container.getEnv()).as("Invalid number of environment variables").hasSizeGreaterThan(1);
 
 		String springApplicationJson = container.getEnv().get(0).getValue();
 
@@ -443,8 +442,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 				new TypeReference<HashMap<String, String>>() {
 				});
 
-		assertNotNull("SPRING_APPLICATION_JSON should not be null", springApplicationJsonValues);
-		assertEquals("Invalid number of SPRING_APPLICATION_JSON entries", 2, springApplicationJsonValues.size());
+		assertThat(springApplicationJsonValues).as("SPRING_APPLICATION_JSON should not be null").isNotNull();
+		assertThat(springApplicationJsonValues).as("Invalid number of SPRING_APPLICATION_JSON entries").hasSize(2);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -470,8 +469,8 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertTrue("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID", container.getEnv().size() == 1);
-		assertTrue("Command line arguments should not be empty", !container.getArgs().isEmpty());
+		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID").hasSize(1);
+		assertThat(container.getArgs()).as("Command line arguments should not be empty").isNotEmpty();
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -502,7 +501,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertEquals("Unexpected image pull policy", "Always", container.getImagePullPolicy());
+		assertThat(container.getImagePullPolicy()).as("Unexpected image pull policy").isEqualTo("Always");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -526,7 +525,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
-		assertEquals("Job annotation is not set", "value1", cronJob.getMetadata().getAnnotations().get("test1"));
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value1");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -554,7 +553,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
-		assertEquals("Job annotation is not set", "value2", cronJob.getMetadata().getAnnotations().get("test1"));
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value2");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -580,8 +579,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertEquals("Unexpected default image pull policy", ImagePullPolicy.IfNotPresent,
-				ImagePullPolicy.relaxedValueOf(container.getImagePullPolicy()));
+		assertThat(ImagePullPolicy.relaxedValueOf(container.getImagePullPolicy())).as("Unexpected default image pull policy").isEqualTo(ImagePullPolicy.IfNotPresent);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -613,7 +611,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		List<LocalObjectReference> secrets = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getImagePullSecrets();
-		assertEquals("Unexpected image pull secret", secretName, secrets.get(0).getName());
+		assertThat(secrets.get(0).getName()).as("Unexpected image pull secret").isEqualTo(secretName);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -639,7 +637,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		List<LocalObjectReference> secrets = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getImagePullSecrets();
-		assertTrue("There should be no secrets", secrets.isEmpty());
+		assertThat(secrets).as("There should be no secrets").isEmpty();
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -668,7 +666,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		List<LocalObjectReference> secrets = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getImagePullSecrets();
-		assertEquals("Unexpected image pull secret", secretName, secrets.get(0).getName());
+		assertThat(secrets.get(0).getName()).as("Unexpected image pull secret").isEqualTo(secretName);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -772,7 +770,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertTrue("Environment variables should not be empty", !container.getEnv().isEmpty());
+		assertThat(container.getEnv()).as("Environment variables should not be empty").isNotEmpty();
 
 		assertThat(container.getEnv()).contains(expectedVars);
 
@@ -806,7 +804,7 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		String serviceAccountName = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getServiceAccountName();
-		assertEquals("Unexpected service account name", taskServiceAccountName, serviceAccountName);
+		assertThat(serviceAccountName).as("Unexpected service account name").isEqualTo(taskServiceAccountName);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -832,13 +830,12 @@ public class KubernetesSchedulerTests extends AbstractSchedulerIntegrationTests 
 
 		String serviceAccountName = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getServiceAccountName();
-		assertEquals("Unexpected service account name", KubernetesSchedulerProperties.DEFAULT_TASK_SERVICE_ACCOUNT_NAME,
-				serviceAccountName);
+		assertThat(serviceAccountName).as("Unexpected service account name").isEqualTo(KubernetesSchedulerProperties.DEFAULT_TASK_SERVICE_ACCOUNT_NAME);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void cleanup() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 
