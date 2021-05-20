@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 the original author or authors.
+ * Copyright 2016-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -25,33 +26,26 @@ import java.util.UUID;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
-import org.springframework.cloud.deployer.spi.task.TaskStatus;
-import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationJUnit5Tests;
 import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.TestPropertySource;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Integration tests for {@link KubernetesTaskLauncher} using jobs instead of bare pods.
@@ -62,10 +56,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 @TestPropertySource(properties = "spring.cloud.deployer.kubernetes.create-job=true")
-public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskLauncherIntegrationTests {
-
-	@ClassRule
-	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
+public class KubernetesTaskLauncherWithJobIntegrationIT extends AbstractTaskLauncherIntegrationJUnit5Tests {
 
 	@Autowired
 	private TaskLauncher taskLauncher;
@@ -73,7 +64,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 	@Autowired
 	private KubernetesClient kubernetesClient;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		if (kubernetesClient.getNamespace() == null) {
 			kubernetesClient.getConfiguration().setNamespace("default");
@@ -102,7 +93,7 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 	@Test
 	@Override
-	@Ignore("Currently reported as failed instead of cancelled")
+	@Disabled("Currently reported as failed instead of cancelled")
 	public void testSimpleCancel() throws InterruptedException {
 		super.testSimpleCancel();
 	}
@@ -129,9 +120,11 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		String launchId = kubernetesTaskLauncher.launch(request);
 		Timeout timeout = deploymentTimeout();
 
-		assertThat(launchId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.launching))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.launching);
+        });
 
 		String taskName = request.getDefinition().getName();
 
@@ -139,40 +132,30 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		List<Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(jobs.size(), is(1));
+		assertThat(jobs).hasSize(1);
 
 		Map<String, String> jobAnnotations = jobs.get(0).getMetadata().getAnnotations();
-		assertFalse(jobAnnotations.isEmpty());
-		assertTrue(jobAnnotations.containsKey("key1"));
-		assertTrue(jobAnnotations.get("key1").equals("val1"));
-		assertTrue(jobAnnotations.containsKey("key2"));
-		assertTrue(jobAnnotations.get("key2").equals("val2"));
-		assertTrue(jobAnnotations.containsKey("key3"));
-		assertTrue(jobAnnotations.get("key3").equals("val31:val32"));
+		assertThat(jobAnnotations).contains(entry("key1", "val1"), entry("key2", "val2"), entry("key3", "val31:val32"));
 
 		log.info("Checking Pod spec annotations of {}...", taskName);
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(pods.size(), is(1));
+		assertThat(pods).hasSize(1);
 
 		Map<String, String> podAnnotations = pods.get(0).getMetadata().getAnnotations();
-		assertFalse(podAnnotations.isEmpty());
-		assertTrue(podAnnotations.containsKey("key1"));
-		assertTrue(podAnnotations.get("key1").equals("val1"));
-		assertTrue(podAnnotations.containsKey("key2"));
-		assertTrue(podAnnotations.get("key2").equals("val2"));
-		assertTrue(podAnnotations.containsKey("key3"));
-		assertTrue(podAnnotations.get("key3").equals("val31:val32"));
+		assertThat(podAnnotations).contains(entry("key1", "val1"), entry("key2", "val2"), entry("key3", "val31:val32"));
 
 		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
 
-		assertThat(taskName, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown);
+        });
 	}
 
 
@@ -198,9 +181,11 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 		String launchId = kubernetesTaskLauncher.launch(request);
 		Timeout timeout = deploymentTimeout();
 
-		assertThat(launchId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.launching))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.launching);
+        });
 
 		String taskName = request.getDefinition().getName();
 
@@ -208,25 +193,27 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		List<Job> jobs = kubernetesClient.batch().jobs().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(jobs.size(), is(1));
+		assertThat(jobs).hasSize(1);
 
 		Job job = jobs.get(0);
-		assertThat(job.getSpec().getBackoffLimit(), is(5));
+		assertThat(job.getSpec().getBackoffLimit()).isEqualTo(5);
 
 		log.info("Checking pod spec of {}...", taskName);
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(pods.size(), is(1));
+		assertThat(pods).hasSize(1);
 
 		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
 
-		assertThat(taskName, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown);
+        });
 	}
 
 	@Test
@@ -248,13 +235,9 @@ public class KubernetesTaskLauncherWithJobIntegrationTests extends AbstractTaskL
 
 		log.info("Launching {}...", request.getDefinition().getName());
 
-		try {
+		assertThatThrownBy(() -> {
 			kubernetesTaskLauncher.launch(request);
-			fail("Expected exception as the RestartPolicy Always is not expected to be set for JobSpec.");
-		}
-		catch (Exception e) {
-			assertEquals("Incorrect exception message on RestartPolicy for JobSpec.", e.getMessage(),
-					"RestartPolicy should not be 'Always' when the JobSpec is used.");
-		}
+		}).isInstanceOf(Exception.class)
+			.hasMessage("RestartPolicy should not be 'Always' when the JobSpec is used.");
 	}
 }

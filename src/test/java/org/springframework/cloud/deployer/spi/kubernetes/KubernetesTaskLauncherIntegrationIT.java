@@ -16,40 +16,33 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.time.Duration;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.UUID;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.hamcrest.Matchers;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.deployer.KubernetesTestSupport;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
-import org.springframework.cloud.deployer.spi.task.TaskStatus;
-import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationJUnit5Tests;
 import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.eventually;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Integration tests for {@link KubernetesTaskLauncher}.
@@ -60,10 +53,7 @@ import static org.springframework.cloud.deployer.spi.test.EventuallyMatcher.even
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
 		"spring.cloud.deployer.kubernetes.namespace=default"
 })
-public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncherIntegrationTests {
-
-	@ClassRule
-	public static KubernetesTestSupport kubernetesAvailable = new KubernetesTestSupport();
+public class KubernetesTaskLauncherIntegrationIT extends AbstractTaskLauncherIntegrationJUnit5Tests {
 
 	@Autowired
 	private TaskLauncher taskLauncher;
@@ -78,7 +68,7 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 
 	@Test
 	@Override
-	@Ignore("Currently reported as failed instead of cancelled")
+	@Disabled("Currently reported as failed instead of cancelled")
 	public void testSimpleCancel() throws InterruptedException {
 		super.testSimpleCancel();
 	}
@@ -115,9 +105,11 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		String launchId = kubernetesTaskLauncher.launch(request);
 		Timeout timeout = deploymentTimeout();
 
-		assertThat(launchId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.running);
+        });
 
 		String taskName = request.getDefinition().getName();
 
@@ -125,29 +117,26 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(pods.size(), is(1));
+		assertThat(pods).hasSize(1);
 
 		Pod pod = pods.get(0);
 
-		assertTrue(pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+		assertThat(pod.getSpec().getContainers().get(0).getPorts()).isEmpty();
 
 		Map<String, String> annotations = pod.getMetadata().getAnnotations();
 
-		assertTrue(annotations.containsKey("key1"));
-		assertTrue(annotations.get("key1").equals("val1"));
-		assertTrue(annotations.containsKey("key2"));
-		assertTrue(annotations.get("key2").equals("val2"));
-		assertTrue(annotations.containsKey("key3"));
-		assertTrue(annotations.get("key3").equals("val31:val32"));
+		assertThat(annotations).contains(entry("key1", "val1"), entry("key2", "val2"), entry("key3", "val31:val32"));
 
 		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
 
-		assertThat(taskName, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown);
+        });
 	}
 
 	@Test
@@ -167,9 +156,11 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		String launchId = kubernetesTaskLauncher.launch(request);
 		Timeout timeout = deploymentTimeout();
 
-		assertThat(launchId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.running);
+        });
 
 		String taskName = request.getDefinition().getName();
 
@@ -177,27 +168,26 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(pods.size(), is(1));
+		assertThat(pods).hasSize(1);
 
 		Pod pod = pods.get(0);
 
-		assertTrue(pod.getSpec().getContainers().get(0).getPorts().isEmpty());
+		assertThat(pod.getSpec().getContainers().get(0).getPorts()).isEmpty();
 
 		Map<String, String> labels = pod.getMetadata().getLabels();
 
-		assertTrue(labels.containsKey("label1"));
-		assertTrue(labels.get("label1").equals("value1"));
-		assertTrue(labels.containsKey("label2"));
-		assertTrue(labels.get("label2").equals("value2"));
+		assertThat(labels).contains(entry("label1", "value1"), entry("label2", "value2"));
 
 		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
 
-		assertThat(taskName, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown);
+        });
 	}
 
 	@Test
@@ -218,43 +208,43 @@ public class KubernetesTaskLauncherIntegrationTests extends AbstractTaskLauncher
 		String launchId = kubernetesTaskLauncher.launch(request);
 		Timeout timeout = deploymentTimeout();
 
-		assertThat(launchId, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.running))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.running);
+        });
 
 		String taskName = request.getDefinition().getName();
 
 		List<Pod> pods = kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
 
-		assertThat(pods.size(), is(1));
+		assertThat(pods).hasSize(1);
 
 		Pod pod = pods.get(0);
 
-		assertTrue(pod.getSpec().getContainers().size() == 2);
+		assertThat(pod.getSpec().getContainers()).hasSize(2);
 
 		Optional<Container> additionalContainer = pod.getSpec().getContainers().stream().filter(i -> i.getName().equals("test")).findFirst();
-		assertTrue("Additional container not found", additionalContainer.isPresent());
+		assertThat(additionalContainer.isPresent()).as("Additional container not found").isTrue();
 
 		Container testAdditionalContainer = additionalContainer.get();
 
-		assertEquals("Unexpected additional container name", testAdditionalContainer.getName(), "test");
-		assertEquals("Unexpected additional container image", testAdditionalContainer.getImage(), "busybox:latest");
+		assertThat(testAdditionalContainer.getName()).as("Unexpected additional container name").isEqualTo("test");
+		assertThat(testAdditionalContainer.getImage()).as("Unexpected additional container image").isEqualTo("busybox:latest");
 
 		List<String> commands = testAdditionalContainer.getCommand();
 
-		assertTrue("Additional container commands missing", commands != null && !commands.isEmpty());
-		assertEquals("Invalid number of additional container commands", 3, commands.size());
-		assertEquals("sh", commands.get(0));
-		assertEquals("-c", commands.get(1));
-		assertEquals("echo hello", commands.get(2));
+		assertThat(commands).contains("sh", "-c", "echo hello");
 
 		log.info("Destroying {}...", taskName);
 
 		timeout = undeploymentTimeout();
 		kubernetesTaskLauncher.destroy(taskName);
 
-		assertThat(taskName, eventually(hasStatusThat(
-				Matchers.<TaskStatus>hasProperty("state", Matchers.is(LaunchState.unknown))), timeout.maxAttempts,
-				timeout.pause));
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+                .atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+                .untilAsserted(() -> {
+			assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown);
+        });
 	}
 }

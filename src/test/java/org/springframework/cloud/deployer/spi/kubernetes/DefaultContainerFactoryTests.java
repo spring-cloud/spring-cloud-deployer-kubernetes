@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 the original author or authors.
+ * Copyright 2016-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,21 +37,18 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.core.io.Resource;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link DefaultContainerFactory}.
@@ -62,7 +59,7 @@ import static org.junit.Assert.fail;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
 public class DefaultContainerFactoryTests {
 
@@ -83,14 +80,14 @@ public class DefaultContainerFactoryTests {
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
-		assertEquals(3, container.getEnv().size());
+		assertThat(container).isNotNull();
+		assertThat(container.getEnv().size()).isEqualTo(3);
 		EnvVar envVar1 = container.getEnv().get(0);
 		EnvVar envVar2 = container.getEnv().get(1);
-		assertEquals("JAVA_OPTIONS", envVar1.getName());
-		assertEquals("-Xmx64m", envVar1.getValue());
-		assertEquals("KUBERNETES_NAMESPACE", envVar2.getName());
-		assertEquals("test-space", envVar2.getValue());
+		assertThat(envVar1.getName()).isEqualTo("JAVA_OPTIONS");
+		assertThat(envVar1.getValue()).isEqualTo("-Xmx64m");
+		assertThat(envVar2.getName()).isEqualTo("KUBERNETES_NAMESPACE");
+		assertThat(envVar2.getValue()).isEqualTo("test-space");
 	}
 
 	@Test
@@ -109,7 +106,7 @@ public class DefaultContainerFactoryTests {
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 		assertThat(container.getCommand()).containsExactly("echo", "arg1", "arg2");
 	}
 
@@ -129,16 +126,16 @@ public class DefaultContainerFactoryTests {
 
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
-		assertTrue("There should be three ports set", containerPorts.size() == 3);
-		assertTrue(8081 == containerPorts.get(0).getContainerPort());
-		assertTrue(8082 == containerPorts.get(1).getContainerPort());
-		assertTrue(65535 == containerPorts.get(2).getContainerPort());
+		assertThat(containerPorts).isNotNull();
+		assertThat(containerPorts.size()).isEqualTo(3);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8081);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8082);
+		assertThat(containerPorts.get(2).getContainerPort()).isEqualTo(65535);
 	}
 
-	@Test(expected = NumberFormatException.class)
+	@Test
 	public void createWithInvalidPort() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
@@ -154,7 +151,9 @@ public class DefaultContainerFactoryTests {
 
 		//Attempting to create with an invalid integer set for a port should cause an exception to bubble up.
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest);
-		defaultContainerFactory.create(containerConfiguration);
+		assertThatThrownBy(() -> {
+			defaultContainerFactory.create(containerConfiguration);
+		}).isInstanceOf(NumberFormatException.class);
 	}
 
 	@Test
@@ -174,16 +173,16 @@ public class DefaultContainerFactoryTests {
 		ContainerConfiguration containerConfiguration = new ContainerConfiguration("app-test", appDeploymentRequest)
 				.withHostNetwork(true);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
-		assertTrue("There should be three container ports set", containerPorts.size() == 3);
-		assertTrue(8081 == containerPorts.get(0).getContainerPort());
-		assertTrue(8081 == containerPorts.get(0).getHostPort());
-		assertTrue(8082 == containerPorts.get(1).getContainerPort());
-		assertTrue(8082 == containerPorts.get(1).getHostPort());
-		assertTrue(65535 == containerPorts.get(2).getContainerPort());
-		assertTrue(65535 == containerPorts.get(2).getHostPort());
+		assertThat(containerPorts).isNotNull();
+		assertThat(containerPorts.size()).isEqualTo(3);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8081);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8081);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8082);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8082);
+		assertThat(containerPorts.get(2).getContainerPort()).isEqualTo(65535);
+		assertThat(containerPorts.get(2).getHostPort()).isEqualTo(65535);
 	}
 
 	@Test
@@ -204,9 +203,10 @@ public class DefaultContainerFactoryTests {
 		ContainerConfiguration shellContainerConfiguration = new ContainerConfiguration("app-test",
 				appDeploymentRequestShell);
 		Container containerShell = defaultContainerFactory.create(shellContainerConfiguration);
-		assertNotNull(containerShell);
-		assertTrue(containerShell.getEnv().get(0).getName().equals("FOO_BAR_BAZ"));
-		assertTrue(containerShell.getArgs().size() == 0);
+		assertThat(containerShell).isNotNull();
+
+		assertThat(containerShell.getEnv().get(0).getName()).isEqualTo("FOO_BAR_BAZ");
+		assertThat(containerShell.getArgs()).isEmpty();
 
 		List<String> cmdLineArgs = new ArrayList<>();
 		cmdLineArgs.add("--foo.bar=value1");
@@ -219,16 +219,16 @@ public class DefaultContainerFactoryTests {
 		shellContainerConfiguration = new ContainerConfiguration("app-test",
 				appDeploymentRequestShell);
 		containerShell = defaultContainerFactory.create(shellContainerConfiguration);
-		assertNotNull(containerShell);
-		assertTrue(containerShell.getEnv().size() == 7);
-		assertTrue(containerShell.getArgs().size() == 0);
+		assertThat(containerShell).isNotNull();
+		assertThat(containerShell.getEnv()).hasSize(7);
+		assertThat(containerShell.getArgs()).isEmpty();
 		String envVarString = containerShell.getEnv().toString();
-		assertTrue(envVarString.contains("name=FOO_BAR_BAZ, value=test"));
-		assertTrue(envVarString.contains("name=FOO_BAR, value=value1"));
-		assertTrue(envVarString.contains("name=SPRING_CLOUD_TASK_EXECUTIONID, value=1"));
-		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_TASKAPPNAME, value==a1"));
-		assertTrue(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_PLATFORMNAME, value=platform1"));
-		assertTrue(envVarString.contains("name=BLAH, value=chacha"));
+		assertThat(envVarString.contains("name=FOO_BAR_BAZ, value=test")).isTrue();
+		assertThat(envVarString.contains("name=FOO_BAR, value=value1")).isTrue();
+		assertThat(envVarString.contains("name=SPRING_CLOUD_TASK_EXECUTIONID, value=1")).isTrue();
+		assertThat(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_TASKAPPNAME, value==a1")).isTrue();
+		assertThat(envVarString.contains("name=SPRING_CLOUD_DATA_FLOW_PLATFORMNAME, value=platform1")).isTrue();
+		assertThat(envVarString.contains("name=BLAH, value=chacha")).isTrue();
 
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "exec");
 		AppDeploymentRequest appDeploymentRequestExec = new AppDeploymentRequest(definition,
@@ -236,9 +236,9 @@ public class DefaultContainerFactoryTests {
 		ContainerConfiguration execContainerConfiguration = new ContainerConfiguration("app-test",
 				appDeploymentRequestExec);
 		Container containerExec = defaultContainerFactory.create(execContainerConfiguration);
-		assertNotNull(containerExec);
-		assertTrue(containerExec.getEnv().size() == 1);
-		assertTrue(containerExec.getArgs().get(0).equals("--foo.bar.baz=test"));
+		assertThat(containerExec).isNotNull();
+		assertThat(containerExec.getEnv()).hasSize(1);
+		assertThat(containerExec.getArgs().get(0)).isEqualTo("--foo.bar.baz=test");
 
 		props.put("spring.cloud.deployer.kubernetes.entryPointStyle", "boot");
 		AppDeploymentRequest appDeploymentRequestBoot = new AppDeploymentRequest(definition,
@@ -246,12 +246,12 @@ public class DefaultContainerFactoryTests {
 		ContainerConfiguration bootContainerConfiguration = new ContainerConfiguration("app-test",
 				appDeploymentRequestBoot);
 		Container containerBoot = defaultContainerFactory.create(bootContainerConfiguration);
-		assertNotNull(containerBoot);
-		assertTrue(containerBoot.getEnv().get(0).getName().equals("SPRING_APPLICATION_JSON"));
-		assertTrue(containerBoot.getEnv().get(0).getValue().equals(new ObjectMapper().writeValueAsString(appProps)));
-		assertTrue(containerBoot.getArgs().size() == 2);
-		assertTrue(containerBoot.getArgs().get(0).equals("--arg1=val1"));
-		assertTrue(containerBoot.getArgs().get(1).equals("--arg2=val2"));
+		assertThat(containerBoot).isNotNull();
+		assertThat(containerBoot.getEnv().get(0).getName()).isEqualTo("SPRING_APPLICATION_JSON");
+		assertThat(containerBoot.getEnv().get(0).getValue()).isEqualTo(new ObjectMapper().writeValueAsString(appProps));
+		assertThat(containerBoot.getArgs()).hasSize(2);
+		assertThat(containerBoot.getArgs().get(0)).isEqualTo("--arg1=val1");
+		assertThat(containerBoot.getArgs().get(1)).isEqualTo("--arg2=val2");
 	}
 
 	@Test
@@ -326,17 +326,17 @@ public class DefaultContainerFactoryTests {
 				.withExternalPort(8080)
 				.withHostNetwork(true);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).as("Only two container ports should be set").hasSize(2);
+		assertThat((int) containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat((int) containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat((int) container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -356,17 +356,17 @@ public class DefaultContainerFactoryTests {
 				.withExternalPort(8080)
 				.withHostNetwork(true);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).as("Only two container ports should be set").hasSize(2);
+		assertThat((int) containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat((int) containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat((int) container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -386,15 +386,15 @@ public class DefaultContainerFactoryTests {
 				.withExternalPort(8080)
 				.withHostNetwork(true);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8080, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
-		assertEquals("HTTPS", container.getLivenessProbe().getHttpGet().getScheme());
+		assertThat((int) containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat((int) container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8080);
+		assertThat(container.getLivenessProbe().getHttpGet().getScheme()).isEqualTo("HTTPS");
 	}
 
 	@Test
@@ -414,15 +414,15 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8080, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
-		assertEquals("HTTPS", container.getReadinessProbe().getHttpGet().getScheme());
+		assertThat((int) containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat((int) container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8080);
+		assertThat(container.getReadinessProbe().getHttpGet().getScheme()).isEqualTo("HTTPS");
 	}
 
 	@Test
@@ -447,13 +447,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals("HTTPS", container.getReadinessProbe().getHttpGet().getScheme());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getScheme()).isEqualTo("HTTPS");
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals("HTTPS", container.getLivenessProbe().getHttpGet().getScheme());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getScheme()).isEqualTo("HTTPS");
 	}
 
 	/**
@@ -477,17 +477,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -507,17 +507,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	/**
@@ -541,17 +541,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -571,17 +571,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	/**
@@ -605,17 +605,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -635,17 +635,17 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
+		assertThat(containerPorts).isNotNull();
 
-		assertEquals("Only two container ports should be set", 2, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8090, (int) containerPorts.get(1).getContainerPort());
-		assertEquals(8090, (int) containerPorts.get(1).getHostPort());
-		assertEquals(8090, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).hasSize(2);
+		assertThat(containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat(containerPorts.get(1).getContainerPort()).isEqualTo(8090);
+		assertThat(containerPorts.get(1).getHostPort()).isEqualTo(8090);
+		assertThat(container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8090);
 	}
 
 	@Test
@@ -666,14 +666,14 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(defaultPort);
 		Container container = defaultContainerFactory.create(containerConfiguration);
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 		List<ContainerPort> containerPorts = container.getPorts();
-		assertNotNull(containerPorts);
-		assertEquals("Only the default container port should set", 1, containerPorts.size());
-		assertEquals(8080, (int) containerPorts.get(0).getContainerPort());
-		assertEquals(8080, (int) containerPorts.get(0).getHostPort());
-		assertEquals(8080, (int) container.getLivenessProbe().getHttpGet().getPort().getIntVal());
-		assertEquals(8080, (int) container.getReadinessProbe().getHttpGet().getPort().getIntVal());
+		assertThat(containerPorts).isNotNull();
+		assertThat(containerPorts).as("Only the default container port should set").hasSize(1);
+		assertThat((int) containerPorts.get(0).getContainerPort()).isEqualTo(8080);
+		assertThat((int) containerPorts.get(0).getHostPort()).isEqualTo(8080);
+		assertThat((int) container.getLivenessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8080);
+		assertThat((int) container.getReadinessProbe().getHttpGet().getPort().getIntVal()).isEqualTo(8080);
 	}
 
 	@Test
@@ -695,13 +695,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(HttpProbeCreator.BOOT_2_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo(HttpProbeCreator.BOOT_2_READINESS_PROBE_PATH);
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(HttpProbeCreator.BOOT_2_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo(HttpProbeCreator.BOOT_2_LIVENESS_PROBE_PATH);
 	}
 
 	@Test
@@ -725,13 +725,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals(HttpProbeCreator.BOOT_1_READINESS_PROBE_PATH, container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo(HttpProbeCreator.BOOT_1_READINESS_PROBE_PATH);
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals(HttpProbeCreator.BOOT_1_LIVENESS_PROBE_PATH, container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo(HttpProbeCreator.BOOT_1_LIVENESS_PROBE_PATH);
 	}
 
 	/**
@@ -760,13 +760,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/readiness");
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo("/liveness");
 	}
 
 	@Test
@@ -791,13 +791,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/readiness");
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo("/liveness");
 	}
 
 	/**
@@ -824,13 +824,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/readiness");
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo("/liveness");
 	}
 
 	@Test
@@ -853,13 +853,13 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
-		assertNotNull(container.getReadinessProbe().getHttpGet().getPath());
-		assertEquals("/readiness", container.getReadinessProbe().getHttpGet().getPath());
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/readiness");
 
-		assertNotNull(container.getLivenessProbe().getHttpGet().getPath());
-		assertEquals("/liveness", container.getLivenessProbe().getHttpGet().getPath());
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isNotNull();
+		assertThat(container.getLivenessProbe().getHttpGet().getPath()).isEqualTo("/liveness");
 	}
 
 	@Test
@@ -884,15 +884,15 @@ public class DefaultContainerFactoryTests {
 				.get(HttpProbeCreator.PROBE_CREDENTIALS_SECRET_KEY_NAME);
 
 		HTTPHeader livenessProbeHeader = container.getLivenessProbe().getHttpGet().getHttpHeaders().get(0);
-		assertEquals(HttpProbeCreator.AUTHORIZATION_HEADER_NAME, livenessProbeHeader.getName());
-		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, livenessProbeHeader.getValue());
+		assertThat(livenessProbeHeader.getName()).isEqualTo(HttpProbeCreator.AUTHORIZATION_HEADER_NAME);
+		assertThat(livenessProbeHeader.getValue()).isEqualTo(ProbeAuthenticationType.Basic.name() + " " + credentials);
 
 		HTTPHeader readinessProbeHeader = container.getReadinessProbe().getHttpGet().getHttpHeaders().get(0);
-		assertEquals(HttpProbeCreator.AUTHORIZATION_HEADER_NAME, readinessProbeHeader.getName());
-		assertEquals(ProbeAuthenticationType.Basic.name() + " " + credentials, readinessProbeHeader.getValue());
+		assertThat(readinessProbeHeader.getName()).isEqualTo(HttpProbeCreator.AUTHORIZATION_HEADER_NAME);
+		assertThat(readinessProbeHeader.getValue()).isEqualTo(ProbeAuthenticationType.Basic.name() + " " + credentials);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpProbeCredentialsInvalidSecret() {
 		Secret secret = randomSecret();
 		secret.setData(Collections.singletonMap("unexpectedkey", "dXNlcjpwYXNz"));
@@ -910,9 +910,9 @@ public class DefaultContainerFactoryTests {
 				.withProbeCredentialsSecret(secret);
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(new KubernetesDeployerProperties());
-		containerFactory.create(containerConfiguration);
-
-		fail();
+		assertThatThrownBy(() -> {
+			containerFactory.create(containerConfiguration);
+		}).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -926,10 +926,8 @@ public class DefaultContainerFactoryTests {
 		ContainerFactory containerFactory = new DefaultContainerFactory(new KubernetesDeployerProperties());
 		Container container = containerFactory.create(containerConfiguration);
 
-		assertTrue("Liveness probe should not contain any HTTP headers",
-				container.getLivenessProbe().getHttpGet().getHttpHeaders().isEmpty());
-		assertTrue("Readiness probe should not contain any HTTP headers",
-				container.getReadinessProbe().getHttpGet().getHttpHeaders().isEmpty());
+		assertThat(container.getLivenessProbe().getHttpGet().getHttpHeaders()).isEmpty();
+		assertThat(container.getReadinessProbe().getHttpGet().getHttpHeaders()).isEmpty();
 	}
 
 	@Test
@@ -954,7 +952,7 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		assertThat(container.getPorts())
 				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
@@ -964,22 +962,22 @@ public class DefaultContainerFactoryTests {
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
-		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+		assertThat(livenessTcpProbePort).isNotNull();
+		assertThat(livenessTcpProbePort.intValue()).isEqualTo(9090);
 
 		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
-		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+		assertThat(readinessTcpProbePort).isNotNull();
+		assertThat(readinessTcpProbePort.intValue()).isEqualTo(5050);
 
-		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbe.getPeriodSeconds());
-		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbe.getPeriodSeconds());
+		assertThat(livenessProbe.getPeriodSeconds()).isNotNull();
+		assertThat(readinessProbe.getPeriodSeconds()).isNotNull();
 
-		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbe.getInitialDelaySeconds());
-		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbe.getInitialDelaySeconds());
+		assertThat(livenessProbe.getInitialDelaySeconds()).isNotNull();
+		assertThat(readinessProbe.getInitialDelaySeconds()).isNotNull();
 	}
 
 	@Test
@@ -1001,12 +999,10 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 
-		try {
+		assertThatThrownBy(() -> {
 			defaultContainerFactory.create(containerConfiguration);
-		} catch (IllegalArgumentException e) {
-			assertTrue("Expected livenessTcpProbePort to be set", e.getMessage()
-					.contains("The livenessTcpProbePort property must be set"));
-		}
+		}).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("The livenessTcpProbePort property must be set");
 	}
 
 	@Test
@@ -1028,12 +1024,10 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 
-		try {
+		assertThatThrownBy(() -> {
 			defaultContainerFactory.create(containerConfiguration);
-		} catch (IllegalArgumentException e) {
-			assertTrue("A readinessTcpProbePort property must be set.", e.getMessage()
-					.contains("A readinessTcpProbePort property must be set."));
-		}
+		}).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("A readinessTcpProbePort property must be set");
 	}
 
 	@Test
@@ -1056,12 +1050,10 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 
-		try {
+		assertThatThrownBy(() -> {
 			defaultContainerFactory.create(containerConfiguration);
-		} catch (Exception e) {
-			assertTrue("ReadinessTcpPortProbe must contain all digits",
-					e.getMessage().contains("ReadinessTcpProbePort must contain all digits"));
-		}
+		}).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("ReadinessTcpProbePort must contain all digits");
 	}
 
 	@Test
@@ -1084,12 +1076,10 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 
-		try {
+		assertThatThrownBy(() -> {
 			defaultContainerFactory.create(containerConfiguration);
-		} catch (Exception e) {
-			assertTrue("LivenessTcpPortProbe must contain all digits",
-					e.getMessage().contains("LivenessTcpProbePort must contain all digits"));
-		}
+		}).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("LivenessTcpProbePort must contain all digits");
 	}
 
 	@Test
@@ -1117,7 +1107,7 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		assertThat(container.getPorts())
 				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
@@ -1127,32 +1117,32 @@ public class DefaultContainerFactoryTests {
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
-		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+		assertThat(livenessTcpProbePort).isNotNull();
+		assertThat(livenessTcpProbePort.intValue()).isEqualTo(9090);
 
 		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
-		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+		assertThat(readinessTcpProbePort).isNotNull();
+		assertThat(readinessTcpProbePort.intValue()).isEqualTo(5050);
 
 		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
-		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbePeriodSeconds);
-		assertEquals("Invalid livesness TCP probe period seconds", 4, livenessProbePeriodSeconds.intValue());
+		assertThat(livenessProbePeriodSeconds).isNotNull();
+		assertThat(livenessProbePeriodSeconds.intValue()).isEqualTo(4);
 
 		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
-		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbePeriodSeconds);
-		assertEquals("Invalid readiness TCP probe period seconds", 2, readinessProbePeriodSeconds.intValue());
+		assertThat(readinessProbePeriodSeconds).isNotNull();
+		assertThat(readinessProbePeriodSeconds.intValue()).isEqualTo(2);
 
 		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
-		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
-		assertEquals("Invalid liveness TCP probe initial delay seconds", 3, livenessProbeInitialDelaySeconds.intValue());
+		assertThat(livenessProbeInitialDelaySeconds).isNotNull();
+		assertThat(livenessProbeInitialDelaySeconds.intValue()).isEqualTo(3);
 
 		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
-		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
-		assertEquals("Invalid readiness TCP probe initial delay seconds", 1, readinessProbeInitialDelaySeconds.intValue());
+		assertThat(readinessProbeInitialDelaySeconds).isNotNull();
+		assertThat(readinessProbeInitialDelaySeconds.intValue()).isEqualTo(1);
 	}
 
 	@Test
@@ -1189,7 +1179,7 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		assertThat(container.getPorts())
 				.contains(new ContainerPortBuilder().withHostPort(5050).withContainerPort(5050).build());
@@ -1199,32 +1189,32 @@ public class DefaultContainerFactoryTests {
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		Integer livenessTcpProbePort = livenessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Liveness TCP probe port should not be null", livenessTcpProbePort);
-		assertEquals("Invalid liveness TCP probe port", 9090, livenessTcpProbePort.intValue());
+		assertThat(livenessTcpProbePort).isNotNull();
+		assertThat(livenessTcpProbePort.intValue()).isEqualTo(9090);
 
 		Integer readinessTcpProbePort = readinessProbe.getTcpSocket().getPort().getIntVal();
-		assertNotNull("Readiness TCP probe port should not be null", readinessTcpProbePort);
-		assertEquals("Invalid readiness TCP probe port", 5050, readinessTcpProbePort.intValue());
+		assertThat(readinessTcpProbePort).isNotNull();
+		assertThat(readinessTcpProbePort.intValue()).isEqualTo(5050);
 
 		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
-		assertNotNull("Liveness TCP probe period seconds should not be null", livenessProbePeriodSeconds);
-		assertEquals("Invalid livesness TCP probe period seconds", 13, livenessProbePeriodSeconds.intValue());
+		assertThat(livenessProbePeriodSeconds).isNotNull();
+		assertThat(livenessProbePeriodSeconds.intValue()).isEqualTo(13);
 
 		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
-		assertNotNull("Readiness TCP probe period seconds should not be null", readinessProbePeriodSeconds);
-		assertEquals("Invalid readiness TCP probe period seconds", 11, readinessProbePeriodSeconds.intValue());
+		assertThat(readinessProbePeriodSeconds).isNotNull();
+		assertThat(readinessProbePeriodSeconds.intValue()).isEqualTo(11);
 
 		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
-		assertNotNull("Liveness TCP probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
-		assertEquals("Invalid liveness TCP probe initial delay seconds", 14, livenessProbeInitialDelaySeconds.intValue());
+		assertThat(livenessProbeInitialDelaySeconds).isNotNull();
+		assertThat(livenessProbeInitialDelaySeconds.intValue()).isEqualTo(14);
 
 		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
-		assertNotNull("Readiness TCP probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
-		assertEquals("Invalid readiness TCP probe initial delay seconds", 12, readinessProbeInitialDelaySeconds.intValue());
+		assertThat(readinessProbeInitialDelaySeconds).isNotNull();
+		assertThat(readinessProbeInitialDelaySeconds.intValue()).isEqualTo(12);
 	}
 
 	@Test
@@ -1249,27 +1239,25 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		List<String> livenessCommandProbeCommand = livenessProbe.getExec().getCommand();
-		assertFalse("Liveness command probe command should not be empty", livenessCommandProbeCommand.isEmpty());
-		assertEquals("Invalid liveness command probe command", "ls /dev", String.join(" ", livenessCommandProbeCommand));
+		assertThat(livenessCommandProbeCommand).containsExactly("ls", "/dev");
 
 		List<String> readinessCommandProbeCommand = readinessProbe.getExec().getCommand();
-		assertFalse("Readiness command probe command should not be empty", readinessCommandProbeCommand.isEmpty());
-		assertEquals("Invalid readiness command probe command", "ls /", String.join(" ", readinessCommandProbeCommand));
+		assertThat(readinessCommandProbeCommand).containsExactly("ls", "/");
 
-		assertNotNull("Liveness command probe period seconds should not be null", livenessProbe.getPeriodSeconds());
-		assertNotNull("Readiness command probe period seconds should not be null", readinessProbe.getPeriodSeconds());
+		assertThat(livenessProbe.getPeriodSeconds()).isNotNull();
+		assertThat(readinessProbe.getPeriodSeconds()).isNotNull();
 
-		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbe.getInitialDelaySeconds());
-		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbe.getInitialDelaySeconds());
+		assertThat(livenessProbe.getInitialDelaySeconds()).isNotNull();
+		assertThat(readinessProbe.getInitialDelaySeconds()).isNotNull();
 	}
 
 	@Test
@@ -1290,12 +1278,10 @@ public class DefaultContainerFactoryTests {
 				.withHostNetwork(true)
 				.withExternalPort(8080);
 
-		try {
+		assertThatThrownBy(() -> {
 			defaultContainerFactory.create(containerConfiguration);
-		} catch (IllegalArgumentException e) {
-			assertTrue("The readinessCommandProbeCommand property must be set.", e.getMessage()
-					.contains("The readinessCommandProbeCommand property must be set."));
-		}
+		}).isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("The readinessCommandProbeCommand property must be set");
 	}
 
 	@Test
@@ -1323,37 +1309,37 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		String livenessTcpProbeCommand = String.join(" ", livenessProbe.getExec().getCommand());
-		assertNotNull("Liveness command probe command should not be null", livenessTcpProbeCommand);
-		assertEquals("Invalid liveness command probe command", "ls /dev", livenessTcpProbeCommand);
+		assertThat(livenessTcpProbeCommand).isNotNull();
+		assertThat(livenessTcpProbeCommand).isEqualTo("ls /dev");
 
 		String readinessTcpProbeCommand = String.join(" ", readinessProbe.getExec().getCommand());
-		assertNotNull("Readiness command probe command should not be null", readinessTcpProbeCommand);
-		assertEquals("Invalid readiness command probe command", "ls /", readinessTcpProbeCommand);
+		assertThat(readinessTcpProbeCommand).isNotNull();
+		assertThat(readinessTcpProbeCommand).isEqualTo("ls /");
 
 		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
-		assertNotNull("Liveness command probe period seconds should not be null", livenessProbePeriodSeconds);
-		assertEquals("Invalid livesness command probe period seconds", 4, livenessProbePeriodSeconds.intValue());
+		assertThat(livenessProbePeriodSeconds).isNotNull();
+		assertThat(livenessProbePeriodSeconds.intValue()).isEqualTo(4);
 
 		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
-		assertNotNull("Readiness command probe period seconds should not be null", readinessProbePeriodSeconds);
-		assertEquals("Invalid readiness command probe period seconds", 2, readinessProbePeriodSeconds.intValue());
+		assertThat(readinessProbePeriodSeconds).isNotNull();
+		assertThat(readinessProbePeriodSeconds.intValue()).isEqualTo(2);
 
 		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
-		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
-		assertEquals("Invalid liveness command probe initial delay seconds", 3, livenessProbeInitialDelaySeconds.intValue());
+		assertThat(livenessProbeInitialDelaySeconds).isNotNull();
+		assertThat(livenessProbeInitialDelaySeconds.intValue()).isEqualTo(3);
 
 		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
-		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
-		assertEquals("Invalid readiness command probe initial delay seconds", 1, readinessProbeInitialDelaySeconds.intValue());
+		assertThat(readinessProbeInitialDelaySeconds).isNotNull();
+		assertThat(readinessProbeInitialDelaySeconds.intValue()).isEqualTo(1);
 	}
 
 	@Test
@@ -1390,37 +1376,37 @@ public class DefaultContainerFactoryTests {
 
 		Container container = defaultContainerFactory.create(containerConfiguration);
 
-		assertNotNull(container);
+		assertThat(container).isNotNull();
 
 		Probe livenessProbe = container.getLivenessProbe();
 		Probe readinessProbe = container.getReadinessProbe();
 
-		assertNotNull("LivenessProbe should not be null", livenessProbe);
-		assertNotNull("ReadinessProbe should not be null", readinessProbe);
+		assertThat(livenessProbe).isNotNull();
+		assertThat(readinessProbe).isNotNull();
 
 		String livenessTcpProbeCommand = String.join(" ", livenessProbe.getExec().getCommand());
-		assertNotNull("Liveness command probe command should not be null", livenessTcpProbeCommand);
-		assertEquals("Invalid liveness command probe command", "ls /dev", livenessTcpProbeCommand);
+		assertThat(livenessTcpProbeCommand).isNotNull();
+		assertThat(livenessTcpProbeCommand).isEqualTo("ls /dev");
 
 		String readinessTcpProbeCommand = String.join(" ", readinessProbe.getExec().getCommand());
-		assertNotNull("Readiness command probe command should not be null", readinessTcpProbeCommand);
-		assertEquals("Invalid readiness command probe command", "ls /", readinessTcpProbeCommand);
+		assertThat(readinessTcpProbeCommand).isNotNull();
+		assertThat(readinessTcpProbeCommand).isEqualTo("ls /");
 
 		Integer livenessProbePeriodSeconds = livenessProbe.getPeriodSeconds();
-		assertNotNull("Liveness command probe period seconds should not be null", livenessProbePeriodSeconds);
-		assertEquals("Invalid livesness command probe period seconds", 13, livenessProbePeriodSeconds.intValue());
+		assertThat(livenessProbePeriodSeconds).isNotNull();
+		assertThat(livenessProbePeriodSeconds.intValue()).isEqualTo(13);
 
 		Integer readinessProbePeriodSeconds = readinessProbe.getPeriodSeconds();
-		assertNotNull("Readiness command probe period seconds should not be null", readinessProbePeriodSeconds);
-		assertEquals("Invalid readiness command probe period seconds", 11, readinessProbePeriodSeconds.intValue());
+		assertThat(readinessProbePeriodSeconds).isNotNull();
+		assertThat(readinessProbePeriodSeconds.intValue()).isEqualTo(11);
 
 		Integer livenessProbeInitialDelaySeconds = livenessProbe.getInitialDelaySeconds();
-		assertNotNull("Liveness command probe initial delay seconds should not be null", livenessProbeInitialDelaySeconds);
-		assertEquals("Invalid liveness command probe initial delay seconds", 14, livenessProbeInitialDelaySeconds.intValue());
+		assertThat(livenessProbeInitialDelaySeconds).isNotNull();
+		assertThat(livenessProbeInitialDelaySeconds.intValue()).isEqualTo(14);
 
 		Integer readinessProbeInitialDelaySeconds = readinessProbe.getInitialDelaySeconds();
-		assertNotNull("Readiness command probe initial delay seconds should not be null", readinessProbeInitialDelaySeconds);
-		assertEquals("Invalid readiness command probe initial delay seconds", 12, readinessProbeInitialDelaySeconds.intValue());
+		assertThat(readinessProbeInitialDelaySeconds).isNotNull();
+		assertThat(readinessProbeInitialDelaySeconds.intValue()).isEqualTo(12);
 	}
 
 	@Test
