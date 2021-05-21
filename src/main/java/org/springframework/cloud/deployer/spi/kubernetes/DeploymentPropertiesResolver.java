@@ -596,8 +596,13 @@ class DeploymentPropertiesResolver {
 		String deploymentLabels = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".deploymentLabels", "");
 
-		if (StringUtils.hasText(deploymentLabels)) {
-			String[] deploymentLabel = deploymentLabels.split(",");
+		// Add deployment labels set at the deployer level.
+		String updatedLabels = StringUtils.hasText(this.properties.getDeploymentLabels()) ?
+				new StringBuilder().append(deploymentLabels).append(StringUtils.hasText(deploymentLabels) ? ",": "")
+						.append(this.properties.getDeploymentLabels()).toString() : deploymentLabels;
+
+		if (StringUtils.hasText(updatedLabels)) {
+			String[] deploymentLabel = updatedLabels.split(",");
 
 			for (String label : deploymentLabel) {
 				String[] labelPair = label.split(":");
@@ -606,7 +611,6 @@ class DeploymentPropertiesResolver {
 				labels.put(labelPair[0].trim(), labelPair[1].trim());
 			}
 		}
-
 		return labels;
 	}
 

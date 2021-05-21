@@ -782,6 +782,11 @@ public class KubernetesDeployerProperties {
 	 */
 	private List<Container> additionalContainers;
 
+	/**
+	 * Deployment label to be applied to Deployment, StatefulSet, JobSpec etc.,
+	 */
+	private String deploymentLabels;
+
 	public String getNamespace() {
 		return namespace;
 	}
@@ -1437,5 +1442,13 @@ public class KubernetesDeployerProperties {
 
 	void setLifecycle(Lifecycle lifecycle) {
 		this.lifecycle = lifecycle;
+	}
+
+	public String getDeploymentLabels() {
+		return deploymentLabels;
+	}
+
+	public void setDeploymentLabels(String deploymentLabels) {
+		this.deploymentLabels = deploymentLabels;
 	}
 }

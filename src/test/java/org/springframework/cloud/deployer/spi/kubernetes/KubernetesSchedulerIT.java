@@ -505,9 +505,11 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	}
 
 	@Test
-	public void testJobAnnotationsFromSchedulerProperties() {
+	public void testJobAnnotationsAndLabelsFromSchedulerProperties() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 		kubernetesSchedulerProperties.setJobAnnotations("test1:value1");
+		kubernetesSchedulerProperties.setPodAnnotations("podtest1:podvalue1");
+		kubernetesSchedulerProperties.setDeploymentLabels("label1:value1,label2:value2");
 		if (kubernetesSchedulerProperties.getNamespace() == null) {
 			kubernetesSchedulerProperties.setNamespace("default");
 		}
@@ -524,6 +526,46 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
 		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations().get("podtest1")).as("Pod annotation is not set").isEqualTo("podvalue1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
+	public void testJobAnnotationsAndLabelsFromSchedulerRequest() {
+		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		kubernetesSchedulerProperties.setJobAnnotations("test1:value1");
+		kubernetesSchedulerProperties.setPodAnnotations("podtest1:podvalue1");
+		kubernetesSchedulerProperties.setDeploymentLabels("label1:value1,label2:value2");
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesSchedulerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		Map<String, String> scheduleProperties = new HashMap<>();
+		scheduleProperties.putAll(getSchedulerProperties());
+		scheduleProperties.put("spring.cloud.scheduler.kubernetes.deploymentLabels", "requestLabel1:requestValue1,requestLabel2:requestValue2");
+		scheduleProperties.put("spring.cloud.scheduler.kubernetes.podAnnotations", "requestPod1:requestPodValue1");
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, scheduleProperties,
+				null, getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value1");
+		// Pod annotation from the request should override the top level property values
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations().get("requestPod1")).as("Pod annotation is not set").isEqualTo("requestPodValue1");
+		// Deployment label from the request should get appended to the top level property values
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("requestLabel1")).as("Pod Label1 from the request is not set").isEqualTo("requestValue1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("requestLabel2")).as("Pod Label2 from the request is not set").isEqualTo("requestValue2");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
