@@ -17,7 +17,6 @@
 package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +49,7 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 public class KubernetesScheduler extends AbstractKubernetesDeployer implements Scheduler {
-	private static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
+	protected static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
 
@@ -167,8 +166,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 	}
 
 	protected CronJob createCronJob(ScheduleRequest scheduleRequest) {
-		Map<String, String> labels = Collections.singletonMap(SPRING_CRONJOB_ID_KEY,
-				scheduleRequest.getDefinition().getName());
+		Map<String, String> labels = new HashMap<>();
+		labels.put(SPRING_CRONJOB_ID_KEY, scheduleRequest.getDefinition().getName());
 
 		Map<String, String> schedulerProperties = scheduleRequest.getSchedulerProperties();
 		String schedule = schedulerProperties.get(SchedulerPropertyKeys.CRON_EXPRESSION);
@@ -179,11 +178,14 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		if (StringUtils.hasText(taskServiceAccountName)) {
 			podSpec.setServiceAccountName(taskServiceAccountName);
 		}
+		Map<String, String> annotations = this.deploymentPropertiesResolver.getPodAnnotations(scheduleRequest.getSchedulerProperties());
+		labels.putAll(this.deploymentPropertiesResolver.getDeploymentLabels(scheduleRequest.getSchedulerProperties()));
 
 		CronJob cronJob = new CronJobBuilder().withNewMetadata().withName(scheduleRequest.getScheduleName())
 				.withLabels(labels).withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(schedulerProperties)).endMetadata()
 				.withNewSpec().withSchedule(schedule).withNewJobTemplate()
-				.withNewSpec().withNewTemplate().withSpec(podSpec).endTemplate().endSpec()
+				.withNewSpec().withNewTemplate().withNewMetadata().addToAnnotations(annotations).addToLabels(labels)
+				.endMetadata().withSpec(podSpec).endTemplate().endSpec()
 				.endJobTemplate().endSpec().build();
 
 		setImagePullSecret(scheduleRequest, cronJob);

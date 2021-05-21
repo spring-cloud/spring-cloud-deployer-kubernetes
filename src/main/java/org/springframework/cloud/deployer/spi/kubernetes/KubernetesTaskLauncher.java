@@ -244,6 +244,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.addToLabels(idMap)
 					.addToLabels(deploymentLabels)
 					.withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(deploymentProperties))
+					.addToAnnotations(this.deploymentPropertiesResolver.getPodAnnotations(deploymentProperties))
 					.build();
 			PodTemplateSpec podTemplateSpec = new PodTemplateSpec(objectMeta, podSpec);
 
@@ -265,6 +266,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 		else {
 			logger.debug(String.format("Launching Pod for task: %s", appId));
+
 			this.client.pods()
 					.createNew()
 					.withNewMetadata()
@@ -272,6 +274,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 					.withLabels(podLabelMap)
 					.addToLabels(deploymentLabels)
 					.withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(deploymentProperties))
+					.addToAnnotations(this.deploymentPropertiesResolver.getPodAnnotations(deploymentProperties))
 					.addToLabels(idMap)
 					.endMetadata()
 					.withSpec(podSpec)
