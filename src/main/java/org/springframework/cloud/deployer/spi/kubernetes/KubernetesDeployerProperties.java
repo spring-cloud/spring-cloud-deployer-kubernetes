@@ -196,6 +196,11 @@ public class KubernetesDeployerProperties {
 		public static class VolumeClaimTemplate {
 
 			/**
+			 * VolumeClaimTemplate name
+			 */
+			private String name;
+
+			/**
 			 * VolumeClaimTemplate storage.
 			 */
 			private String storage = "10m";
@@ -204,6 +209,14 @@ public class KubernetesDeployerProperties {
 			 * VolumeClaimTemplate storage class name.
 			 */
 			private String storageClassName;
+
+			public String getName() {
+				return this.name;
+			}
+
+			public void setName(String name) {
+				this.name = name;
+			}
 
 			public String getStorage() {
 				return storage;

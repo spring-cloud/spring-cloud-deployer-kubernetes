@@ -264,6 +264,23 @@ class DeploymentPropertiesResolver {
 	}
 
 	/**
+	 * Get the VolumeClaim template name for Statefulset from the deployment properties.
+	 *
+	 * @param kubernetesDeployerProperties the kubernetes deployer properties
+	 * @return the volume claim template name
+	 */
+	String getStatefulSetVolumeClaimTemplateName(Map<String, String> kubernetesDeployerProperties) {
+		String name = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".statefulSet.volumeClaimTemplate.name");
+
+		if (name == null && properties.getStatefulSet() != null && properties.getStatefulSet().getVolumeClaimTemplate() != null) {
+			name = properties.getStatefulSet().getVolumeClaimTemplate().getName();
+		}
+
+		return name;
+	}
+
+	/**
 	 * Get the StatefulSet storage class name to be set in VolumeClaim template for the deployment properties.
 	 *
 	 * @param kubernetesDeployerProperties the kubernetes deployer properties

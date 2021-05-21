@@ -274,10 +274,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		String storageClassName = this.deploymentPropertiesResolver.getStatefulSetStorageClassName(kubernetesDeployerProperties);
 
+		String volumeClaimTemplateName = this.deploymentPropertiesResolver.getStatefulSetVolumeClaimTemplateName(kubernetesDeployerProperties);
+
+		volumeClaimTemplateName = StringUtils.hasText(volumeClaimTemplateName) ? volumeClaimTemplateName : appId;
+
 		PersistentVolumeClaimBuilder persistentVolumeClaimBuilder = new PersistentVolumeClaimBuilder().withNewSpec().
 				withStorageClassName(storageClassName).withAccessModes(Collections.singletonList("ReadWriteOnce"))
 				.withNewResources().addToLimits(storageResource).addToRequests(storageResource).endResources()
-				.endSpec().withNewMetadata().withName(appId).withLabels(idMap)
+				.endSpec().withNewMetadata().withName(volumeClaimTemplateName).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).endMetadata();
 
 		PodSpec podSpec = createPodSpec(request);

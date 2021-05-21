@@ -858,6 +858,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		Map<String, String> props = new HashMap<>();
 		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
 		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.name", "mystorage");
 		props.put("spring.cloud.deployer.kubernetes.statefulSet.volumeClaimTemplate.storage", "1g");
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
@@ -903,7 +904,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		Assertions.assertThat(container.getImage()).isEqualTo(testApplication().getURI().getSchemeSpecificPart());
 
 		PersistentVolumeClaim pvc = statefulSetSpec.getVolumeClaimTemplates().get(0);
-		Assertions.assertThat(pvc.getMetadata().getName()).isEqualTo(deploymentId);
+		Assertions.assertThat(pvc.getMetadata().getName()).isEqualTo("mystorage");
 
 		PersistentVolumeClaimSpec pvcSpec = pvc.getSpec();
 		Assertions.assertThat(pvcSpec.getAccessModes()).containsOnly("ReadWriteOnce");
@@ -922,6 +923,47 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 				.untilAsserted(() -> {
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.unknown);
 		});
+	}
+
+	@Test
+	public void createStatefulSetWithPVCDefaultName() throws Exception {
+		Map<String, String> props = new HashMap<>();
+		props.put(KubernetesAppDeployer.COUNT_PROPERTY_KEY, "3");
+		props.put(KubernetesAppDeployer.INDEXED_PROPERTY_KEY, "true");
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
+
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
+				kubernetesClient);
+
+		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
+		String deploymentId = deployer.deploy(appDeploymentRequest);
+		Timeout timeout = deploymentTimeout();
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+				.atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+				.untilAsserted(() -> {
+					assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
+				});
+
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
+
+		StatefulSet statefulSet = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems().get(0);
+		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
+		Container container = statefulSetSpec.getTemplate().getSpec().getContainers().get(0);
+
+		Assertions.assertThat(container.getName()).isEqualTo(deploymentId);
+
+		PersistentVolumeClaim pvc = statefulSetSpec.getVolumeClaimTemplates().get(0);
+		Assertions.assertThat(pvc.getMetadata().getName()).isEqualTo(deploymentId);
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+				.atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+				.untilAsserted(() -> {
+					assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.unknown);
+				});
 	}
 
 	@Test
