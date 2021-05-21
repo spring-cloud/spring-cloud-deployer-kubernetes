@@ -92,7 +92,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.doAnswer;
-import static org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer.SPRING_APP_KEY;
 
 /**
  * Integration tests for {@link KubernetesAppDeployer}.
@@ -162,7 +161,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		});
 
 		// Ensure that a StatefulSet is deployed
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 		assertThat(statefulSets).isNotNull();
 		assertThat(statefulSets).hasSize(1);
@@ -461,7 +460,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 		PodSpec spec = kubernetesClient.pods().withLabels(selector).list().getItems().get(0).getSpec();
 		assertThat(spec.getVolumes()).isNotNull();
 		Volume volume = spec.getVolumes().stream()
@@ -608,7 +607,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 		PodSpec spec = kubernetesClient.pods().withLabels(selector).list().getItems().get(0).getSpec();
 
 		Map<String, String> envVars = new HashMap<>();
@@ -693,7 +692,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 
@@ -778,7 +777,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 
@@ -829,7 +828,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 
@@ -878,7 +877,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		StatefulSet statefulSet = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems().get(0);
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();
@@ -960,7 +959,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		});
 
 		// Ensure that a StatefulSet is deployed
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 		List<StatefulSet> statefulSets = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems();
 		assertThat(statefulSets).isNotNull();
 		assertThat(statefulSets).hasSize(1);
@@ -995,7 +994,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		List<Deployment> deployments = kubernetesClient.apps().deployments().withLabels(selector).list().getItems();
 
@@ -1041,7 +1040,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
 		});
 		Map<String, String> idMap = deployer.createIdMap(deploymentId, appDeploymentRequest);
-		Map<String, String> selector = Collections.singletonMap(SPRING_APP_KEY, deploymentId);
+		Map<String, String> selector = Collections.singletonMap(AbstractKubernetesDeployer.SPRING_APP_KEY, deploymentId);
 
 		StatefulSet statefulSet = kubernetesClient.apps().statefulSets().withLabels(selector).list().getItems().get(0);
 		StatefulSetSpec statefulSetSpec = statefulSet.getSpec();

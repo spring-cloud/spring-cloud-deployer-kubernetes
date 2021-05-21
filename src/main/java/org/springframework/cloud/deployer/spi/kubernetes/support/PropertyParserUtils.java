@@ -23,8 +23,6 @@ import java.util.Map;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import static java.lang.String.format;
-
 /**
  * Utility methods for formatting and parsing properties
  *
@@ -45,7 +43,7 @@ public class PropertyParserUtils {
 			String[] pairs = stringPairs.split(",");
 			for (String pair : pairs) {
 				String[] splitString = pair.split(":", 2);
-				Assert.isTrue(splitString.length == 2, format("Invalid annotation value: %s", pair));
+				Assert.isTrue(splitString.length == 2, String.format("Invalid annotation value: %s", pair));
 				mapValue.put(splitString[0].trim(), splitString[1].trim());
 			}
 		}

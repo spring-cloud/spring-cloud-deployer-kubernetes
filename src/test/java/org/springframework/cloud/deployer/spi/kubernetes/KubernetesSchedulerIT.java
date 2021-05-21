@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,6 +52,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.scheduler.CreateScheduleException;
@@ -68,8 +69,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE;
-import static org.springframework.cloud.deployer.spi.scheduler.SchedulerPropertyKeys.CRON_EXPRESSION;
 
 /**
  * Tests for Kubernetes {@link Scheduler} implementation.
@@ -77,9 +76,8 @@ import static org.springframework.cloud.deployer.spi.scheduler.SchedulerProperty
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  */
-// @RunWith(SpringRunner.class)
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(webEnvironment = NONE)
+@SpringBootTest(webEnvironment = WebEnvironment.NONE)
 @ContextConfiguration(classes = { KubernetesSchedulerIT.Config.class })
 public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tests {
 
@@ -169,7 +167,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	public void testSchedulerPropertiesMerge() {
 		final String baseScheduleName = "test-schedule1";
 		Map<String, String> schedulerProperties = new HashMap<>();
-		schedulerProperties.put(CRON_EXPRESSION, "0/10 * * * *");
+		schedulerProperties.put(SchedulerPropertyKeys.CRON_EXPRESSION, "0/10 * * * *");
 		schedulerProperties.put(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".imagePullPolicy", "Never");
 		Map<String, String> deploymentProperties = new HashMap<>();
 		deploymentProperties.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".environmentVariables", "MYVAR1=MYVAL1,MYVAR2=MYVAL2");
@@ -238,7 +236,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 	@Test
 	public void testInvalidCronSyntax() {
-		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "1 2 3 4");
+		Map<String, String> schedulerProperties = Collections.singletonMap(SchedulerPropertyKeys.CRON_EXPRESSION, "1 2 3 4");
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,
@@ -252,7 +250,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@Test
 	public void testNameTooLong() {
 		final String baseScheduleName = "tencharlng-scdf-itcouldbesaidthatthisislongtoowaytoo";
-		Map<String, String> schedulerProperties = Collections.singletonMap(CRON_EXPRESSION, "0/10 * * * *");
+		Map<String, String> schedulerProperties = Collections.singletonMap(SchedulerPropertyKeys.CRON_EXPRESSION, "0/10 * * * *");
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties, null, null,

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ package org.springframework.cloud.deployer.spi.kubernetes;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,20 +52,15 @@ import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.ConfigMapKeyRef;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.InitContainer;
+import org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SecretKeyRef;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
 import org.springframework.cloud.deployer.spi.util.CommandLineTokenizer;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.ConfigMapKeyRef;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.InitContainer;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.Lifecycle;
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.SecretKeyRef;
 
 /**
  * Class that resolves the appropriate deployment properties based on the property prefix being used.
@@ -336,7 +332,7 @@ class DeploymentPropertiesResolver {
 		String nodeSelector = this.properties.getNodeSelector();
 
 		String nodeSelectorDeploymentProperty = deploymentProperties
-				.getOrDefault(KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
+				.getOrDefault(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "");
 
 		boolean hasGlobalNodeSelector = StringUtils.hasText(properties.getNodeSelector());
 		boolean hasDeployerPropertyNodeSelector = StringUtils.hasText(nodeSelectorDeploymentProperty);
@@ -350,7 +346,7 @@ class DeploymentPropertiesResolver {
 			String[] nodeSelectorPairs = nodeSelector.split(",");
 			for (String nodeSelectorPair : nodeSelectorPairs) {
 				String[] selector = nodeSelectorPair.split(":");
-				Assert.isTrue(selector.length == 2, format("Invalid nodeSelector value: '%s'", nodeSelectorPair));
+				Assert.isTrue(selector.length == 2, String.format("Invalid nodeSelector value: '%s'", nodeSelectorPair));
 				nodeSelectors.put(selector[0].trim(), selector[1].trim());
 			}
 		}
@@ -518,7 +514,7 @@ class DeploymentPropertiesResolver {
 						.withName(initContainer.getContainerName())
 						.withImage(initContainer.getImageName())
 						.withCommand(initContainer.getCommands())
-						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(emptyList()))
+						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(Collections.emptyList()))
 						.build();
 			}
 		}
@@ -584,7 +580,7 @@ class DeploymentPropertiesResolver {
 			for (String label : deploymentLabel) {
 				String[] labelPair = label.split(":");
 				Assert.isTrue(labelPair.length == 2,
-						format("Invalid label format, expected 'labelKey:labelValue', got: '%s'", labelPair));
+						String.format("Invalid label format, expected 'labelKey:labelValue', got: '%s'", labelPair));
 				labels.put(labelPair[0].trim(), labelPair[1].trim());
 			}
 		}
@@ -760,8 +756,8 @@ class DeploymentPropertiesResolver {
 	 * @param deploymentProperties the kubernetes deployer properties map
 	 * @return Lifecycle spec
 	 */
-	Lifecycle getLifeCycle(Map<String,String> deploymentProperties) {
-		Lifecycle lifecycle = properties.getLifecycle();
+	KubernetesDeployerProperties.Lifecycle getLifeCycle(Map<String,String> deploymentProperties) {
+		KubernetesDeployerProperties.Lifecycle lifecycle = properties.getLifecycle();
 
 		if (deploymentProperties.keySet().stream()
 				.noneMatch(s -> s.startsWith(propertyPrefix + ".lifecycle"))) {
@@ -781,9 +777,9 @@ class DeploymentPropertiesResolver {
 		return lifecycle;
 	}
 
-	private Lifecycle.Hook lifecycleHook(String command) {
-		Lifecycle.Hook hook = new Lifecycle.Hook();
-		Lifecycle.Exec exec = new Lifecycle.Exec();
+	private KubernetesDeployerProperties.Lifecycle.Hook lifecycleHook(String command) {
+		KubernetesDeployerProperties.Lifecycle.Hook hook = new KubernetesDeployerProperties.Lifecycle.Hook();
+		KubernetesDeployerProperties.Lifecycle.Exec exec = new KubernetesDeployerProperties.Lifecycle.Exec();
 		exec.setCommand(Arrays.asList(command.split(",")));
 		hook.setExec(exec);
 		return hook;

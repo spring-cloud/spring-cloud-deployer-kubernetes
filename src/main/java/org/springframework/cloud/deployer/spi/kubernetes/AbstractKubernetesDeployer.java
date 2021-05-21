@@ -25,12 +25,8 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
-import io.fabric8.kubernetes.api.model.ExecActionBuilder;
 import io.fabric8.kubernetes.api.model.HandlerBuilder;
-import io.fabric8.kubernetes.api.model.HandlerFluent;
 import io.fabric8.kubernetes.api.model.Lifecycle;
-import io.fabric8.kubernetes.api.model.LifecycleBuilder;
-import io.fabric8.kubernetes.api.model.LifecycleFluent;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
@@ -194,10 +190,10 @@ public class AbstractKubernetesDeployer {
 		if (imagePullSecret != null) {
 			podSpec.addNewImagePullSecret(imagePullSecret);
 		}
-		
+
 		List<String> imagePullSecrets = this.deploymentPropertiesResolver.getImagePullSecrets(deploymentProperties);
 
-		if (imagePullSecrets != null) {			
+		if (imagePullSecrets != null) {
 			imagePullSecrets.forEach(imgPullsecret -> podSpec.addNewImagePullSecret(imgPullsecret));
 		}
 

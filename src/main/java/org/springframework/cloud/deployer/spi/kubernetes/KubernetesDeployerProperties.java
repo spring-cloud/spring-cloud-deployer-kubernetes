@@ -29,8 +29,6 @@ import io.fabric8.kubernetes.client.Config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
-import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
-
 /**
  * @author Florian Rosenberg
  * @author Thomas Risberg
@@ -41,8 +39,9 @@ import static org.springframework.cloud.deployer.spi.kubernetes.KubernetesDeploy
  * @author David Turanski
  * @author Enrique Medina Montenegro
  */
-@ConfigurationProperties(prefix = KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)
+@ConfigurationProperties(prefix = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)
 public class KubernetesDeployerProperties {
+
 	static final String KUBERNETES_DEPLOYER_PROPERTIES_PREFIX = "spring.cloud.deployer.kubernetes";
 
 	/**

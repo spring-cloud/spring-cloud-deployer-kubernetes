@@ -16,18 +16,19 @@
 
 package org.springframework.cloud.deployer.spi.kubernetes;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.cloud.deployer.spi.app.AppInstanceStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Represents the status of a module.
