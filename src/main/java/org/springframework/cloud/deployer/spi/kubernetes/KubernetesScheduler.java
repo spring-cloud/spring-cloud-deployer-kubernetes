@@ -49,7 +49,7 @@ import org.springframework.util.StringUtils;
  * @author Ilayaperumal Gopinathan
  */
 public class KubernetesScheduler extends AbstractKubernetesDeployer implements Scheduler {
-	private static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
+	protected static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
 

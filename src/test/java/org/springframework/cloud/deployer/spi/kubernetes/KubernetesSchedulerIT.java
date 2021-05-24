@@ -534,6 +534,31 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	}
 
 	@Test
+	public void testDefaultLabel() {
+		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
+		if (kubernetesSchedulerProperties.getNamespace() == null) {
+			kubernetesSchedulerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesSchedulerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesSchedulerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				null, getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations()).isNull();
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().size()).as("Should have one label").isEqualTo(1);
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get(
+				KubernetesScheduler.SPRING_CRONJOB_ID_KEY)).as("Default label is not set").isNotNull();
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
 	public void testJobAnnotationsAndLabelsFromSchedulerRequest() {
 		KubernetesSchedulerProperties kubernetesSchedulerProperties = new KubernetesSchedulerProperties();
 		kubernetesSchedulerProperties.setJobAnnotations("test1:value1");
