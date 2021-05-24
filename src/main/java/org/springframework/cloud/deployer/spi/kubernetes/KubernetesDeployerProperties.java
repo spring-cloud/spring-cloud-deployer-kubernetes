@@ -405,6 +405,11 @@ public class KubernetesDeployerProperties {
 
 		private List<VolumeMount> volumeMounts;
 
+		/**
+		 * Environment variables to set for any deployed init container.
+		 */
+		private String[] environmentVariables = new String[] {};
+
 		public String getImageName() {
 			return imageName;
 		}
@@ -435,6 +440,14 @@ public class KubernetesDeployerProperties {
 
 		public void setVolumeMounts(List<VolumeMount> volumeMounts) {
 			this.volumeMounts = volumeMounts;
+		}
+
+		public String[] getEnvironmentVariables() {
+			return environmentVariables;
+		}
+
+		public void setEnvironmentVariables(String[] environmentVariables) {
+			this.environmentVariables = environmentVariables;
 		}
 	}
 

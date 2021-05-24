@@ -495,6 +495,9 @@ class DeploymentPropertiesResolver {
 			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".initContainer.commands");
 
+			String envString = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".initContainer.environmentVariables");
+
 			List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
 
 			if (StringUtils.hasText(containerName) && StringUtils.hasText(imageName)) {
@@ -502,6 +505,7 @@ class DeploymentPropertiesResolver {
 						.withName(containerName)
 						.withImage(imageName)
 						.withCommand(commands)
+						.withEnv(toEnvironmentVariables((envString != null)? envString.split(","): new String[0]))
 						.addAllToVolumeMounts(vms)
 						.build();
 			}
@@ -514,12 +518,30 @@ class DeploymentPropertiesResolver {
 						.withName(initContainer.getContainerName())
 						.withImage(initContainer.getImageName())
 						.withCommand(initContainer.getCommands())
+						.withEnv(toEnvironmentVariables(initContainer.getEnvironmentVariables()))
 						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(Collections.emptyList()))
 						.build();
 			}
 		}
 
 		return container;
+	}
+
+	private List<EnvVar>  toEnvironmentVariables(String[] environmentVariables) {
+		Map<String, String> envVarsMap = new HashMap<>();
+		if (environmentVariables != null) {
+			for (String envVar : environmentVariables) {
+				String[] strings = envVar.split("=", 2);
+				Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
+				envVarsMap.put(strings[0], strings[1]);
+			}
+		}
+
+		List<EnvVar> envVars = new ArrayList<>();
+		for (Map.Entry<String, String> e : envVarsMap.entrySet()) {
+			envVars.add(new EnvVar(e.getKey(), e.getValue(), null));
+		}
+		return envVars;
 	}
 
 	List<Container> getAdditionalContainers(Map<String, String> deploymentProperties) {
