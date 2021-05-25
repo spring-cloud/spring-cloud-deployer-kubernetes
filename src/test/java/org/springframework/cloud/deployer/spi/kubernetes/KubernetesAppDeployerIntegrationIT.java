@@ -1358,13 +1358,6 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 
 		Container testInitContainer = initContainer.get();
 
-		assertThat(testInitContainer.getName()).as("Unexpected init container name").isEqualTo("test");
-		assertThat(testInitContainer.getImage()).as("Unexpected init container image").isEqualTo("busybox:latest");
-
-		List<String> commands = testInitContainer.getCommand();
-
-		assertThat(commands).contains("sh", "-c", "echo hello");
-
 		List<EnvVar> containerEnvs = testInitContainer.getEnv();
 
 		assertThat(containerEnvs).hasSize(2);
