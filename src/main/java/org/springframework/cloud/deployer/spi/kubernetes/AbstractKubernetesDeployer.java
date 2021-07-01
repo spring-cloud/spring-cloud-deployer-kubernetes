@@ -45,7 +45,6 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
-import org.springframework.cloud.deployer.spi.scheduler.ScheduleRequest;
 import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
@@ -180,8 +179,7 @@ public class AbstractKubernetesDeployer {
 
 		String appId = createDeploymentId(appDeploymentRequest);
 
-		Map<String, String>  deploymentProperties = (appDeploymentRequest instanceof ScheduleRequest) ?
-				((ScheduleRequest) appDeploymentRequest).getSchedulerProperties() : appDeploymentRequest.getDeploymentProperties();
+		Map<String, String>  deploymentProperties = appDeploymentRequest.getDeploymentProperties();
 
 		PodSpecBuilder podSpec = new PodSpecBuilder();
 
@@ -256,10 +254,10 @@ public class AbstractKubernetesDeployer {
 
 		podSpec.withRestartPolicy(this.deploymentPropertiesResolver.getRestartPolicy(deploymentProperties).name());
 
-		String deploymentServiceAcccountName = this.deploymentPropertiesResolver.getDeploymentServiceAccountName(deploymentProperties);
+		String deploymentServiceAccountName = this.deploymentPropertiesResolver.getDeploymentServiceAccountName(deploymentProperties);
 
-		if (deploymentServiceAcccountName != null) {
-			podSpec.withServiceAccountName(deploymentServiceAcccountName);
+		if (deploymentServiceAccountName != null) {
+			podSpec.withServiceAccountName(deploymentServiceAccountName);
 		}
 
 		PodSecurityContext podSecurityContext = this.deploymentPropertiesResolver.getPodSecurityContext(deploymentProperties);
@@ -315,7 +313,7 @@ public class AbstractKubernetesDeployer {
 		String secretName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.deploymentPropertiesResolver.getPropertyPrefix() + ".probeCredentialsSecret");
 
-		if (!StringUtils.isEmpty(secretName)) {
+		if (StringUtils.hasText(secretName)) {
 			return this.client.secrets().withName(secretName).get();
 		}
 
