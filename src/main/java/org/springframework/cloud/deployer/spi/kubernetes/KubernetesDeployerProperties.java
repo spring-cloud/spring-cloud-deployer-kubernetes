@@ -465,6 +465,59 @@ public class KubernetesDeployerProperties {
 	}
 
 	/**
+	 * The {@link RestartPolicy} to use. Defaults to {@link RestartPolicy#Never}.
+	 */
+	private RestartPolicy restartPolicy = RestartPolicy.Never;
+
+	/**
+	 * The default service account name to use for tasks.
+	 */
+	protected static final String DEFAULT_TASK_SERVICE_ACCOUNT_NAME = "default";
+
+	/**
+	 * Service account name to use for tasks, defaults to:
+	 * {@link #DEFAULT_TASK_SERVICE_ACCOUNT_NAME}
+	 */
+	private String taskServiceAccountName = DEFAULT_TASK_SERVICE_ACCOUNT_NAME;
+
+	/**
+	 * Obtains the {@link RestartPolicy} to use. Defaults to
+	 * {@link #restartPolicy}.
+	 *
+	 * @return the {@link RestartPolicy} to use
+	 */
+	public RestartPolicy getRestartPolicy() {
+		return restartPolicy;
+	}
+
+	/**
+	 * Sets the {@link RestartPolicy} to use.
+	 *
+	 * @param restartPolicy the {@link RestartPolicy} to use
+	 */
+	public void setRestartPolicy(RestartPolicy restartPolicy) {
+		this.restartPolicy = restartPolicy;
+	}
+
+	/**
+	 * Obtains the service account name to use for tasks.
+	 *
+	 * @return the service account name
+	 */
+	public String getTaskServiceAccountName() {
+		return taskServiceAccountName;
+	}
+
+	/**
+	 * Sets the service account name to use for tasks.
+	 *
+	 * @param taskServiceAccountName the service account name
+	 */
+	public void setTaskServiceAccountName(String taskServiceAccountName) {
+		this.taskServiceAccountName = taskServiceAccountName;
+	}
+
+	/**
 	 * Name of the environment variable that can define the Kubernetes namespace to use.
 	 */
 	public static final String ENV_KEY_KUBERNETES_NAMESPACE = "KUBERNETES_NAMESPACE";

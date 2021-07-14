@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -280,7 +280,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
 		for (Map.Entry<String, String> entry : args.entrySet()) {
-			if (StringUtils.isEmpty(entry.getValue())) {
+			if (!StringUtils.hasText(entry.getValue())) {
 				logger.warn(
 						"Excluding request property with missing value from command args: " + entry.getKey());
 			}
@@ -302,13 +302,14 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 
 	private DeploymentPropertiesResolver getDeploymentPropertiesResolver(AppDeploymentRequest request) {
-		String propertiesPrefix = (request instanceof ScheduleRequest) ? KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
+		String propertiesPrefix = (request instanceof ScheduleRequest &&
+				((ScheduleRequest) request).getSchedulerProperties() != null &&
+				((ScheduleRequest) request).getSchedulerProperties().size() > 0 ) ? KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
 				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
 		return new DeploymentPropertiesResolver(propertiesPrefix, this.properties);
 	}
 
 	private Map<String, String> getDeploymentProperties(AppDeploymentRequest request) {
-		return (request instanceof ScheduleRequest) ? ((ScheduleRequest)request).getSchedulerProperties() :
-				request.getDeploymentProperties();
+		return request.getDeploymentProperties();
 	}
 }
