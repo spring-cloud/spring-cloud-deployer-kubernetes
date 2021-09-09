@@ -825,7 +825,7 @@ public class KubernetesAppDeployerTests {
 	@Test
 	public void testPodSecurityContextProperty() {
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534}");
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534, 65535]}");
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
@@ -839,6 +839,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
+		assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental groups").isEqualTo(Arrays.asList(new Long[]{65534L, 65535L}));
 	}
 
 	@Test
@@ -953,6 +954,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
 		securityContext.setFsGroup(65534L);
 		securityContext.setRunAsUser(65534L);
+		securityContext.setSupplementalGroups(new Long[]{65534L});
 
 		kubernetesDeployerProperties.setPodSecurityContext(securityContext);
 
@@ -965,6 +967,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
+		assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental groups").isEqualTo(Arrays.asList(new Long[]{65534L}));
 	}
 
 	@Test
@@ -1101,6 +1104,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
+        assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental groups").isEqualTo(Arrays.asList(new Long[]{65534L, 65535L}));
 	}
 
 	@Test
@@ -1162,6 +1166,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isNull();
+		assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental group").isEmpty();
 	}
 
 	@Test
@@ -1181,12 +1186,33 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isNull();
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
+        assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental group").isEmpty();
 	}
+
+    @Test
+    public void testPodSecurityContextSupplementalGroupsOnly() {
+        Map<String, String> props = new HashMap<>();
+        props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{supplementalGroups: [65534,65535]}");
+
+        AppDefinition definition = new AppDefinition("app-test", null);
+        AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+
+        deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+        PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+
+        PodSecurityContext podSecurityContext = podSpec.getSecurityContext();
+
+        assertThat(podSecurityContext).as("Pod security context should not be null").isNotNull();
+
+        assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isNull();
+        assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isNull();
+        assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental group").isEqualTo(Arrays.asList(new Long[]{65534L, 65535L }));
+    }
 
 	@Test
 	public void testPodSecurityContextPropertyOverrideGlobal() {
 		Map<String, String> props = new HashMap<>();
-		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534}");
+		props.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534,65535]}");
 
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
@@ -1196,6 +1222,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
 		securityContext.setFsGroup(1000L);
 		securityContext.setRunAsUser(1000L);
+		securityContext.setSupplementalGroups(new Long[]{1000L});
 
 		kubernetesDeployerProperties.setPodSecurityContext(securityContext);
 
@@ -1208,6 +1235,7 @@ public class KubernetesAppDeployerTests {
 
 		assertThat(podSecurityContext.getRunAsUser()).as("Unexpected run as user").isEqualTo(65534);
 		assertThat(podSecurityContext.getFsGroup()).as("Unexpected fs group").isEqualTo(65534);
+		assertThat(podSecurityContext.getSupplementalGroups()).as("Unexpected supplemental groups").isEqualTo(Arrays.asList(new Long[]{65534L, 65535L}));
 	}
 
 	@Test

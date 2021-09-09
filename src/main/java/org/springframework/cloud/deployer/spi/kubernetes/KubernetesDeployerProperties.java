@@ -340,6 +340,8 @@ public class KubernetesDeployerProperties {
 
 		private Long fsGroup;
 
+		private Long[] supplementalGroups;
+
 		public void setRunAsUser(Long runAsUser) {
 			this.runAsUser = runAsUser;
 		}
@@ -354,6 +356,14 @@ public class KubernetesDeployerProperties {
 
 		public Long getFsGroup() {
 			return fsGroup;
+		}
+
+		public void setSupplementalGroups(Long[] supplementalGroups) {
+			this.supplementalGroups = supplementalGroups;
+		}
+
+		public Long[] getSupplementalGroups(){
+			return supplementalGroups;
 		}
 	}
 

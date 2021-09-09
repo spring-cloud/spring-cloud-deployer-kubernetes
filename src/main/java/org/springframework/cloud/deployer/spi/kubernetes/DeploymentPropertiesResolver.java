@@ -415,29 +415,15 @@ class DeploymentPropertiesResolver {
 			podSecurityContext = new PodSecurityContextBuilder()
 					.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
 					.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
+					.withSupplementalGroups(deployerProperties.getPodSecurityContext().getSupplementalGroups())
+					.build();
+		} else if (this.properties.getPodSecurityContext() != null ) {
+			podSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
+					.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
+					.withSupplementalGroups(this.properties.getPodSecurityContext().getSupplementalGroups())
 					.build();
 		}
-		else {
-			String runAsUser = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".podSecurityContext.runAsUser");
-
-			String fsGroup = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".podSecurityContext.fsGroup");
-
-			if (StringUtils.hasText(runAsUser) && StringUtils.hasText(fsGroup)) {
-				podSecurityContext = new PodSecurityContextBuilder()
-						.withRunAsUser(Long.valueOf(runAsUser))
-						.withFsGroup(Long.valueOf(fsGroup))
-						.build();
-			}
-			else if (this.properties.getPodSecurityContext() != null) {
-				podSecurityContext = new PodSecurityContextBuilder()
-						.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
-						.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
-						.build();
-			}
-		}
-
 		return podSecurityContext;
 	}
 
