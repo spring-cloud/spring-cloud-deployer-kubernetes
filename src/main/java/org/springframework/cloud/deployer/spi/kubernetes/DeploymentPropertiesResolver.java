@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.AffinityBuilder;
@@ -415,6 +416,7 @@ class DeploymentPropertiesResolver {
 			podSecurityContext = new PodSecurityContextBuilder()
 					.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
 					.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
+					.withSupplementalGroups(deployerProperties.getPodSecurityContext().getSupplementalGroups())
 					.build();
 		}
 		else {
@@ -424,16 +426,21 @@ class DeploymentPropertiesResolver {
 			String fsGroup = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 					this.propertyPrefix + ".podSecurityContext.fsGroup");
 
-			if (StringUtils.hasText(runAsUser) && StringUtils.hasText(fsGroup)) {
+			String supplementalGroups = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+					this.propertyPrefix + ".podSecurityContext.supplementalGroups");
+
+			if (StringUtils.hasText(runAsUser) && StringUtils.hasText(fsGroup) && StringUtils.hasText(supplementalGroups)) {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(Long.valueOf(runAsUser))
 						.withFsGroup(Long.valueOf(fsGroup))
+						.withSupplementalGroups(Stream.of(supplementalGroups.split(",")).map(Long::valueOf).collect(Collectors.toList()))
 						.build();
 			}
 			else if (this.properties.getPodSecurityContext() != null) {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
 						.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
+						.withSupplementalGroups(this.properties.getPodSecurityContext().getSupplementalGroups())
 						.build();
 			}
 		}
