@@ -433,7 +433,7 @@ class DeploymentPropertiesResolver {
 				podSecurityContext = new PodSecurityContextBuilder()
 						.withRunAsUser(Long.valueOf(runAsUser))
 						.withFsGroup(Long.valueOf(fsGroup))
-						.withSupplementalGroups(Stream.of(supplementalGroups.split(",")).map(Long::valueOf).collect(Collectors.toList()))
+						.withSupplementalGroups(Stream.of(supplementalGroups.replaceAll("\\[|\\]", "").split(",")).map(Long::valueOf).collect(Collectors.toList()))
 						.build();
 			}
 			else if (this.properties.getPodSecurityContext() != null) {
