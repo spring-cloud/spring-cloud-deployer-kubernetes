@@ -44,7 +44,7 @@ jobs:
           --repo-resolve-snapshots=libs-snapshot \
           --repo-deploy-releases=release \
           --repo-deploy-snapshots=snapshot
-        echo JFROG_CLI_BUILD_NAME=spring-cloud-deployer-kubernetes-main >> $GITHUB_ENV
+        echo JFROG_CLI_BUILD_NAME=spring-cloud-deployer-kubernetes-27x >> $GITHUB_ENV
         echo JFROG_CLI_BUILD_NUMBER=$GITHUB_RUN_NUMBER >> $GITHUB_ENV
 
     # zoo extract and ensure
@@ -59,7 +59,7 @@ jobs:
         jfrog rt mvn -U -B clean install
         jfrog rt build-publish
         echo BUILD_ZOO_HANDLER_spring_cloud_deployer_kubernetes_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) >> $GITHUB_ENV
-        echo BUILD_ZOO_HANDLER_spring_cloud_deployer_kubernetes_buildname=spring-cloud-deployer-kubernetes-main >> $GITHUB_ENV
+        echo BUILD_ZOO_HANDLER_spring_cloud_deployer_kubernetes_buildname=spring-cloud-deployer-kubernetes-27x >> $GITHUB_ENV
         echo BUILD_ZOO_HANDLER_spring_cloud_deployer_kubernetes_buildnumber=$GITHUB_RUN_NUMBER >> $GITHUB_ENV
 
     # zoo success
