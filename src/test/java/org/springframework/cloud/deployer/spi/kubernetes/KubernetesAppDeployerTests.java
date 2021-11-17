@@ -1023,14 +1023,14 @@ public class KubernetesAppDeployerTests {
 				.withOperator("In")
 				.withValues("S1")
 				.build()));
-		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "failure-domain.beta.kubernetes.io/zone");
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, null, "failure-domain.beta.kubernetes.io/zone");
 		LabelSelector labelSelector2 = new LabelSelector();
 		labelSelector2.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
 				.withKey("security")
 				.withOperator("In")
 				.withValues("s2")
 				.build()));
-		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, "failure-domain.beta.kubernetes.io/zone");
+		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, null, "failure-domain.beta.kubernetes.io/zone");
 		WeightedPodAffinityTerm weightedPodAffinityTerm = new WeightedPodAffinityTerm(podAffinityTerm2, 100);
 		PodAffinity podAffinity = new AffinityBuilder()
 				.withNewPodAffinity()
@@ -1063,14 +1063,14 @@ public class KubernetesAppDeployerTests {
 				.withOperator("In")
 				.withValues("store")
 				.build()));
-		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "kubernetes.io/hostname");
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, null, "kubernetes.io/hostname");
 		LabelSelector labelSelector2 = new LabelSelector();
 		labelSelector2.setMatchExpressions(Arrays.asList(new LabelSelectorRequirementBuilder()
 				.withKey("security")
 				.withOperator("In")
 				.withValues("s2")
 				.build()));
-		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, "failure-domain.beta.kubernetes.io/zone");
+		PodAffinityTerm podAffinityTerm2 = new PodAffinityTerm(labelSelector2, null, null, "failure-domain.beta.kubernetes.io/zone");
 		WeightedPodAffinityTerm weightedPodAffinityTerm = new WeightedPodAffinityTerm(podAffinityTerm2, 100);
 		PodAntiAffinity podAntiAffinity = new AffinityBuilder()
 				.withNewPodAntiAffinity()
@@ -1322,7 +1322,7 @@ public class KubernetesAppDeployerTests {
 				.withOperator("In")
 				.withValues("Reliable")
 				.build()));
-		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "failure-domain.beta.kubernetes.io/zone");
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, null, "failure-domain.beta.kubernetes.io/zone");
 		PodAffinity podAffinity = new AffinityBuilder()
 				.withNewPodAffinity()
 				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
@@ -1374,7 +1374,7 @@ public class KubernetesAppDeployerTests {
 				.withOperator("Equals")
 				.withValues("v1")
 				.build()));
-		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, "kubernetes.io/hostnam");
+		PodAffinityTerm podAffinityTerm = new PodAffinityTerm(labelSelector, null, null, "kubernetes.io/hostnam");
 		PodAntiAffinity podAntiAffinity = new AffinityBuilder()
 				.withNewPodAntiAffinity()
 				.withRequiredDuringSchedulingIgnoredDuringExecution(podAffinityTerm)
