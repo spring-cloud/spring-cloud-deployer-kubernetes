@@ -654,20 +654,17 @@ class DeploymentPropertiesResolver {
 			return RestartPolicy.valueOf(restartPolicy);
 		}
 
-		return (this.properties instanceof KubernetesSchedulerProperties) ?
-				((KubernetesSchedulerProperties) this.properties).getRestartPolicy() : RestartPolicy.Always;
+		return this.properties.getRestartPolicy();
 	}
 
 	String getTaskServiceAccountName(Map<String, String> kubernetesDeployerProperties) {
 		String taskServiceAccountName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".taskServiceAccountName", "");
-
 		if (StringUtils.hasText(taskServiceAccountName)) {
 			return taskServiceAccountName;
 		}
 
-		return (this.properties instanceof KubernetesSchedulerProperties) ?
-				((KubernetesSchedulerProperties) this.properties).getTaskServiceAccountName() : null;
+		return this.properties.getTaskServiceAccountName();
 	}
 
 	/**
