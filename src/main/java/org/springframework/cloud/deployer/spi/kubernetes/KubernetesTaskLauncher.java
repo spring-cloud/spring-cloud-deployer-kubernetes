@@ -393,6 +393,9 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			boolean jobDeleted = jobsToDelete.delete();
 			logger.debug(String.format("Job deleted for: %s - %b", id, jobDeleted));
 		}
+		else {
+			throw new IllegalStateException(String.format("Cannot delete Job for task: %s. Because Job is not exist!", id));
+		}
 	}
 
 	private void deletePod(String id) {
@@ -403,6 +406,9 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			logger.debug(String.format("Deleting Pod for task: %s", id));
 			boolean podsDeleted = podsToDelete.delete();
 			logger.debug(String.format("Pod deleted for: %s - %b", id, podsDeleted));
+		}
+		else {
+			throw new IllegalStateException(String.format("Cannot delete Pod for task: %s. Because Pod is not exist!", id));
 		}
 	}
 
