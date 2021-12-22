@@ -1350,179 +1350,188 @@ public class KubernetesAppDeployerTests {
 		}
 	}
 
-	@Test
-	public void testPodSecurityContextPropertyAllFields() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534, 65535], seccompProfile: { type: RuntimeDefault }}");
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withRunAsUser(65534L)
-				.withFsGroup(65534L)
-				.withSupplementalGroups(65534L, 65535L)
-				.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertyUIDOnly() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534}");
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withRunAsUser(65534L)
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertyFsGroupOnly() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{fsGroup: 65534}");
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withFsGroup(65534L)
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertySupplementalGroupsOnly() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{supplementalGroups: [65534,65535]}");
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withSupplementalGroups(65534L, 65535L)
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertySeccompProfileOnly() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{seccompProfile: { type: RuntimeDefault}}");
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertyFromYaml() throws Exception {
-		KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
-		Map<String, String> deploymentProps = new HashMap<>();
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withRunAsUser(65534L)
-				.withFsGroup(65534L)
-				.withSupplementalGroups(65534L, 65535L)
-				.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextGlobalProperty() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
-		securityContext.setFsGroup(65534L);
-		securityContext.setRunAsUser(65534L);
-		securityContext.setSupplementalGroups(new Long[]{65534L});
-		KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
-		seccompProfile.setType("Localhost");
-		seccompProfile.setLocalhostProfile("profile.json");
-		securityContext.setSeccompProfile(seccompProfile);
-		globalDeployerProps.setPodSecurityContext(securityContext);
-
-		Map<String, String> deploymentProps = Collections.emptyMap();
-
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withRunAsUser(65534L)
-				.withFsGroup(65534L)
-				.withSupplementalGroups(65534L)
-				.withSeccompProfile(new SeccompProfile("profile.json", "Localhost"))
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	@Test
-	public void testPodSecurityContextPropertyOverrideGlobal() {
-		KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-		KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
-		securityContext.setFsGroup(1000L);
-		securityContext.setRunAsUser(1000L);
-		securityContext.setSupplementalGroups(new Long[]{1000L});
-		KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
-		seccompProfile.setType("Localhost");
-		seccompProfile.setLocalhostProfile("sec/default-allow.json");
-		securityContext.setSeccompProfile(seccompProfile);
-		globalDeployerProps.setPodSecurityContext(securityContext);
-
-		Map<String, String> deploymentProps = new HashMap<>();
-		deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534,65535], seccompProfile: { type: Localhost, localhostProfile: sec/custom-allow.json } }");
-
-		PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-				.withRunAsUser(65534L)
-				.withFsGroup(65534L)
-				.withSupplementalGroups(65534L, 65535L)
-				.withSeccompProfile(new SeccompProfile("sec/custom-allow.json", "Localhost"))
-				.build();
-
-		PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-
-		PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-		assertThat(actualPodSecurityContext)
-				.isNotNull()
-				.isEqualTo(expectedPodSecurityContext);
-	}
-
-	private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
-		AppDefinition definition = new AppDefinition("app-test", null);
-		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
-		return deployer.createPodSpec(appDeploymentRequest);
+	@Nested 
+	@DisplayName("creates pod spec with pod security context")
+	class CreatePodSpecWithPodSecurityContext {
+	
+		@Test
+		@DisplayName("created from deployment property with all fields")
+		void createdFromDeploymentPropertyWithAllFields() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534, 65535], seccompProfile: { type: RuntimeDefault }}");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(65534L)
+					.withFsGroup(65534L)
+					.withSupplementalGroups(65534L, 65535L)
+					.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from deployment property with runAsUser only")
+		void createdFromDeploymentPropertyWithRunAsUserOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534}");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(65534L)
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from deployment property with fsGroup only")
+		void createdFromDeploymentPropertyWithFsGroupOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{fsGroup: 65534}");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withFsGroup(65534L)
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from deployment property with supplementalGroups only")
+		void createdFromDeploymentPropertyWithSupplementalGroupsOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{supplementalGroups: [65534,65535]}");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withSupplementalGroups(65534L, 65535L)
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from deployment property with seccompProfile only")
+		void createdFromDeploymentPropertyWithSeccompProfileOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{seccompProfile: { type: RuntimeDefault}}");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from global deployer property sourced from yaml")
+		void createdFromGlobalDeployerPropertySourcedFromYaml() throws Exception {
+			KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
+			Map<String, String> deploymentProps = new HashMap<>();
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(65534L)
+					.withFsGroup(65534L)
+					.withSupplementalGroups(65534L, 65535L)
+					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from global deployer property")
+		void createdFromGlobalDeployerProperty() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
+			securityContext.setFsGroup(65534L);
+			securityContext.setRunAsUser(65534L);
+			securityContext.setSupplementalGroups(new Long[]{65534L});
+			KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
+			seccompProfile.setType("Localhost");
+			seccompProfile.setLocalhostProfile("profile.json");
+			securityContext.setSeccompProfile(seccompProfile);
+			globalDeployerProps.setPodSecurityContext(securityContext);
+			Map<String, String> deploymentProps = Collections.emptyMap();
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(65534L)
+					.withFsGroup(65534L)
+					.withSupplementalGroups(65534L)
+					.withSeccompProfile(new SeccompProfile("profile.json", "Localhost"))
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		@Test
+		@DisplayName("created from deployment property overrriding global deployer property")
+		void createdFromDeploymentPropertyOverridingGlobalDeployerProperty() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			KubernetesDeployerProperties.PodSecurityContext securityContext = new KubernetesDeployerProperties.PodSecurityContext();
+			securityContext.setFsGroup(1000L);
+			securityContext.setRunAsUser(1000L);
+			securityContext.setSupplementalGroups(new Long[]{1000L});
+			KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
+			seccompProfile.setType("Localhost");
+			seccompProfile.setLocalhostProfile("sec/default-allow.json");
+			securityContext.setSeccompProfile(seccompProfile);
+			globalDeployerProps.setPodSecurityContext(securityContext);
+			Map<String, String> deploymentProps = new HashMap<>();
+			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534,65535], seccompProfile: { type: Localhost, localhostProfile: sec/custom-allow.json } }");
+			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+					.withRunAsUser(65534L)
+					.withFsGroup(65534L)
+					.withSupplementalGroups(65534L, 65535L)
+					.withSeccompProfile(new SeccompProfile("sec/custom-allow.json", "Localhost"))
+					.build();
+	
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+	
+			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
+			assertThat(actualPodSecurityContext)
+					.isNotNull()
+					.isEqualTo(expectedPodSecurityContext);
+		}
+	
+		private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
+			AppDefinition definition = new AppDefinition("app-test", null);
+			AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
+			KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
+			return deployer.createPodSpec(appDeploymentRequest);
+		}
 	}
 
 	@Test
