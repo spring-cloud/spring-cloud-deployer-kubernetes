@@ -1248,108 +1248,6 @@ public class KubernetesAppDeployerTests {
 		assertThat(podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
 	}
 
-	@Nested
-	@DisplayName("creates pod spec with container security context")
-	class CreatePodSpecWithContainerSecurityContext {
-
-		@Test
-		@DisplayName("created from deployment property with all fields")
-		void createdFromDeploymentPropertyWithAllFields() {
-			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(false)
-					.withReadOnlyRootFilesystem(true)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		@Test
-		@DisplayName("created from deployment property with allowPrivilegeEscalation only")
-		void createdFromDeploymentPropertyWithAllowPrivilegeEscalationOnly() {
-			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: true}");
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(true)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		@Test
-		@DisplayName("created from deployment property with readOnlyRootFilesystem only")
-		void createdFromDeploymentPropertyWithReadOnlyRootFilesystemOnly() {
-			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{readOnlyRootFilesystem: true}");
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withReadOnlyRootFilesystem(true)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		@Test
-		@DisplayName("created from global deployer property sourced from yaml")
-		void createdFromGlobalDeployerPropertySourcedFromYaml() throws Exception {
-			KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
-			Map<String, String> deploymentProps = Collections.emptyMap();
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(true)
-					.withReadOnlyRootFilesystem(false)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		@Test
-		@DisplayName("created from global deployer property")
-		void createdFromGlobalDeployerProperty() {
-			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-			KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
-			securityContext.setAllowPrivilegeEscalation(false);
-			securityContext.setReadOnlyRootFilesystem(true);
-			globalDeployerProps.setContainerSecurityContext(securityContext);
-			Map<String, String> deploymentProps = Collections.emptyMap();
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(false)
-					.withReadOnlyRootFilesystem(true)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		@Test
-		@DisplayName("created from deployment property overrriding global deployer property")
-		void createdFromDeploymentPropertyOverridingGlobalDeployerProperty() {
-			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
-			KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
-			securityContext.setAllowPrivilegeEscalation(true);
-			securityContext.setReadOnlyRootFilesystem(false);
-			globalDeployerProps.setContainerSecurityContext(securityContext);
-			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(false)
-					.withReadOnlyRootFilesystem(true)
-					.build();
-			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
-		}
-
-		private void assertThatDeployerCreatesPodSpecWithContainerSecurityContext(
-				KubernetesDeployerProperties globalDeployerProps,
-				Map<String, String> deploymentProps,
-				SecurityContext expectedContainerSecurityContext
-		) {
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-			assertThat(podSpec.getContainers())
-					.singleElement()
-					.extracting(Container::getSecurityContext)
-					.isEqualTo(expectedContainerSecurityContext);
-		}
-
-		private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
-			AppDefinition definition = new AppDefinition("app-test", null);
-			AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
-			KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
-			return deployer.createPodSpec(appDeploymentRequest);
-		}
-	}
-
 	@Nested 
 	@DisplayName("creates pod spec with pod security context")
 	class CreatePodSpecWithPodSecurityContext {
@@ -1489,13 +1387,108 @@ public class KubernetesAppDeployerTests {
 					.isNotNull()
 					.isEqualTo(expectedPodSecurityContext);
 		}
+	}
 
-		private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
-			AppDefinition definition = new AppDefinition("app-test", null);
-			AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
-			KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
-			return deployer.createPodSpec(appDeploymentRequest);
+	@Nested
+	@DisplayName("creates pod spec with container security context")
+	class CreatePodSpecWithContainerSecurityContext {
+
+		@Test
+		@DisplayName("created from deployment property with all fields")
+		void createdFromDeploymentPropertyWithAllFields() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withAllowPrivilegeEscalation(false)
+					.withReadOnlyRootFilesystem(true)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
 		}
+
+		@Test
+		@DisplayName("created from deployment property with allowPrivilegeEscalation only")
+		void createdFromDeploymentPropertyWithAllowPrivilegeEscalationOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: true}");
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withAllowPrivilegeEscalation(true)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
+		}
+
+		@Test
+		@DisplayName("created from deployment property with readOnlyRootFilesystem only")
+		void createdFromDeploymentPropertyWithReadOnlyRootFilesystemOnly() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{readOnlyRootFilesystem: true}");
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withReadOnlyRootFilesystem(true)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
+		}
+
+		@Test
+		@DisplayName("created from global deployer property sourced from yaml")
+		void createdFromGlobalDeployerPropertySourcedFromYaml() throws Exception {
+			KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
+			Map<String, String> deploymentProps = Collections.emptyMap();
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withAllowPrivilegeEscalation(true)
+					.withReadOnlyRootFilesystem(false)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
+		}
+
+		@Test
+		@DisplayName("created from global deployer property")
+		void createdFromGlobalDeployerProperty() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
+			securityContext.setAllowPrivilegeEscalation(false);
+			securityContext.setReadOnlyRootFilesystem(true);
+			globalDeployerProps.setContainerSecurityContext(securityContext);
+			Map<String, String> deploymentProps = Collections.emptyMap();
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withAllowPrivilegeEscalation(false)
+					.withReadOnlyRootFilesystem(true)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
+		}
+
+		@Test
+		@DisplayName("created from deployment property overrriding global deployer property")
+		void createdFromDeploymentPropertyOverridingGlobalDeployerProperty() {
+			KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
+			KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
+			securityContext.setAllowPrivilegeEscalation(true);
+			securityContext.setReadOnlyRootFilesystem(false);
+			globalDeployerProps.setContainerSecurityContext(securityContext);
+			Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
+			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+					.withAllowPrivilegeEscalation(false)
+					.withReadOnlyRootFilesystem(true)
+					.build();
+			assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
+		}
+
+		private void assertThatDeployerCreatesPodSpecWithContainerSecurityContext(
+				KubernetesDeployerProperties globalDeployerProps,
+				Map<String, String> deploymentProps,
+				SecurityContext expectedContainerSecurityContext
+		) {
+			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
+			assertThat(podSpec.getContainers())
+					.singleElement()
+					.extracting(Container::getSecurityContext)
+					.isEqualTo(expectedContainerSecurityContext);
+		}
+	}
+
+	private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
+		AppDefinition definition = new AppDefinition("app-test", null);
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
+		KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
+		return deployer.createPodSpec(appDeploymentRequest);
 	}
 
 	@Test
