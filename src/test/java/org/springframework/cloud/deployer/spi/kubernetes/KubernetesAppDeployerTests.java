@@ -1366,13 +1366,7 @@ public class KubernetesAppDeployerTests {
 					.withSupplementalGroups(65534L, 65535L)
 					.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1384,13 +1378,7 @@ public class KubernetesAppDeployerTests {
 			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
 					.withRunAsUser(65534L)
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1402,13 +1390,7 @@ public class KubernetesAppDeployerTests {
 			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
 					.withFsGroup(65534L)
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1420,13 +1402,7 @@ public class KubernetesAppDeployerTests {
 			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
 					.withSupplementalGroups(65534L, 65535L)
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1438,13 +1414,7 @@ public class KubernetesAppDeployerTests {
 			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
 					.withSeccompProfile(new SeccompProfile(null, "RuntimeDefault"))
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1458,13 +1428,7 @@ public class KubernetesAppDeployerTests {
 					.withSupplementalGroups(65534L, 65535L)
 					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1487,13 +1451,7 @@ public class KubernetesAppDeployerTests {
 					.withSupplementalGroups(65534L)
 					.withSeccompProfile(new SeccompProfile("profile.json", "Localhost"))
 					.build();
-	
-			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
-			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
-			assertThat(actualPodSecurityContext)
-					.isNotNull()
-					.isEqualTo(expectedPodSecurityContext);
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
 		}
 	
 		@Test
@@ -1517,15 +1475,21 @@ public class KubernetesAppDeployerTests {
 					.withSupplementalGroups(65534L, 65535L)
 					.withSeccompProfile(new SeccompProfile("sec/custom-allow.json", "Localhost"))
 					.build();
-	
+			assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
+		}
+
+		private void assertThatDeployerCreatesPodSpecWithPodSecurityContext(
+				KubernetesDeployerProperties globalDeployerProps,
+				Map<String, String> deploymentProps,
+				PodSecurityContext expectedPodSecurityContext
+		) {
 			PodSpec podSpec = deployerCreatesPodSpec(globalDeployerProps, deploymentProps);
-	
 			PodSecurityContext actualPodSecurityContext = podSpec.getSecurityContext();
 			assertThat(actualPodSecurityContext)
 					.isNotNull()
 					.isEqualTo(expectedPodSecurityContext);
 		}
-	
+
 		private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
 			AppDefinition definition = new AppDefinition("app-test", null);
 			AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
