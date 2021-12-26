@@ -40,7 +40,9 @@ gcloud container --project {your-project-name} clusters create "spring-test" --z
 gcloud config set container/cluster spring-test
 gcloud config set compute/zone us-central1-b
 gcloud container clusters get-credentials spring-test
+kubectl version
 ```
+> :information_source: the last command causes the access token to be generated and saved to the kubeconfig file - it can be any valid kubectl command
 
 #### Running the tests
 
