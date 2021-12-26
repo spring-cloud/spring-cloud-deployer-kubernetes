@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -194,7 +195,10 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			PodList podList = client.pods().withLabels(selector).list();
 			StringBuilder logAppender = new StringBuilder();
 			for (Pod pod : podList.getItems()) {
-				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
+				for (Container container : pod.getSpec().getContainers()) {
+					logAppender.append(this.client.pods().withName(pod.getMetadata().getName())
+							.inContainer(container.getName()).tailingLines(500).getLog());
+				}
 			}
 			return logAppender.toString();
 		} else {
@@ -203,7 +207,10 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			PodList podList = client.pods().withLabels(selector).list();
 			StringBuilder logAppender = new StringBuilder();
 			for (Pod pod : podList.getItems()) {
-				logAppender.append(this.client.pods().withName(pod.getMetadata().getName()).tailingLines(500).getLog());
+				for (Container container : pod.getSpec().getContainers()) {
+					logAppender.append(this.client.pods().withName(pod.getMetadata().getName())
+							.inContainer(container.getName()).tailingLines(500).getLog());
+				}
 			}
 			return logAppender.toString();
 		}
