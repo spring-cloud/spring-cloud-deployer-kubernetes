@@ -40,6 +40,9 @@ import static org.assertj.core.api.Assertions.entry;
 /**
  * Integration tests for {@link KubernetesTaskLauncher}.
  *
+ * <p>NOTE: The tests do not call {@code TaskLauncher.destroy/cleanup} in a finally block but instead rely on the
+ * {@link AbstractKubernetesTaskLauncherIntegrationTests#cleanupLingeringApps() AfterEach method} to clean any stray apps.
+ *
  * @author Thomas Risberg
  * @author Chris Schaefer
  * @author Chris Bono
@@ -99,7 +102,7 @@ public class KubernetesTaskLauncherIntegrationIT extends AbstractKubernetesTaskL
 				.untilAsserted(() -> assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.running));
 
 		log.info("Checking task Pod for {}...", taskName);
-		List<Pod> pods = getPodsForTask(taskName); //kubernetesClient.pods().withLabel("task-name", taskName).list().getItems();
+		List<Pod> pods = getPodsForTask(taskName);
 		assertThat(pods).hasSize(1);
 		assertThat(pods).singleElement().satisfies(assertingConsumer);
 

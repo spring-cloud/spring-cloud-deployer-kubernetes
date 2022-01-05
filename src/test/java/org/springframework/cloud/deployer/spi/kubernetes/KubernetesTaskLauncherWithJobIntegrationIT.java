@@ -42,6 +42,9 @@ import static org.assertj.core.api.Assertions.entry;
 /**
  * Integration tests for {@link KubernetesTaskLauncher} using jobs instead of bare pods.
  *
+ * <p>NOTE: The tests do not call {@code TaskLauncher.destroy/cleanup} in a finally block but instead rely on the
+ * {@link AbstractKubernetesTaskLauncherIntegrationTests#cleanupLingeringApps() AfterEach method} to clean any stray apps.
+ *
  * @author Leonardo Diniz
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
