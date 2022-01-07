@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -60,6 +61,7 @@ import org.springframework.util.StringUtils;
  * @author Chris Schaefer
  * @author Enrique Medina Montenegro
  * @author Ilayaperumal Gopinathan
+ * @author Chris Bono
  */
 public class AbstractKubernetesDeployer {
 
@@ -250,6 +252,12 @@ public class AbstractKubernetesDeployer {
 		if (hostNetwork) {
 			podSpec.withHostNetwork(true);
 		}
+
+		SecurityContext containerSecurityContext = this.deploymentPropertiesResolver.getContainerSecurityContext(deploymentProperties);
+		if (containerSecurityContext != null) {
+			container.setSecurityContext(containerSecurityContext);
+		}
+
 		podSpec.addToContainers(container);
 
 		podSpec.withRestartPolicy(this.deploymentPropertiesResolver.getRestartPolicy(deploymentProperties).name());

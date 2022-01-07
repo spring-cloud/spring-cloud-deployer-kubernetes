@@ -41,6 +41,8 @@ import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.SecretEnvSource;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.SecurityContext;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -69,6 +71,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
+ * @author Chris Bono
  */
 
 class DeploymentPropertiesResolver {
@@ -412,19 +415,45 @@ class DeploymentPropertiesResolver {
 				this.propertyPrefix + ".podSecurityContext", "podSecurityContext");
 
 		if (deployerProperties.getPodSecurityContext() != null) {
-			podSecurityContext = new PodSecurityContextBuilder()
-					.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
-					.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
-					.withSupplementalGroups(deployerProperties.getPodSecurityContext().getSupplementalGroups())
-					.build();
+			podSecurityContext = buildPodSecurityContext(deployerProperties);
 		} else if (this.properties.getPodSecurityContext() != null ) {
-			podSecurityContext = new PodSecurityContextBuilder()
-					.withRunAsUser(this.properties.getPodSecurityContext().getRunAsUser())
-					.withFsGroup(this.properties.getPodSecurityContext().getFsGroup())
-					.withSupplementalGroups(this.properties.getPodSecurityContext().getSupplementalGroups())
-					.build();
+			podSecurityContext = buildPodSecurityContext(this.properties);
 		}
 		return podSecurityContext;
+	}
+
+	private PodSecurityContext buildPodSecurityContext(KubernetesDeployerProperties deployerProperties) {
+		PodSecurityContextBuilder podSecurityContextBuilder = new PodSecurityContextBuilder()
+				.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
+				.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
+				.withSupplementalGroups(deployerProperties.getPodSecurityContext().getSupplementalGroups());
+		if (deployerProperties.getPodSecurityContext().getSeccompProfile() != null) {
+			podSecurityContextBuilder.withNewSeccompProfile(
+					deployerProperties.getPodSecurityContext().getSeccompProfile().getLocalhostProfile(),
+					deployerProperties.getPodSecurityContext().getSeccompProfile().getType());
+		}
+		return podSecurityContextBuilder.build();
+	}
+
+	SecurityContext getContainerSecurityContext(Map<String, String> kubernetesDeployerProperties) {
+		SecurityContext securityContext = null;
+
+		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
+				this.propertyPrefix + ".containerSecurityContext", "containerSecurityContext");
+
+		if (deployerProperties.getContainerSecurityContext() != null) {
+			securityContext = buildContainerSecurityContext(deployerProperties);
+		} else if (this.properties.getContainerSecurityContext() != null ) {
+			securityContext = buildContainerSecurityContext(this.properties);
+		}
+		return securityContext;
+	}
+
+	private SecurityContext buildContainerSecurityContext(KubernetesDeployerProperties deployerProperties) {
+		return new SecurityContextBuilder()
+				.withAllowPrivilegeEscalation(deployerProperties.getContainerSecurityContext().getAllowPrivilegeEscalation())
+				.withReadOnlyRootFilesystem(deployerProperties.getContainerSecurityContext().getReadOnlyRootFilesystem())
+				.build();
 	}
 
 	Affinity getAffinityRules(Map<String, String> kubernetesDeployerProperties) {

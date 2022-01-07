@@ -1,0 +1,4 @@
+# spring.cloud.deployer.kubernetes.containerSecurityContext:
+containerSecurityContext:
+  allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: false

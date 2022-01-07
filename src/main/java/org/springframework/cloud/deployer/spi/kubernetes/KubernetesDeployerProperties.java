@@ -38,6 +38,7 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  * @author Chris Schaefer
  * @author David Turanski
  * @author Enrique Medina Montenegro
+ * @author Chris Bono
  */
 @ConfigurationProperties(prefix = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX)
 public class KubernetesDeployerProperties {
@@ -336,11 +337,25 @@ public class KubernetesDeployerProperties {
 	}
 
 	public static class PodSecurityContext {
+		/**
+		 * The numeric user ID to run pod container processes under
+		 */
 		private Long runAsUser;
 
+		/**
+		 * The numeric group ID for the volumes of the pod
+		 */
 		private Long fsGroup;
 
+		/**
+		 * The numeric group IDs applied to the pod container processes, in addition to the container's primary group ID
+		 */
 		private Long[] supplementalGroups;
+
+		/**
+		 * The seccomp options to use for the pod containers
+		 */
+		private SeccompProfile seccompProfile;
 
 		public void setRunAsUser(Long runAsUser) {
 			this.runAsUser = runAsUser;
@@ -364,6 +379,74 @@ public class KubernetesDeployerProperties {
 
 		public Long[] getSupplementalGroups(){
 			return supplementalGroups;
+		}
+
+		public SeccompProfile getSeccompProfile() {
+			return seccompProfile;
+		}
+
+		public void setSeccompProfile(SeccompProfile seccompProfile) {
+			this.seccompProfile = seccompProfile;
+		}
+	}
+
+	/**
+	 * Defines a pod seccomp profile settings.
+	 */
+	public static class SeccompProfile {
+
+		/**
+		 * Type of seccomp profile.
+		 */
+		private String type;
+
+		/**
+		 * Path of the pre-configured profile on the node, relative to the kubelet's configured Seccomp profile location, only valid when type is "Localhost".
+		 */
+		private String localhostProfile;
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+		public String getLocalhostProfile() {
+			return localhostProfile;
+		}
+
+		public void setLocalhostProfile(String localhostProfile) {
+			this.localhostProfile = localhostProfile;
+		}
+	}
+
+	public static class ContainerSecurityContext {
+		/**
+		 * Whether a process can gain more privileges than its parent process
+		 */
+		private Boolean allowPrivilegeEscalation;
+
+		/**
+		 * Mounts the container's root filesystem as read-only
+		 */
+		private Boolean readOnlyRootFilesystem;
+
+		public void setAllowPrivilegeEscalation(Boolean allowPrivilegeEscalation) {
+			this.allowPrivilegeEscalation = allowPrivilegeEscalation;
+		}
+
+		public Boolean getAllowPrivilegeEscalation() {
+			return allowPrivilegeEscalation;
+		}
+
+		public void setReadOnlyRootFilesystem(Boolean readOnlyRootFilesystem) {
+			this.readOnlyRootFilesystem = readOnlyRootFilesystem;
+		}
+
+		public Boolean getReadOnlyRootFilesystem() {
+			return readOnlyRootFilesystem;
 		}
 	}
 
@@ -822,6 +905,11 @@ public class KubernetesDeployerProperties {
 	 * The security context to apply to created pod's.
 	 */
 	private PodSecurityContext podSecurityContext;
+
+	/**
+	 * The security context to apply to created pod's main container.
+	 */
+	private ContainerSecurityContext containerSecurityContext;
 
 	/**
 	 * The node affinity rules to apply.
@@ -1446,6 +1534,14 @@ public class KubernetesDeployerProperties {
 
 	public PodSecurityContext getPodSecurityContext() {
 		return podSecurityContext;
+	}
+
+	public void setContainerSecurityContext(ContainerSecurityContext containerSecurityContext) {
+		this.containerSecurityContext = containerSecurityContext;
+	}
+
+	public ContainerSecurityContext getContainerSecurityContext() {
+		return containerSecurityContext;
 	}
 
 	public NodeAffinity getNodeAffinity() {

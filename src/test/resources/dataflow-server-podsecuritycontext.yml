@@ -3,3 +3,6 @@ podSecurityContext:
   runAsUser: 65534
   fsGroup: 65534
   supplementalGroups: [65534,65535]
+  seccompProfile:
+    type: Localhost
+    localhostProfile: my-profiles/profile-allow.json
