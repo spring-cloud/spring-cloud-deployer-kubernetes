@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 the original author or authors.
+ * Copyright 2016-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
+import org.springframework.cloud.deployer.spi.app.AppAdmin;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppScaleRequest;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
@@ -84,6 +85,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -128,11 +130,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testScaleStatefulSet() {
 		log.info("Testing {}...", "ScaleStatefulSet");
-		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
-
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -193,11 +191,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testScaleDeployment() {
 		log.info("Testing {}...", "ScaleDeployment");
-		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
-
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -253,9 +247,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		deployProperties.setLivenessHttpProbePeriod(10);
 		deployProperties.setMaxTerminatedErrorRestarts(1);
 		deployProperties.setMaxCrashLoopBackOffRestarts(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer lbAppDeployer = kubernetesAppDeployer(deployProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -268,6 +260,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, props);
 
 		log.info("Deploying {}...", request.getDefinition().getName());
+
 		String deploymentId = lbAppDeployer.deploy(request);
 		Timeout timeout = deploymentTimeout();
 		await().pollInterval(Duration.ofMillis(timeout.pause))
@@ -292,9 +285,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateLoadBalancer(true);
 		deployProperties.setMinutesToWaitForLoadBalancer(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer lbAppDeployer = kubernetesAppDeployer(deployProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -327,9 +318,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateLoadBalancer(true);
 		deployProperties.setMinutesToWaitForLoadBalancer(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer lbAppDeployer = kubernetesAppDeployer(deployProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -377,12 +366,52 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	}
 
 	@Test
+	public void testAttributes() {
+		log.info("Testing {}...", "Attributes");
+		KubernetesDeployerProperties properties = new KubernetesDeployerProperties();
+		AppAdmin appAdmin = new AppAdmin();
+		appAdmin.setUser("user");
+		appAdmin.setPassword("password");
+		properties.setAppAdmin(appAdmin);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer(properties);
+
+		AppDefinition definition = new AppDefinition(randomName(), null);
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
+
+		log.info("Deploying {}...", request.getDefinition().getName());
+		String deploymentId = appDeployer.deploy(request);
+		Timeout timeout = deploymentTimeout();
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+				.atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+				.untilAsserted(() -> {
+					assertThat(appDeployer.status(deploymentId).getInstances().values().stream()
+							.map(ais -> ais.getAttributes()).filter(a ->
+									StringUtils.hasText(a.get("pod.ip")))
+							.findFirst()).isPresent();
+					assertThat(appDeployer.status(deploymentId).getInstances().values().stream()
+							.map(ais -> ais.getAttributes()).filter(a ->
+									StringUtils.hasText(a.get("actuator.path")))
+							.map(a -> a.get("actuator.path"))
+									.findFirst().get()).isEqualTo("/actuator");
+
+					assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.deployed);
+				});
+
+		log.info("Undeploying {}...", deploymentId);
+		timeout = undeploymentTimeout();
+		appDeployer.undeploy(deploymentId);
+		await().pollInterval(Duration.ofMillis(timeout.pause))
+				.atMost(Duration.ofMillis(timeout.maxAttempts * timeout.pause))
+				.untilAsserted(() -> {
+					assertThat(appDeployer().status(deploymentId).getState()).isEqualTo(DeploymentState.unknown);
+				});
+	}
+
+	@Test
 	public void testDeploymentWithPodAnnotation() {
 		log.info("Testing {}...", "DeploymentWithPodAnnotation");
-		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -442,9 +471,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 				.build()));
 		deployProperties.setVolumeMounts(Collections.singletonList(new VolumeMount(hostPathVolumeSource.getPath(), null,
 				mountName, false, null, null)));
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer lbAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer lbAppDeployer = kubernetesAppDeployer(deployProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(),
 				Collections.singletonMap("logging.file", containerPath + subPath));
@@ -583,9 +610,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 		deployProperties.setCreateLoadBalancer(true);
 		deployProperties.setMinutesToWaitForLoadBalancer(1);
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer testAppDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer testAppDeployer = kubernetesAppDeployer(deployProperties);
 
 		Map<String, String> appProperties = new HashMap<>();
 		appProperties.put("security.basic.enabled", "false");
@@ -642,8 +667,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		deployProperties.setDeploymentServiceAccountName(serviceAccountName);
 
 		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer(deployProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, testApplication());
@@ -678,8 +702,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 		String deploymentId = deployer.deploy(appDeploymentRequest);
@@ -764,8 +787,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 		String deploymentId = deployer.deploy(appDeploymentRequest);
@@ -816,7 +838,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setStatefulSetInitContainerImageName(imageName);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 		String deploymentId = deployer.deploy(appDeploymentRequest);
@@ -864,8 +886,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 		String deploymentId = deployer.deploy(appDeploymentRequest);
@@ -933,8 +954,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 		String deploymentId = deployer.deploy(appDeploymentRequest);
@@ -969,11 +989,8 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testStatefulSetPodAnnotations() {
 		log.info("Testing {}...", "StatefulSetPodAnnotations");
-		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
 
-		ContainerFactory containerFactory = new DefaultContainerFactory(deployProperties);
-		KubernetesAppDeployer appDeployer = new KubernetesAppDeployer(deployProperties, kubernetesClient,
-				containerFactory);
+		KubernetesAppDeployer appDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1022,8 +1039,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 
@@ -1068,8 +1084,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, testApplication(), props);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 
@@ -1126,8 +1141,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 
 		kubernetesDeployerProperties.setLimits(resources);
 
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer deployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		log.info("Deploying {}...", appDeploymentRequest.getDefinition().getName());
 
@@ -1150,7 +1164,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			log.info("Got expected not not deployed exception on undeployment: " + e.getMessage());
 		}
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+		deployer = kubernetesAppDeployer();
 
 		log.info("Deploying {}... again", deploymentId);
 
@@ -1176,10 +1190,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	public void testMultipleContainersInPod() {
 		log.info("Testing {}...", "MultipleContainersInPod");
 
-		KubernetesDeployerProperties deployProperties = new KubernetesDeployerProperties();
-
-		KubernetesAppDeployer kubernetesAppDeployer = Mockito.spy(new KubernetesAppDeployer(deployProperties,
-				kubernetesClient, new DefaultContainerFactory(deployProperties)));
+		KubernetesAppDeployer kubernetesAppDeployer = Mockito.spy(kubernetesAppDeployer());
 
 		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("server.port", "9090"));
 		Resource resource = testApplication();
@@ -1220,7 +1231,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testDefaultServicePort() {
 		log.info("Testing {}...", "DefaultServicePort");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1255,7 +1266,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testDefaultServicePortOverride() {
 		log.info("Testing {}...", "DefaultServicePortOverride");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), Collections.singletonMap("server.port", "9090"));
 		Resource resource = testApplication();
@@ -1290,7 +1301,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testServiceWithMultiplePorts() {
 		log.info("Testing {}...", "ServiceWithMultiplePorts");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1328,8 +1339,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testCreateInitContainer() {
 		log.info("Testing {}...", "CreateInitContainer");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.initContainer",
 				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello']}");
@@ -1374,8 +1384,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testCreateInitContainerWithEnvVariables() {
 		log.info("Testing {}...", "CreateInitContainer");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		Map<String, String> props = Collections.singletonMap("spring.cloud.deployer.kubernetes.initContainer",
 				"{containerName: 'test', imageName: 'busybox:latest', commands: ['sh', '-c', 'echo hello'], environmentVariables: ['KEY1=VAL1', 'KEY2=VAL2']}");
@@ -1419,8 +1428,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testCreateInitContainerWithVolumeMounts() {
 		log.info("Testing {}...", "CreateInitContainerWithVolumeMounts");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer =kubernetesAppDeployer();
 
 		Map<String, String> props = Stream.of(new String[][]{
 				{
@@ -1489,8 +1497,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testCreateAdditionalContainers() {
 		log.info("Testing {}...", "CreateAdditionalContainers");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		Map<String, String> props = Stream.of(new String[][]{
 				{
@@ -1578,8 +1585,8 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		container2.setCommand(Arrays.asList("sh", "-c", "echo hello-from-original-properties"));
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setAdditionalContainers(Arrays.asList(container1, container2));
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
+
 
 		Map<String, String> props = Stream.of(new String[][]{
 				{
@@ -1671,8 +1678,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 	@Test
 	public void testUnknownStatusOnPendingResources() throws InterruptedException {
 		log.info("Testing {}...", "UnknownStatusOnPendingResources");
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1733,7 +1739,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setSecretRefs(Collections.singletonList(secret.getMetadata().getName()));
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1785,8 +1791,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 
 		Secret secret = randomSecret();
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.secretRefs", secret.getMetadata().getName());
@@ -1845,8 +1850,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setSecretRefs(Collections.singletonList(propertySecret.getMetadata().getName()));
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer =kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.secretRefs", deployerPropertySecret.getMetadata().getName());
@@ -1913,8 +1917,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setSecretRefs(secrets);
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -1979,8 +1982,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		props.put("spring.cloud.deployer.kubernetes.secretRefs", "[" + secret1.getMetadata().getName() + "," +
 				secret2.getMetadata().getName() + "]");
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -2043,7 +2045,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setConfigMapRefs(Collections.singletonList(configMap.getMetadata().getName()));
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties, kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -2094,8 +2096,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 
 		ConfigMap configMap = randomConfigMap();
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.config-map-refs", configMap.getMetadata().getName());
@@ -2153,8 +2154,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setConfigMapRefs(Collections.singletonList(propertyConfigMap.getMetadata().getName()));
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		Map<String, String> props = new HashMap<>();
 		props.put("spring.cloud.deployer.kubernetes.configMapRefs", deployerPropertyConfigMap.getMetadata().getName());
@@ -2220,8 +2220,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setConfigMapRefs(configMaps);
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(kubernetesDeployerProperties,
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer(kubernetesDeployerProperties);
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -2285,8 +2284,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		props.put("spring.cloud.deployer.kubernetes.configMapRefs", "[" + configMap1.getMetadata().getName() + "," +
 				configMap2.getMetadata().getName() + "]");
 
-		KubernetesAppDeployer kubernetesAppDeployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(),
-				kubernetesClient);
+		KubernetesAppDeployer kubernetesAppDeployer = kubernetesAppDeployer();
 
 		AppDefinition definition = new AppDefinition(randomName(), null);
 		Resource resource = testApplication();
@@ -2432,5 +2430,13 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 		configMap.setMetadata(objectMeta);
 
 		return kubernetesClient.configMaps().create(configMap);
+	}
+
+	private KubernetesAppDeployer kubernetesAppDeployer() {
+		return kubernetesAppDeployer(new KubernetesDeployerProperties());
+	}
+	private KubernetesAppDeployer kubernetesAppDeployer(KubernetesDeployerProperties kubernetesDeployerProperties) {
+		return new KubernetesAppDeployer(kubernetesDeployerProperties, this.kubernetesClient,
+				new DefaultContainerFactory(kubernetesDeployerProperties));
 	}
 }

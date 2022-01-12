@@ -91,7 +91,7 @@ public class KubernetesAppDeployerTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
 			new HashMap<>());
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer =k8sAppDeployer(bindDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getVolumes()).isEmpty();
@@ -105,7 +105,7 @@ public class KubernetesAppDeployerTests {
 			+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}" + "]");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getVolumes()).containsOnly(
@@ -124,7 +124,7 @@ public class KubernetesAppDeployerTests {
 				+ "{name: 'testnfs', mountPath: '/test/nfs', readOnly: 'true'}" + "]");
 		appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		HostPathVolumeSource hostPathVolumeSource = new HostPathVolumeSourceBuilder()
@@ -144,7 +144,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setNodeSelector("disktype:ssd, os:qnx");
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "qnx"));
@@ -157,7 +157,7 @@ public class KubernetesAppDeployerTests {
 		props.put(KubernetesDeployerProperties.KUBERNETES_DEPLOYMENT_NODE_SELECTOR, "disktype:ssd, os: linux");
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "linux"));
@@ -173,7 +173,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setNodeSelector("disktype:ssd, os:qnx");
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getNodeSelector()).containsOnly(entry("disktype", "ssd"), entry("os", "openbsd"));
@@ -188,7 +188,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getContainers().get(0).getEnv())
@@ -210,7 +210,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getContainers().get(0).getEnv())
@@ -226,7 +226,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getContainers().get(0).getEnv())
@@ -244,7 +244,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
@@ -260,7 +260,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setImagePullSecret("regcred");
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(1);
@@ -276,7 +276,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(2);
@@ -293,7 +293,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setImagePullSecrets(Arrays.asList("regcredone","regcredtwo"));
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getImagePullSecrets().size()).isEqualTo(2);
@@ -310,7 +310,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getServiceAccountName()).isNotNull();
@@ -326,7 +326,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setDeploymentServiceAccountName("myserviceaccount");
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getServiceAccountName()).isNotNull();
@@ -345,7 +345,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setDeploymentServiceAccountName("defaultsan");
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getServiceAccountName()).isNotNull();
@@ -358,7 +358,7 @@ public class KubernetesAppDeployerTests {
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(),
 				new HashMap<>());
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getTolerations()).isNotEmpty();
@@ -375,7 +375,7 @@ public class KubernetesAppDeployerTests {
 
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getTolerations()).isNotNull();
@@ -405,7 +405,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.getTolerations().add(toleration);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getTolerations()).isNotNull();
@@ -434,7 +434,7 @@ public class KubernetesAppDeployerTests {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.getTolerations().add(toleration);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getTolerations()).isNotNull();
@@ -468,7 +468,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.getTolerations().add(toleration2);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		assertThat(podSpec.getTolerations()).isNotNull();
@@ -529,7 +529,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer =k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -553,7 +553,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -585,7 +585,7 @@ public class KubernetesAppDeployerTests {
 		secretKeyRef.setDataKey("passwordGlobal");
 		kubernetesDeployerProperties.setSecretKeyRefs(Collections.singletonList(secretKeyRef));
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -627,7 +627,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setSecretKeyRefs(globalSecretKeyRefs);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -661,7 +661,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -684,7 +684,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -708,7 +708,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -740,7 +740,7 @@ public class KubernetesAppDeployerTests {
 		configMapKeyRef.setDataKey("envGlobal");
 		kubernetesDeployerProperties.setConfigMapKeyRefs(Collections.singletonList(configMapKeyRef));
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -782,7 +782,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setConfigMapKeyRefs(globalConfigMapKeyRefs);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -816,7 +816,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -853,7 +853,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
@@ -888,7 +888,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
@@ -923,7 +923,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 
-		deployer = new KubernetesAppDeployer(new KubernetesDeployerProperties(), null);
+		deployer = k8sAppDeployer(new KubernetesDeployerProperties());
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
@@ -963,7 +963,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setNodeAffinity(nodeAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
@@ -1003,7 +1003,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setPodAffinity(podAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
@@ -1043,7 +1043,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setPodAntiAffinity(podAntiAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
@@ -1057,7 +1057,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinity = podSpec.getAffinity().getNodeAffinity();
@@ -1071,7 +1071,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinity = podSpec.getAffinity().getPodAffinity();
@@ -1085,7 +1085,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null);
 
-		deployer = new KubernetesAppDeployer(bindDeployerProperties(), null);
+		deployer = k8sAppDeployer();
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinity = podSpec.getAffinity().getPodAntiAffinity();
@@ -1135,7 +1135,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setNodeAffinity(nodeAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		NodeAffinity nodeAffinityTest = podSpec.getAffinity().getNodeAffinity();
@@ -1187,7 +1187,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setPodAffinity(podAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAffinity podAffinityTest = podSpec.getAffinity().getPodAffinity();
@@ -1239,7 +1239,7 @@ public class KubernetesAppDeployerTests {
 
 		kubernetesDeployerProperties.setPodAntiAffinity(podAntiAffinity);
 
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 
 		PodAntiAffinity podAntiAffinityTest = podSpec.getAffinity().getPodAntiAffinity();
@@ -1487,7 +1487,7 @@ public class KubernetesAppDeployerTests {
 	private PodSpec deployerCreatesPodSpec(KubernetesDeployerProperties globalDeployerProperties, Map<String, String> deploymentProperties) {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), deploymentProperties);
-		KubernetesAppDeployer deployer = new KubernetesAppDeployer(globalDeployerProperties, null);
+		KubernetesAppDeployer deployer = k8sAppDeployer(globalDeployerProperties);
 		return deployer.createPodSpec(appDeploymentRequest);
 	}
 
@@ -1499,7 +1499,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 		assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
 				.containsExactlyInAnyOrder("/bin/sh","-c","echo Hello from the postStart handler > /usr/share/message");
@@ -1513,7 +1513,7 @@ public class KubernetesAppDeployerTests {
 		AppDefinition definition = new AppDefinition("app-test", null);
 		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 		assertThat(podSpec.getContainers().get(0).getLifecycle().getPreStop().getExec().getCommand())
 				.containsExactlyInAnyOrder(
@@ -1552,7 +1552,7 @@ public class KubernetesAppDeployerTests {
 			}
 		});
 		kubernetesDeployerProperties.setLifecycle(lifecycle);
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 		assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
 				.containsExactlyInAnyOrder(
@@ -1593,7 +1593,7 @@ public class KubernetesAppDeployerTests {
 			}
 		});
 		kubernetesDeployerProperties.setLifecycle(lifecycle);
-		deployer = new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+		deployer = k8sAppDeployer(kubernetesDeployerProperties);
 		PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
 		assertThat(podSpec.getContainers().get(0).getLifecycle().getPreStop().getExec().getCommand())
 				.containsExactlyInAnyOrder(
@@ -1621,4 +1621,13 @@ public class KubernetesAppDeployerTests {
 		MapConfigurationPropertySource source = new MapConfigurationPropertySource(yaml);
 		return new Binder(source).bind("", Bindable.of(KubernetesDeployerProperties.class)).get();
 	}
+
+	protected KubernetesAppDeployer k8sAppDeployer() throws Exception {
+		return k8sAppDeployer(bindDeployerProperties());
+	}
+
+	protected KubernetesAppDeployer k8sAppDeployer(KubernetesDeployerProperties kubernetesDeployerProperties) {
+		return new KubernetesAppDeployer(kubernetesDeployerProperties, null);
+	}
+
 }
