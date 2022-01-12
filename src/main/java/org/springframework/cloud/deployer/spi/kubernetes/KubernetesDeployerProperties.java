@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import io.fabric8.kubernetes.client.Config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.cloud.deployer.spi.app.AppAdmin;
 
 /**
  * @author Florian Rosenberg
@@ -951,6 +952,8 @@ public class KubernetesDeployerProperties {
 	 */
 	private String deploymentLabels;
 
+	private AppAdmin appAdmin = new AppAdmin();
+
 	public String getNamespace() {
 		return namespace;
 	}
@@ -1622,5 +1625,13 @@ public class KubernetesDeployerProperties {
 
 	public void setDeploymentLabels(String deploymentLabels) {
 		this.deploymentLabels = deploymentLabels;
+	}
+
+	public AppAdmin getAppAdmin() {
+		return appAdmin;
+	}
+
+	public void setAppAdmin(AppAdmin appAdmin) {
+		this.appAdmin = appAdmin;
 	}
 }

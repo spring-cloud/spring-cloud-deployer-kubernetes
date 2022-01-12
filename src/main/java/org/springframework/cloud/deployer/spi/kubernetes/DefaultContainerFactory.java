@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,9 +97,16 @@ public class DefaultContainerFactory implements ContainerFactory {
 
 		List<String> appArgs = new ArrayList<>();
 
+		Map<String, String> appAdminCredentials = new HashMap<>();
+		properties.getAppAdmin().addCredentialsToAppEnvironmentAsProperties(appAdminCredentials);
+
 		switch (entryPointStyle) {
 		case exec:
 			appArgs = createCommandArgs(request);
+			List<String> finalAppArgs = appArgs;
+			appAdminCredentials.forEach((k, v) -> finalAppArgs.add(String.format("--%s=%s", k,v)));
+
+
 			break;
 		case boot:
 			if (envVarsMap.containsKey(SPRING_APPLICATION_JSON)) {
@@ -121,6 +128,8 @@ public class DefaultContainerFactory implements ContainerFactory {
 			for (String key : request.getDefinition().getProperties().keySet()) {
 				String envVar = key.replace('.', '_').toUpperCase();
 				envVarsMap.put(envVar, request.getDefinition().getProperties().get(key));
+				envVarsMap.putAll(appAdminCredentials);
+
 			}
 			// Push all the command line arguments as environment properties
 			// The task app name(in case of Composed Task), platform_name and executionId are expected to be updated.
