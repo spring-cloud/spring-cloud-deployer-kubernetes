@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -274,15 +275,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 	List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
 
-		List<String> commandArgOptions = new ArrayList<>();
-		for(String arg : request.getCommandlineArguments()) {
-			int indexOfAssignment = arg.indexOf("=");
-			if(indexOfAssignment < 0) {
-				commandArgOptions.add(arg);
-			} else {
-				commandArgOptions.add(arg.substring(0, indexOfAssignment).replaceAll("^--",""));
-			}
-		}
+		List<String> commandArgOptions = request.getCommandlineArguments().stream()
+		.map(this::getArgOption)
+		.collect(Collectors.toList());
 
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
@@ -307,6 +302,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return cmdArgs;
 	}
 
+	private String getArgOption(String arg) {
+		int indexOfAssignment = arg.indexOf("=");
+		String argOption = (indexOfAssignment < 0) ? arg : arg.substring(0, indexOfAssignment);
+		return argOption.trim().replaceAll("^--", "");
+	 }
 
 	private DeploymentPropertiesResolver getDeploymentPropertiesResolver(AppDeploymentRequest request) {
 		String propertiesPrefix = (request instanceof ScheduleRequest &&
