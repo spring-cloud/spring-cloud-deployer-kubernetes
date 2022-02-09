@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 the original author or authors.
+ * Copyright 2016-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author Chris Schaefer
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
+ * @author Glenn Renfro
  */
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
@@ -1419,6 +1420,23 @@ public class DefaultContainerFactoryTests {
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
 		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("--foo=newValue");
+	}
+
+	@Test
+	public void testCommandLineArgsNoAssignment() {
+		List<String> args = new ArrayList();
+		args.add("a");
+		args.add("--b = c");
+		args.add("d=e");
+		args.add("f = g");
+		AppDefinition definition = new AppDefinition("app-test", Collections.singletonMap("b", "d"));
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null,
+				args);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("a", "--b = c", "d=e", "f = g");
 	}
 
 	@Test

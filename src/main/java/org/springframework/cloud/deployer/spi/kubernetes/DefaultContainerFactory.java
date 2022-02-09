@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ import org.springframework.util.StringUtils;
  * @author David Turanski
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
+ * @author Glenn Renfro
  */
 public class DefaultContainerFactory implements ContainerFactory {
 	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
@@ -273,9 +274,10 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
+
 		List<String> commandArgOptions = request.getCommandlineArguments().stream()
-				.map(arg-> arg.substring(0,arg.indexOf("=")).replaceAll("^--",""))
-				.collect(Collectors.toList());
+		.map(this::getArgOption)
+		.collect(Collectors.toList());
 
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
@@ -300,6 +302,11 @@ public class DefaultContainerFactory implements ContainerFactory {
 		return cmdArgs;
 	}
 
+	private String getArgOption(String arg) {
+		int indexOfAssignment = arg.indexOf("=");
+		String argOption = (indexOfAssignment < 0) ? arg : arg.substring(0, indexOfAssignment);
+		return argOption.trim().replaceAll("^--", "");
+	 }
 
 	private DeploymentPropertiesResolver getDeploymentPropertiesResolver(AppDeploymentRequest request) {
 		String propertiesPrefix = (request instanceof ScheduleRequest &&
