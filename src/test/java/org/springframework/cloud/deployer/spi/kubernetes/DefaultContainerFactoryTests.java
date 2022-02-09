@@ -1422,6 +1422,22 @@ public class DefaultContainerFactoryTests {
 	}
 
 	@Test
+	public void testCommandLineArgsNoAssignment() {
+		List<String> args = new ArrayList();
+		args.add("a");
+		args.add("b = c");
+		args.add("d=e");
+		AppDefinition definition = new AppDefinition("app-test", Collections.emptyMap());
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), null,
+				args);
+
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
+				kubernetesDeployerProperties);
+		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("a", "b = c", "d=e");
+	}
+
+	@Test
 	public void testCommandLineArgsExcludesMalformedProperties() {
 		Map<String,String> properties = new HashMap<>();
 		properties.put("sun.cpu.isalist","");

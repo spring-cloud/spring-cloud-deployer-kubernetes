@@ -24,7 +24,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,6 +53,7 @@ import org.springframework.util.StringUtils;
  * @author David Turanski
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
+ * @author Glenn Renfro
  */
 public class DefaultContainerFactory implements ContainerFactory {
 	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
@@ -273,9 +273,16 @@ public class DefaultContainerFactory implements ContainerFactory {
 	 */
 	List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
-		List<String> commandArgOptions = request.getCommandlineArguments().stream()
-				.map(arg-> arg.substring(0,arg.indexOf("=")).replaceAll("^--",""))
-				.collect(Collectors.toList());
+
+		List<String> commandArgOptions = new ArrayList<>();
+		for(String arg : request.getCommandlineArguments()) {
+			int indexOfAssignment = arg.indexOf("=");
+			if(indexOfAssignment < 0) {
+				commandArgOptions.add(arg);
+			} else {
+				commandArgOptions.add(arg.substring(0, indexOfAssignment).replaceAll("^--",""));
+			}
+		}
 
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
