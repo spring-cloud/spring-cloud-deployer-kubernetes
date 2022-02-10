@@ -558,9 +558,9 @@ public class KubernetesDeployerProperties {
 	}
 
 	/**
-	 * The {@link RestartPolicy} to use. Defaults to {@link RestartPolicy#Never}.
+	 * The {@link RestartPolicy} to use. Defaults to {@link RestartPolicy#Always}.
 	 */
-	private RestartPolicy restartPolicy = RestartPolicy.Never;
+	private RestartPolicy restartPolicy = RestartPolicy.Always;
 
 	/**
 	 * The default service account name to use for tasks.

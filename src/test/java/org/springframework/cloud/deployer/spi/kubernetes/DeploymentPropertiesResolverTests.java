@@ -37,7 +37,7 @@ public class DeploymentPropertiesResolverTests {
 		DeploymentPropertiesResolver deploymentPropertiesResolver = getDeploymentPropertiesResolver(isDeprecated, kubernetesDeployerProperties);
 		Map<String, String> properties = new HashMap<>();
 		RestartPolicy restartPolicy = deploymentPropertiesResolver.getRestartPolicy(properties);
-		Assertions.assertThat(restartPolicy).isEqualTo(RestartPolicy.Never);
+		Assertions.assertThat(restartPolicy).isEqualTo(RestartPolicy.Always);
 		if (isDeprecated) {
 			properties.put(KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX + ".restartPolicy", RestartPolicy.Never.name());
 		}
