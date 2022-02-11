@@ -205,7 +205,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
 	private String determineActuatorPortFromLivenessProbe(Pod pod, String path) {
 		IntOrString intOrString = pod.getSpec().getContainers().stream()
-				.filter((Container container) -> container.getLivenessProbe() != null &&
+				.filter(container -> container.getLivenessProbe() != null &&
 						container.getLivenessProbe().getHttpGet() != null &&
 						container.getLivenessProbe().getHttpGet().getPath().equals(path))
 				.findFirst()
