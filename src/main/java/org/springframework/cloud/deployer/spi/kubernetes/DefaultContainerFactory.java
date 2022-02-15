@@ -276,8 +276,9 @@ public class DefaultContainerFactory implements ContainerFactory {
 		List<String> cmdArgs = new LinkedList<>();
 
 		List<String> commandArgOptions = request.getCommandlineArguments().stream()
-		.map(this::getArgOption)
-		.collect(Collectors.toList());
+				.filter(arg-> arg.contains("="))
+				.map(this::getArgOption)
+				.collect(Collectors.toList());
 
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
