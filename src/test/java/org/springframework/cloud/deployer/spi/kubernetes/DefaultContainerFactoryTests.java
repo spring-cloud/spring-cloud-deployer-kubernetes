@@ -59,6 +59,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  * @author Glenn Renfro
+ * @author Heechan Yang
  */
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = { KubernetesAutoConfiguration.class })
@@ -1451,6 +1452,28 @@ public class DefaultContainerFactoryTests {
 		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(
 				kubernetesDeployerProperties);
 		assertThat(defaultContainerFactory.createCommandArgs(appDeploymentRequest)).containsExactly("--foo=bar");
+	}
+
+	@Test
+	void testNonKeyValueCommandLineArgs() {
+		Map<String, String> properties = new HashMap<>();
+		properties.put("sun.cpu.isalist", "");
+		properties.put("foo", "bar");
+		properties.put("foo2", "bar2");
+		AppDefinition definition = new AppDefinition("app-test", properties);
+		List<String> commandLineArgs = Arrays.asList("argA", "argB", "foo=barFromCommandLineArg", "foo3=bar3");
+		AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(
+				definition, getResource(), null, commandLineArgs);
+
+		DefaultContainerFactory defaultContainerFactory = new DefaultContainerFactory(null);
+		List<String> createdCommandLineArgs = defaultContainerFactory.createCommandArgs(appDeploymentRequest);
+		assertThat(createdCommandLineArgs).contains("argA")
+				.contains("argB")
+				.contains("foo=barFromCommandLineArg")
+				.contains("--foo2=bar2")
+				.contains("foo3=bar3")
+				.doesNotContain("--foo=bar")
+				.doesNotContain("sun.cpu.isalist=");
 	}
 
 	private Resource getResource() {
