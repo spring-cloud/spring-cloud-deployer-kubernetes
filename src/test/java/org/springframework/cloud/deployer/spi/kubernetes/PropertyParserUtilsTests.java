@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
+ * @author Glenn Renfro
  */
 public class PropertyParserUtilsTests {
 
@@ -50,6 +51,42 @@ public class PropertyParserUtilsTests {
 		assertThat(annotations.size() == 2).isTrue();
 		assertThat(annotations.containsKey("annotation1")).isTrue();
 		assertThat(annotations.get("annotation1").equals("value1")).isTrue();
+		assertThat(annotations.containsKey("annotation2")).isTrue();
+		assertThat(annotations.get("annotation2").equals("value2")).isTrue();
+	}
+
+	@Test
+	public void testAnnotationParseMultipleWithCommas() {
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:value2"))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,c,d\"")
+				.containsEntry("annotation2", "value2");
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "value1")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,c,d\"")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
+// Test even number of quotes not to be used as token for ignoring commas boundary.
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,\"\"c,d\",annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,\"\"c,d\"")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
+	}
+
+	@Test
+	public void testAnnotationWithQuotes() {
+		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation1:\"value1\",annotation2:value2");
+		assertThat(annotations.isEmpty()).isFalse();
+		assertThat(annotations.size() == 2).isTrue();
+		assertThat(annotations.containsKey("annotation1")).isTrue();
+		assertThat(annotations.get("annotation1").equals("\"value1\"")).isTrue();
 		assertThat(annotations.containsKey("annotation2")).isTrue();
 		assertThat(annotations.get("annotation2").equals("value2")).isTrue();
 	}
