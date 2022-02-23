@@ -41,6 +41,10 @@ public class PropertyParserUtils {
 		Map<String, String> mapValue = new HashMap<>();
 
 		if (StringUtils.hasText(stringPairs)) {
+			/**
+			 * Positive look ahead that into a non capturing group that will skip all commas in quotes.
+			 * Even number quotes will be ignored by the non capturing group.
+			 */
 			String[] pairs = stringPairs.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
 			for (String pair : pairs) {
 				String[] splitString = pair.split(":", 2);

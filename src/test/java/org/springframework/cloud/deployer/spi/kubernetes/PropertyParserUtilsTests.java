@@ -57,27 +57,27 @@ public class PropertyParserUtilsTests {
 
 	@Test
 	public void testAnnotationParseMultipleWithCommas() {
-		Map<String, String> annotations = PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:value2");
-		assertThat(annotations.isEmpty()).isFalse();
-		assertThat(annotations.size() == 2).isTrue();
-		assertThat(annotations.containsKey("annotation1")).isTrue();
-		assertThat(annotations.get("annotation1").equals("\"value1,a,b,c,d\"")).isTrue();
-		assertThat(annotations.containsKey("annotation2")).isTrue();
-		assertThat(annotations.get("annotation2").equals("value2")).isTrue();
-		annotations = PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2:\"value2,a,b,c,d\"");
-		assertThat(annotations.isEmpty()).isFalse();
-		assertThat(annotations.size() == 2).isTrue();
-		assertThat(annotations.containsKey("annotation1")).isTrue();
-		assertThat(annotations.get("annotation1").equals("value1")).isTrue();
-		assertThat(annotations.containsKey("annotation2")).isTrue();
-		assertThat(annotations.get("annotation2").equals("\"value2,a,b,c,d\"")).isTrue();
-		annotations = PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:\"value2,a,b,c,d\"");
-		assertThat(annotations.isEmpty()).isFalse();
-		assertThat(annotations.size() == 2).isTrue();
-		assertThat(annotations.containsKey("annotation1")).isTrue();
-		assertThat(annotations.get("annotation1").equals("\"value1,a,b,c,d\"")).isTrue();
-		assertThat(annotations.containsKey("annotation2")).isTrue();
-		assertThat(annotations.get("annotation2").equals("\"value2,a,b,c,d\"")).isTrue();
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:value2"))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,c,d\"")
+				.containsEntry("annotation2", "value2");
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:value1,annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "value1")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,c,d\",annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,c,d\"")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
+// Test even number of quotes not to be used as token for ignoring commas boundary.
+		assertThat(PropertyParserUtils.getStringPairsToMap("annotation1:\"value1,a,b,\"\"c,d\",annotation2:\"value2,a,b,c,d\""))
+				.isNotEmpty()
+				.hasSize(2)
+				.containsEntry("annotation1", "\"value1,a,b,\"\"c,d\"")
+				.containsEntry("annotation2", "\"value2,a,b,c,d\"");
 	}
 
 	@Test
