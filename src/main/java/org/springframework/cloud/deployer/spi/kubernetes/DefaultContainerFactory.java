@@ -276,8 +276,10 @@ public class DefaultContainerFactory implements ContainerFactory {
 		List<String> cmdArgs = new LinkedList<>();
 
 		List<String> commandArgOptions = request.getCommandlineArguments().stream()
-		.map(this::getArgOption)
-		.collect(Collectors.toList());
+				.filter(arg -> arg.contains("="))
+				.map(arg -> arg.split("=")[0])
+				.map(arg -> arg.trim().replaceAll("^--", ""))
+				.collect(Collectors.toList());
 
 		// add properties from deployment request
 		Map<String, String> args = request.getDefinition().getProperties();
@@ -301,12 +303,6 @@ public class DefaultContainerFactory implements ContainerFactory {
 		logger.debug("Using command args: " + cmdArgs);
 		return cmdArgs;
 	}
-
-	private String getArgOption(String arg) {
-		int indexOfAssignment = arg.indexOf("=");
-		String argOption = (indexOfAssignment < 0) ? arg : arg.substring(0, indexOfAssignment);
-		return argOption.trim().replaceAll("^--", "");
-	 }
 
 	private DeploymentPropertiesResolver getDeploymentPropertiesResolver(AppDeploymentRequest request) {
 		String propertiesPrefix = (request instanceof ScheduleRequest &&
