@@ -55,6 +55,7 @@ import org.springframework.util.StringUtils;
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  * @author Glenn Renfro
+ * @author Heechan Yang
  */
 public class DefaultContainerFactory implements ContainerFactory {
 	private static Log logger = LogFactory.getLog(DefaultContainerFactory.class);
