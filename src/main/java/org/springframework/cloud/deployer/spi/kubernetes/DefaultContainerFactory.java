@@ -275,7 +275,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 	List<String> createCommandArgs(AppDeploymentRequest request) {
 		List<String> cmdArgs = new LinkedList<>();
 
-		List<String> commandArgOptions = request.getCommandlineArguments().stream()
+		List<String> keyValueTypeCommandArgs = request.getCommandlineArguments().stream()
 				.filter(arg -> arg.contains("="))
 				.map(arg -> arg.split("=")[0])
 				.map(arg -> arg.trim().replaceAll("^--", ""))
@@ -288,7 +288,7 @@ public class DefaultContainerFactory implements ContainerFactory {
 				logger.warn(
 						"Excluding request property with missing value from command args: " + entry.getKey());
 			}
-			else if (commandArgOptions.contains(entry.getKey())) {
+			else if (keyValueTypeCommandArgs.contains(entry.getKey())) {
 				logger.warn(
 						String.format(
 								"Excluding request property [--%s=%s] as a command arg. Existing command line argument takes precedence."
