@@ -29,9 +29,29 @@ Build the project without running tests using:
 
 ## Integration tests
 
-All testing is curently done against a GKE cluster. Minikube is no longer useful since we test some parts of the external IP features that a LoadBalancer service provides.
+The integration tests require a running Kubernetes cluster. A couple of options are listed below.
+
+### Minkube
+[Minikube](https://github.com/kubernetes/minikube) is a tool that makes it easy to run Kubernetes locally. It runs a single-node Kubernetes cluster inside a VM on your laptop for users looking to try out Kubernetes or develop with it day-to-day. 
+
+Follow the [getting started](https://minikube.sigs.k8s.io/docs/start/) guide to install Minikube.
+
+1. Start Minikube
+   ```shell
+   minkube start
+   ```
+2. Run the tests
+   ```shell
+   ./mvnw clean test
+   ```
+3. Stop Minikube
+   ```shell
+   minkube stop
+   ```
+
 
 ### Google Container Engine
+While Minikube is very easy to run and test against, it is preferred to test against a GKE cluster. Minikube is not as useful since we test some parts of the external IP features that a LoadBalancer service provides.
 
 Create a test cluster and target it using something like (use your own project name, substitute --zone if needed):
 
