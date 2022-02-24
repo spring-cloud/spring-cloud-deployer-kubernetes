@@ -35,6 +35,7 @@ import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 
 /**
@@ -136,5 +137,13 @@ public class KubernetesTaskLauncherIntegrationIT extends AbstractKubernetesTaskL
 
 		pods = getPodsForTask(taskName);
 		assertThat(pods).isEmpty();
+	}
+
+	@Test
+	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo) {
+		logTestInfo(testInfo);
+		assertThatThrownBy(() -> taskLauncher().cleanup("foo"))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Cannot delete pod for task \"%s\" (reason: pod does not exist)", "foo");
 	}
 }

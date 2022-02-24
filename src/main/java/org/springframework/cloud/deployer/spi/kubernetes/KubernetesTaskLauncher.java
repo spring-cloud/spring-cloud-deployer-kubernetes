@@ -56,6 +56,7 @@ import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -388,28 +389,26 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		FilterWatchListDeletable<Job, JobList> jobsToDelete = client.batch().jobs()
 				.withLabel(SPRING_APP_KEY, id);
 
-		if (jobsToDelete != null && jobsToDelete.list().getItems() != null) {
-			logger.debug(String.format("Deleting Job for task: %s", id));
-			boolean jobDeleted = jobsToDelete.delete();
-			logger.debug(String.format("Job deleted for: %s - %b", id, jobDeleted));
+		if (jobsToDelete == null || ObjectUtils.isEmpty(jobsToDelete.list().getItems())) {
+			throw new IllegalStateException(String.format("Cannot delete job for task \"%s\" (reason: job does not exist)", id));
 		}
-		else {
-			throw new IllegalStateException(String.format("Cannot delete Job for task: %s. Because Job is not exist!", id));
-		}
+
+		logger.debug(String.format("Deleting job for task: %s", id));
+		boolean deleted = jobsToDelete.delete();
+		logger.debug(String.format("Job was%s deleted for task: %s", id, (deleted ? "" : " not")));
 	}
 
 	private void deletePod(String id) {
 		FilterWatchListDeletable<Pod, PodList> podsToDelete = client.pods()
 				.withLabel(SPRING_APP_KEY, id);
 
-		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
-			logger.debug(String.format("Deleting Pod for task: %s", id));
-			boolean podsDeleted = podsToDelete.delete();
-			logger.debug(String.format("Pod deleted for: %s - %b", id, podsDeleted));
+		if (podsToDelete == null || ObjectUtils.isEmpty(podsToDelete.list().getItems())) {
+			throw new IllegalStateException(String.format("Cannot delete pod for task \"%s\" (reason: pod does not exist)", id));
 		}
-		else {
-			throw new IllegalStateException(String.format("Cannot delete Pod for task: %s. Because Pod is not exist!", id));
-		}
+
+		logger.debug(String.format("Deleting pod for task: %s", id));
+		boolean deleted = podsToDelete.delete();
+		logger.debug(String.format("Pod was%s deleted for task: %s", id, (deleted ? "" : " not")));
 	}
 
 	private Job getJob(String jobName) {

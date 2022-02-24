@@ -152,4 +152,12 @@ public class KubernetesTaskLauncherWithJobIntegrationIT extends AbstractKubernet
 		jobs = getJobsForTask(taskName);
 		assertThat(jobs).isEmpty();
 	}
+
+	@Test
+	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo) {
+		logTestInfo(testInfo);
+		assertThatThrownBy(() -> taskLauncher().cleanup("foo"))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Cannot delete job for task \"%s\" (reason: job does not exist)", "foo");
+	}
 }
