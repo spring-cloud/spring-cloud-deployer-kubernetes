@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 the original author or authors.
+ * Copyright 2016-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ import org.springframework.util.StringUtils;
  * @author Leonardo Diniz
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
+ * @author Glenn Renfro
  */
 public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implements TaskLauncher {
 	private KubernetesTaskLauncherProperties taskLauncherProperties;
@@ -390,7 +391,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (jobsToDelete == null || ObjectUtils.isEmpty(jobsToDelete.list().getItems())) {
-			throw new IllegalStateException(String.format("Cannot delete job for task \"%s\" (reason: job does not exist)", id));
+			logger.warn(String.format("Cannot delete job for task \"%s\" (reason: job does not exist)", id));
 		}
 
 		logger.debug(String.format("Deleting job for task: %s", id));
@@ -403,7 +404,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 				.withLabel(SPRING_APP_KEY, id);
 
 		if (podsToDelete == null || ObjectUtils.isEmpty(podsToDelete.list().getItems())) {
-			throw new IllegalStateException(String.format("Cannot delete pod for task \"%s\" (reason: pod does not exist)", id));
+			logger.warn(String.format("Cannot delete pod for task \"%s\" (reason: pod does not exist)", id));
 		}
 
 		logger.debug(String.format("Deleting pod for task: %s", id));
