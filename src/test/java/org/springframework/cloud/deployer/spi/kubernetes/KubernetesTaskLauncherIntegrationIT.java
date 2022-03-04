@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 the original author or authors.
+ * Copyright 2016-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,17 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.utils.PodStatusUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 
 /**
@@ -47,10 +49,12 @@ import static org.assertj.core.api.Assertions.entry;
  * @author Thomas Risberg
  * @author Chris Schaefer
  * @author Chris Bono
+ * @author Glenn Renfro
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
 		"spring.cloud.deployer.kubernetes.namespace=default"
 })
+@ExtendWith(OutputCaptureExtension.class)
 public class KubernetesTaskLauncherIntegrationIT extends AbstractKubernetesTaskLauncherIntegrationTests {
 
 	@Test
@@ -140,10 +144,9 @@ public class KubernetesTaskLauncherIntegrationIT extends AbstractKubernetesTaskL
 	}
 
 	@Test
-	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo) {
+	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo, CapturedOutput taskOutput) {
 		logTestInfo(testInfo);
-		assertThatThrownBy(() -> taskLauncher().cleanup("foo"))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessage("Cannot delete pod for task \"%s\" (reason: pod does not exist)", "foo");
+		taskLauncher().cleanup("foo");
+		assertThat(taskOutput.getAll()).contains("Cannot delete pod for task \"foo\" (reason: pod does not exist)");
 	}
 }
