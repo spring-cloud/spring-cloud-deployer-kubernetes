@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 the original author or authors.
+ * Copyright 2016-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,11 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
@@ -49,9 +52,11 @@ import static org.assertj.core.api.Assertions.entry;
  * @author Chris Schaefer
  * @author Ilayaperumal Gopinathan
  * @author Chris Bono
+ * @author Glenn Renfro
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class})
 @TestPropertySource(properties = "spring.cloud.deployer.kubernetes.create-job=true")
+@ExtendWith(OutputCaptureExtension.class)
 public class KubernetesTaskLauncherWithJobIntegrationIT extends AbstractKubernetesTaskLauncherIntegrationTests {
 
 	@BeforeEach
@@ -154,10 +159,9 @@ public class KubernetesTaskLauncherWithJobIntegrationIT extends AbstractKubernet
 	}
 
 	@Test
-	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo) {
+	void cleanupForNonExistentTaskThrowsException(TestInfo testInfo, CapturedOutput taskOutput) {
 		logTestInfo(testInfo);
-		assertThatThrownBy(() -> taskLauncher().cleanup("foo"))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessage("Cannot delete job for task \"%s\" (reason: job does not exist)", "foo");
+		taskLauncher().cleanup("foo");
+		assertThat(taskOutput.getAll()).contains("Cannot delete job for task \"foo\" (reason: job does not exist)");
 	}
 }
