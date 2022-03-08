@@ -136,7 +136,7 @@ public class KubernetesAppInstanceStatus implements AppInstanceStatus {
 
 		if (pod != null) {
 			result.put("pod.name", pod.getMetadata().getName());
-			result.put("pod.startTime", pod.getStatus().getStartTime());
+			result.put("pod.startTime", nullSafe(pod.getStatus().getStartTime()));
 			result.put("pod.ip", nullSafe(pod.getStatus().getPodIP()));
 			result.put("actuator.path", determineActuatorPathFromLivenessProbe(pod));
 			result.put("actuator.port", determineActuatorPortFromLivenessProbe(pod, result.get("actuator.path")));
