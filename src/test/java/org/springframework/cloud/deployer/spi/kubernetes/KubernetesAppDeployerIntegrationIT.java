@@ -105,7 +105,7 @@ import static org.mockito.Mockito.doAnswer;
  * @author Christian Tzolov
  */
 @SpringBootTest(classes = {KubernetesAutoConfiguration.class}, properties = {
-		"logging.level.org.springframework.cloud.deployer.spi=INFO"
+		"logging.level.org.springframework.cloud.deployer=DEBUG"
 })
 public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerIntegrationJUnit5Tests {
 
