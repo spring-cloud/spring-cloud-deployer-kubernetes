@@ -201,7 +201,6 @@ public class DefaultContainerFactory implements ContainerFactory {
 		if (!containerCommand.isEmpty()) {
 			container.withCommand(containerCommand);
 		}
-
 		return container.build();
 	}
 

@@ -99,7 +99,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	@Override
 	public String deploy(AppDeploymentRequest request) {
 		String appId = createDeploymentId(request);
-		logger.debug(String.format("Deploying app: %s", appId));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Deploying app: %s", appId));
+		}
 
 		try {
 			AppStatus status = status(appId);
@@ -129,7 +131,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	@Override
 	public void undeploy(String appId) {
-		logger.debug(String.format("Undeploying app: %s", appId));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Undeploying app: %s", appId));
+		}
 		AppStatus status = status(appId);
 		if (status.getState().equals(DeploymentState.unknown)) {
 			// ensure objects for this appId are deleted in the event a previous deployment failed.
@@ -164,7 +168,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			}
 		}
 		AppStatus status = buildAppStatus(appId, podList, services);
-		logger.debug(String.format("Status for app: %s is %s", appId, status));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Status for app: %s is %s", appId, status));
+		}
 
 		return status;
 	}
@@ -201,7 +207,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	@Override
 	public void scale(AppScaleRequest appScaleRequest) {
 		String deploymentId = appScaleRequest.getDeploymentId();
-		logger.debug(String.format("Scale app: %s to: %s", deploymentId, appScaleRequest.getCount()));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Scale app: %s to: %s", deploymentId, appScaleRequest.getCount()));
+		}
 
 		ScalableResource scalableResource = this.client.apps().deployments().withName(deploymentId);
 		if (scalableResource.get() == null) {
@@ -221,8 +229,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 	private Deployment createDeployment(AppDeploymentRequest request) {
 
 		String appId = createDeploymentId(request);
-
-		logger.debug(String.format("Creating Deployment: %s", appId));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Creating Deployment: %s", appId));
+		}
 
 		int replicas = getCountFromRequest(request);
 
@@ -242,7 +251,11 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 				.addToLabels(deploymentLabels).withAnnotations(annotations).endMetadata().withSpec(podSpec).endTemplate()
 				.endSpec().build();
 
-		return client.apps().deployments().create(d);
+		d = client.apps().deployments().create(d);
+		if(logger.isDebugEnabled()) {
+			logger.debug("created:" + d.getFullResourceName() + ":" + d.getStatus());
+		}
+		return d;
 	}
 
 	private int getCountFromRequest(AppDeploymentRequest request) {
@@ -266,8 +279,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		int replicas = getCountFromRequest(request);
 
 		Map<String, String> kubernetesDeployerProperties = request.getDeploymentProperties();
-
-		logger.debug(String.format("Creating StatefulSet: %s on %d with %d replicas", appId, externalPort, replicas));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Creating StatefulSet: %s on %d with %d replicas", appId, externalPort, replicas));
+		}
 
 		Map<String, Quantity> storageResource = Collections.singletonMap("storage",
 				new Quantity(this.deploymentPropertiesResolver.getStatefulSetStorage(kubernetesDeployerProperties)));
@@ -308,7 +322,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		StatefulSet statefulSet = new StatefulSetBuilder().withNewMetadata().withName(appId).withLabels(idMap)
 				.addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE).addToLabels(deploymentLabels).endMetadata().withSpec(spec).build();
 
-		client.apps().statefulSets().create(statefulSet);
+		statefulSet = client.apps().statefulSets().create(statefulSet);
+		if(logger.isDebugEnabled()) {
+			logger.debug("created:" + statefulSet.getFullResourceName() + ":" + statefulSet.getStatus());
+		}
 	}
 
 	protected void createService(AppDeploymentRequest request) {
@@ -316,8 +333,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 		String appId = createDeploymentId(request);
 
 		int externalPort = getExternalPort(request);
-
-		logger.debug(String.format("Creating Service: %s on %d", appId, externalPort));
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Creating Service: %s on %d using %s", appId, externalPort, request.getDeploymentProperties()));
+		}
 
 		Map<String, String> idMap = createIdMap(appId, request);
 
@@ -393,11 +411,14 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 			spec.withSelector(idMap);
 		}
 
-		client.services().createOrReplace(
+		Service service = client.services().createOrReplace(
 				new ServiceBuilder().withNewMetadata().withName(serviceName)
 						.withLabels(idMap).withAnnotations(annotations).addToLabels(SPRING_MARKER_KEY, SPRING_MARKER_VALUE)
 						.endMetadata().withSpec(spec.build()).build()
 		);
+		if(logger.isDebugEnabled()) {
+			logger.debug("created:" + service.getFullResourceName() + ":" + service.getStatus());
+		}
 	}
 
 	// logic to support using un-versioned service names when called from skipper
@@ -488,8 +509,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 	private void deleteAllObjects(String appIdToDelete) {
 		Map<String, String> labels = Collections.singletonMap(SPRING_APP_KEY, appIdToDelete);
-
-		waitForLoadBalancerReady(labels);
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("deleteAllObjects:%s:%s", appIdToDelete, labels));
+		}
+		// waitForLoadBalancerReady(labels); // Not negative effect in not waiting for loadbalancer.
 		deleteService(labels);
 		deleteDeployment(labels);
 		deleteStatefulSet(labels);
@@ -503,7 +526,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (servicesToDelete != null && servicesToDelete.list().getItems() != null) {
 			boolean servicesDeleted = servicesToDelete.delete();
-			logger.debug(String.format("Service deleted for: %s - %b", labels, servicesDeleted));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("Service deleted for: %s - %b", labels, servicesDeleted));
+			}
 		}
 	}
 
@@ -513,7 +538,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (deploymentsToDelete != null && deploymentsToDelete.list().getItems() != null) {
 			boolean deploymentsDeleted = deploymentsToDelete.delete();
-			logger.debug(String.format("Deployment deleted for: %s - %b", labels, deploymentsDeleted));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("Deployment deleted for: %s - %b", labels, deploymentsDeleted));
+			}
 		}
 	}
 
@@ -523,7 +550,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (ssToDelete != null && ssToDelete.list().getItems() != null) {
 			boolean ssDeleted = ssToDelete.delete();
-			logger.debug(String.format("StatefulSet deleted for: %s - %b", labels, ssDeleted));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("StatefulSet deleted for: %s - %b", labels, ssDeleted));
+			}
 		}
 	}
 
@@ -533,7 +562,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (podsToDelete != null && podsToDelete.list().getItems() != null) {
 			boolean podsDeleted = podsToDelete.delete();
-			logger.debug(String.format("Pod deleted for: %s - %b", labels, podsDeleted));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("Pod deleted for: %s - %b", labels, podsDeleted));
+			}
 		}
 	}
 
@@ -543,7 +574,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
 		if (pvcsToDelete != null && pvcsToDelete.list().getItems() != null) {
 			boolean pvcsDeleted = pvcsToDelete.delete();
-			logger.debug(String.format("PVC deleted for: %s - %b", labels, pvcsDeleted));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("PVC deleted for: %s - %b", labels, pvcsDeleted));
+			}
 		}
 	}
 
@@ -562,7 +595,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 						if (tries % 6 == 0) {
 							logger.warn("Waiting for LoadBalancer to complete before deleting it ...");
 						}
-						logger.debug(String.format("Waiting for LoadBalancer, try %d", tries));
+						if(logger.isDebugEnabled()) {
+							logger.debug(String.format("Waiting for LoadBalancer, try %d", tries));
+						}
 						try {
 							Thread.sleep(10000L);
 						}
@@ -574,8 +609,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 						break;
 					}
 				}
-				logger.debug(String.format("LoadBalancer Ingress: %s",
-						svc.getStatus().getLoadBalancer().getIngress().toString()));
+				if(logger.isDebugEnabled()) {
+					logger.debug(String.format("LoadBalancer Ingress: %s",
+							svc.getStatus().getLoadBalancer().getIngress().toString()));
+				}
 			}
 		}
 	}
