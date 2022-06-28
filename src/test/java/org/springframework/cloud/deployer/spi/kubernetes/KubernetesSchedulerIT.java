@@ -988,26 +988,6 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
 
-	@Test
-	public void testConcurencyPolicyError() {
-		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
-		if (kubernetesDeployerProperties.getNamespace() == null) {
-			kubernetesDeployerProperties.setNamespace("default");
-		}
-		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
-				.inNamespace(kubernetesDeployerProperties.getNamespace());
-
-		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
-				kubernetesDeployerProperties);
-
-		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
-		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties("wrongValue"),
-				 getCommandLineArgs(), randomName(), testApplication());
-
-		assertThatThrownBy(() -> {
-			kubernetesScheduler.createCronJob(scheduleRequest);
-		}).isInstanceOf(IllegalArgumentException.class);		
-	}
 
 	@Test
 	public void testConcurencyPolicyDefault() {

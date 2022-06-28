@@ -212,11 +212,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		}
 		if(concurrencyPolicy==null) {
 			concurrencyPolicy = "Allow";
-		} else {
-			if(!concurrencyPolicy.matches("Allow|Forbid|Replace")) {
-				throw new IllegalArgumentException("The provided concurrency policy is invalid: "+concurrencyPolicy);
-			}
-		}
+		} 
 
 		PodSpec podSpec = createPodSpec(new ScheduleRequest(scheduleRequest.getDefinition(),schedulerProperties, scheduleRequest.getCommandlineArguments(), scheduleRequest.getScheduleName(),scheduleRequest.getResource()));
 		String taskServiceAccountName = this.deploymentPropertiesResolver.getTaskServiceAccountName(schedulerProperties);
