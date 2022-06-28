@@ -62,6 +62,7 @@ import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
+import org.springframework.cloud.deployer.spi.kubernetes.support.ArgumentSanitizer;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.util.StringUtils;
 
@@ -101,7 +102,10 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
     public String deploy(AppDeploymentRequest request) {
         String appId = createDeploymentId(request);
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Deploying app: %s", appId));
+            ArgumentSanitizer sanitizer = new ArgumentSanitizer();
+            Map<String,String> sanitized = sanitizer.sanitizeProperties(request.getDeploymentProperties());
+            List<String> sanitizedCommandlineArguments = sanitizer.sanitizeArguments(request.getCommandlineArguments());
+            logger.debug(String.format("Deploying app: %s, request: commandlineArguments=%s, deploymentProperties=%s, definition=%s, resource=%s", appId, sanitizedCommandlineArguments, sanitized, request.getDefinition(), request.getResource()));
         }
 
         try {
@@ -334,7 +338,9 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
         int externalPort = getExternalPort(request);
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Creating Service: %s on %d using %s", appId, externalPort, request.getDeploymentProperties()));
+            ArgumentSanitizer sanitizer = new ArgumentSanitizer();
+            Map<String, String> sanitized = sanitizer.sanitizeProperties(request.getDeploymentProperties());
+            logger.debug(String.format("Creating Service: %s on %d using %s", appId, externalPort, sanitized));
         }
 
         Map<String, String> idMap = createIdMap(appId, request);
