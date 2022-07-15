@@ -261,6 +261,7 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 			JobSpec jobSpec = new JobSpecBuilder()
 					.withTemplate(podTemplateSpec)
 					.withBackoffLimit(getBackoffLimit(request))
+					.withTtlSecondsAfterFinished(getTtlSecondsAfterFinished(request))
 					.build();
 
 			this.client.batch().v1().jobs().create(
@@ -461,6 +462,23 @@ public class KubernetesTaskLauncher extends AbstractKubernetesDeployer implement
 		}
 		else {
 			return this.taskLauncherProperties.getBackoffLimit();
+		}
+	}
+
+	/**
+	 * Get the ttlSecondsAfterFinihsed setting for the deployment request.
+	 *
+	 * @param request The deployment request.
+	 * @return the ttlSecondsAfterFinished
+	 */
+	protected Integer getTtlSecondsAfterFinished(AppDeploymentRequest request) {
+		String ttlSecondsAfterFinished = PropertyParserUtils.getDeploymentPropertyValue(request.getDeploymentProperties(),
+				"spring.cloud.deployer.kubernetes.ttlSecondsAfterFinished");
+		if (StringUtils.hasText(ttlSecondsAfterFinished)) {
+			return Integer.valueOf(ttlSecondsAfterFinished);
+		}
+		else {
+			return this.taskLauncherProperties.getTtlSecondsAfterFinished();
 		}
 	}
 }

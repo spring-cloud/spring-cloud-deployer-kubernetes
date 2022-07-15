@@ -164,4 +164,38 @@ public class KubernetesTaskLauncherWithJobIntegrationIT extends AbstractKubernet
 		taskLauncher().cleanup("foo");
 		assertThat(taskOutput.getAll()).contains("Cannot delete job for task \"foo\" (reason: job does not exist)");
 	}
+
+	@Test
+	void deleteJobAfterTtlSecondsOnAfterFinishedExpire(TestInfo testInfo) {
+		logTestInfo(testInfo);
+
+		Map<String, String> applicationProps = new HashMap<>();
+		applicationProps.put("killDelay", "1");
+		AppDefinition definition = new AppDefinition(randomName(), applicationProps);
+
+		Resource resource = testApplication();
+
+		Map<String, String> deploymentProps = new HashMap<>();
+		deploymentProps.put("spring.cloud.deployer.kubernetes.restartPolicy", "Never");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.backoffLimit", "0");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.ttlSecondsAfterFinished", "3");
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, deploymentProps);
+		String taskName = request.getDefinition().getName();
+
+		log.info("Launching {}...", taskName);
+		String launchId = taskLauncher().launch(request);
+		awaitWithPollAndTimeout(deploymentTimeout())
+				.untilAsserted(() -> assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.launching));
+
+		List<Job> jobs = getJobsForTask(taskName);
+		assertThat(jobs).hasSize(1);
+
+		log.info("Waiting for deleting the job {}...", taskName);
+
+		awaitWithPollAndTimeout(undeploymentTimeout())
+				.untilAsserted(() -> assertThat(taskLauncher().status(launchId).getState()).isEqualTo(LaunchState.unknown));
+
+		jobs = getJobsForTask(taskName);
+		assertThat(jobs).isEmpty();
+	}
 }
