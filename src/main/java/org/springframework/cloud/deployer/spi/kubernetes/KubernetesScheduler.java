@@ -52,6 +52,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 	protected static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
+	
+	static final String KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.concurrencyPolicy";
 
 	public KubernetesScheduler(KubernetesClient client,
 			KubernetesDeployerProperties properties) {
@@ -202,6 +204,15 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 				schedulerProperties.get("spring.cloud.deployer.kubernetes.cron.expression") :
 				schedulerProperties.get(SchedulerPropertyKeys.CRON_EXPRESSION);
 		Assert.hasText(schedule, "The property spring.cloud.deployer.cron.expression must be defined");
+		
+		String concurrencyPolicy = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY);
+		// check default server properties
+		if (!StringUtils.hasText(concurrencyPolicy)) {
+			concurrencyPolicy = this.properties.getCron().getConcurrencyPolicy();
+		}
+		if(concurrencyPolicy==null) {
+			concurrencyPolicy = "Allow";
+		} 
 
 		PodSpec podSpec = createPodSpec(new ScheduleRequest(scheduleRequest.getDefinition(),schedulerProperties, scheduleRequest.getCommandlineArguments(), scheduleRequest.getScheduleName(),scheduleRequest.getResource()));
 		String taskServiceAccountName = this.deploymentPropertiesResolver.getTaskServiceAccountName(schedulerProperties);
@@ -214,7 +225,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 		CronJob cronJob = new CronJobBuilder().withNewMetadata().withName(scheduleRequest.getScheduleName())
 				.withLabels(labels).withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(schedulerProperties)).endMetadata()
-				.withNewSpec().withSchedule(schedule).withNewJobTemplate()
+				.withNewSpec().withSchedule(schedule).withConcurrencyPolicy(concurrencyPolicy).withNewJobTemplate()
 				.withNewSpec().withNewTemplate().withNewMetadata().addToAnnotations(annotations).addToLabels(labels)
 				.endMetadata().withSpec(podSpec).endTemplate().endSpec()
 				.endJobTemplate().endSpec().build();

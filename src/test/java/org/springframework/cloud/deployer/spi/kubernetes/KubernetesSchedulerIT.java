@@ -107,6 +107,13 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	protected Map<String, String> getSchedulerProperties() {
 		return Collections.singletonMap(SchedulerPropertyKeys.CRON_EXPRESSION, "57 13 ? * *");
 	}
+	
+	
+	private Map<String, String> getSchedulerProperties(String concurrencyPolicy) {
+		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
+		schedulerProperties.put(KubernetesScheduler.KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY, concurrencyPolicy);
+		return schedulerProperties;		
+	}
 
 	@Override
 	protected Map<String, String> getDeploymentProperties() {
@@ -955,6 +962,82 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
+	
+	@ParameterizedTest
+	@ValueSource(strings = {"Forbid","Allow","Replace"})
+	public void testConcurencyPolicy(String concurrencyPolicy) {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(concurrencyPolicy),
+				 getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo(concurrencyPolicy);
+		
+		
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+
+	@Test
+	public void testConcurencyPolicyDefault() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				 getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo("Allow");
+		
+		
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+	
+	@Test
+	public void testConcurencyPolicyFromServerProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		kubernetesDeployerProperties.getCron().setConcurrencyPolicy("Forbid");
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				 getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo("Forbid");
+		
+		
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+	
 
 	@AfterAll
 	public static void cleanup() {

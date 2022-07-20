@@ -1095,6 +1095,18 @@ public class KubernetesDeployerProperties {
     public void setImagePullSecrets(List<String> imagePullSecrets) {
         this.imagePullSecrets = imagePullSecrets;
     }
+	
+	public static class CronConfig {
+		private String concurrencyPolicy;
+
+		public String getConcurrencyPolicy() {
+			return concurrencyPolicy;
+		}
+
+		public void setConcurrencyPolicy(String concurrencyPolicy) {
+			this.concurrencyPolicy = concurrencyPolicy;
+		}
+	}
 
     /**
      * @deprecated @{see {@link #getLivenessHttpProbeDelay()}}
@@ -1421,6 +1433,11 @@ public class KubernetesDeployerProperties {
     public void setStartupTcpProbeTimeout(int startupTcpProbeTimeout) {
         this.startupTcpProbeTimeout = startupTcpProbeTimeout;
     }
+	
+	/**
+	 * Cron configuration for job scheduling
+	 */
+	private CronConfig cron = new CronConfig();
 
     public int getStartupTcpProbePeriod() {
         return startupTcpProbePeriod;
@@ -2059,4 +2076,12 @@ public class KubernetesDeployerProperties {
     public void setAppAdmin(AppAdmin appAdmin) {
         this.appAdmin = appAdmin;
     }
+
+	public CronConfig getCron() {
+		return cron;
+	}
+
+	public void setCron(CronConfig cron) {
+		this.cron = cron;
+	}
 }
