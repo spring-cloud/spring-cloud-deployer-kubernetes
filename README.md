@@ -1,23 +1,16 @@
 # Spring Cloud Deployer Kubernetes
 A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer) implementation for deploying long-lived streaming applications and short-lived tasks to Kubernetes.
 
-## Kubernetes Compatibility
+## Kubernetes Compatibilit
 
-| Deployer \ Kubernetes | 1.11 | 1.12 | 1.13 | 1.14 | 1.15 | 1.16 | 1.17 | 1.18 | 1.19 |
-|----------------------|------|-----|------|------|------|------|------|------|-----|
-| **1.3.x**            | ✓    | ✓   | ✓    | ✕    | ✕    | ✕    | ✕    | ✕    | *   |
-| **2.0.x**            | ✓    | ✓   | ✓    | ✕    | ✕    | ✕    | ✕    | ✕    |*   |
-| **2.1.x**            | ✓   | ✓   | ✓  | ✕    | ✕    | ✕    | ✕    | ✕    |*   |
-| **2.2.x**            | ✕    | ✕   | ✓    | ✓    | ✓    | ✕    | ✕    | ✕    |*   |
-| **2.3.x**            | ✕    | ✕   | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |*   |
-| **2.4.x**            | ✕    | ✕   | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |*   |
-| **2.5.x**            | ✕    | ✕   | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |*   |
-| **2.6.x**            | ✕    | ✕   | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |*   |
-| **2.7.x**         | ✕    | ✕   | ✕    | ✕    | ✕    | ✓    | ✓    | ✓    |✓    |
-| **MAIN**             | ✕    | ✕   | ✕    | ✕    | ✕    | *   | *   | ✓    | ✓ |
+| Deployer \ Kubernetes | 1.18 | 1.19 | 1.20 | 1.21 | 1.22 | 1.23 |
+|-----------------------|------|------|------|------|------|------|
+| **2.6.x**             | `✓`  | `✕`  | `✕`  | `✕`  | `✕`  | `✕`  |
+| **2.7.x**             | `✓`  | `✓`  | `✓`  | `✓`  | `?`  | `?`  |
+| **MAIN**              | `✕`  | `✓`  | `✓`  | `✓`  | `✓`  | `✓`  |
 
-- `✓` Fully supported version.
-- `?` Due to breaking changes between Kubernetes API versions, some features might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
+- `✓` Fully supported vers
+- `?` Due to breaking chans might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
 - `✕` Unsupported version.
 
 ## Building
