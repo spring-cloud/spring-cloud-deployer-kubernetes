@@ -690,6 +690,10 @@ public class KubernetesDeployerProperties {
     private String startupProbeScheme = "HTTP";
 
     /**
+     * If present will assign to spec.shareProcessNamespace of the Pod.
+     */
+    private Boolean shareProcessNamespace;
+    /**
      * Delay in seconds when the readiness check of the app container should start checking if
      * the module is fully up and running.
      */
@@ -1107,6 +1111,14 @@ public class KubernetesDeployerProperties {
 			this.concurrencyPolicy = concurrencyPolicy;
 		}
 	}
+
+    public Boolean getShareProcessNamespace() {
+        return shareProcessNamespace;
+    }
+
+    public void setShareProcessNamespace(Boolean shareProcessNamespace) {
+        this.shareProcessNamespace = shareProcessNamespace;
+    }
 
     /**
      * @deprecated @{see {@link #getLivenessHttpProbeDelay()}}

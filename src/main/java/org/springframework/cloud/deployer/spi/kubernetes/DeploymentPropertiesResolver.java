@@ -422,6 +422,12 @@ class DeploymentPropertiesResolver {
 		return podSecurityContext;
 	}
 
+	Boolean getShareProcessNamespace(Map<String, String> kubernetesDeployerProperties) {
+		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
+			this.propertyPrefix + ".shareProcessNamespace", "shareProcessNamespace");
+		return deployerProperties.getShareProcessNamespace();
+	}
+
 	private PodSecurityContext buildPodSecurityContext(KubernetesDeployerProperties deployerProperties) {
 		PodSecurityContextBuilder podSecurityContextBuilder = new PodSecurityContextBuilder()
 				.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())

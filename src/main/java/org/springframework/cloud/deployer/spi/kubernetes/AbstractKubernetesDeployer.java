@@ -285,6 +285,12 @@ public class AbstractKubernetesDeployer {
 		if (initContainer != null) {
 			podSpec.addToInitContainers(initContainer);
 		}
+
+		Boolean shareProcessNamespace = this.deploymentPropertiesResolver.getShareProcessNamespace(deploymentProperties);
+		if(shareProcessNamespace != null) {
+			podSpec.withShareProcessNamespace(shareProcessNamespace);
+		}
+
 		podSpec.addAllToContainers(this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties));
 		return podSpec.build();
 	}
