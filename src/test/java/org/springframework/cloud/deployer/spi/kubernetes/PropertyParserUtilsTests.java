@@ -121,11 +121,13 @@ public class PropertyParserUtilsTests {
 		deploymentProps.put("spring.cloud.deployer.kubernetes.serviceAnnotations", "key3:value3,key4:value4");
 		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.image-name", "springcloud/openjdk");
 		deploymentProps.put("spring.cloud.deployer.kubernetes.initContainer.containerName", "test");
+		deploymentProps.put("spring.cloud.deployer.kubernetes.shareProcessNamespace", "true");
 		deploymentProps.put("spring.cloud.deployer.kubernetes.init-container.commands", "['sh','echo hello']");
 		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.podAnnotations").equals("key1:value1,key2:value2")).isTrue();
 		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.serviceAnnotations").equals("key3:value3,key4:value4")).isTrue();
 		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk")).isTrue();
 		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.initContainer.imageName").equals("springcloud/openjdk")).isTrue();
 		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.imagePullPolicy").equals("Never")).isTrue();
+		assertThat(PropertyParserUtils.getDeploymentPropertyValue(deploymentProps, "spring.cloud.deployer.kubernetes.shareProcessNamespace").equals("true")).isTrue();
 	}
 }
