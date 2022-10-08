@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.StatusCause;
-import io.fabric8.kubernetes.api.model.batch.v1beta1.CronJob;
-import io.fabric8.kubernetes.api.model.batch.v1beta1.CronJobBuilder;
-import io.fabric8.kubernetes.api.model.batch.v1beta1.CronJobList;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 
@@ -52,7 +52,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 	protected static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
-	
+
 	static final String KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.concurrencyPolicy";
 
 	public KubernetesScheduler(KubernetesClient client,
@@ -154,7 +154,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 	@Override
 	public void unschedule(String scheduleName) {
-		boolean unscheduled = this.client.batch().cronjobs().withName(scheduleName).delete();
+		boolean unscheduled = this.client.batch().v1().cronjobs().withName(scheduleName).delete();
 
 		if (!unscheduled) {
 			throw new SchedulerException("Failed to unschedule schedule " + scheduleName + " does not exist.");
@@ -171,7 +171,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 	@Override
 	public List<ScheduleInfo> list() {
-		CronJobList cronJobList = this.client.batch().cronjobs().list();
+		CronJobList cronJobList = this.client.batch().v1().cronjobs().list();
 
 		List<CronJob> cronJobs = cronJobList.getItems();
 		List<ScheduleInfo> scheduleInfos = new ArrayList<>();
@@ -204,7 +204,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 				schedulerProperties.get("spring.cloud.deployer.kubernetes.cron.expression") :
 				schedulerProperties.get(SchedulerPropertyKeys.CRON_EXPRESSION);
 		Assert.hasText(schedule, "The property spring.cloud.deployer.cron.expression must be defined");
-		
+
 		String concurrencyPolicy = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY);
 		// check default server properties
 		if (!StringUtils.hasText(concurrencyPolicy)) {
@@ -212,7 +212,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		}
 		if(concurrencyPolicy==null) {
 			concurrencyPolicy = "Allow";
-		} 
+		}
 
 		PodSpec podSpec = createPodSpec(new ScheduleRequest(scheduleRequest.getDefinition(),schedulerProperties, scheduleRequest.getCommandlineArguments(), scheduleRequest.getScheduleName(),scheduleRequest.getResource()));
 		String taskServiceAccountName = this.deploymentPropertiesResolver.getTaskServiceAccountName(schedulerProperties);
@@ -232,7 +232,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 		setImagePullSecret(scheduleRequest, cronJob);
 
-		return this.client.batch().cronjobs().create(cronJob);
+		return this.client.batch().v1().cronjobs().create(cronJob);
 	}
 
 	protected String getExceptionMessageForField(KubernetesClientException clientException,
