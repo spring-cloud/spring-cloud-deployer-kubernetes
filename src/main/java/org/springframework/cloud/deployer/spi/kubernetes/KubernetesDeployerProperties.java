@@ -1074,6 +1074,11 @@ public class KubernetesDeployerProperties {
      */
     private String deploymentLabels;
 
+    /**
+     * Pod priorityClassName. The user should create a PriorityClass before setting this property.
+     */
+    private String priorityClassName;
+
     private AppAdmin appAdmin = new AppAdmin();
 
     public String getNamespace() {
@@ -1118,6 +1123,14 @@ public class KubernetesDeployerProperties {
 
     public void setShareProcessNamespace(Boolean shareProcessNamespace) {
         this.shareProcessNamespace = shareProcessNamespace;
+    }
+
+    public String getPriorityClassName() {
+        return priorityClassName;
+    }
+
+    public void setPriorityClassName(String priorityClassName) {
+        this.priorityClassName = priorityClassName;
     }
 
     /**

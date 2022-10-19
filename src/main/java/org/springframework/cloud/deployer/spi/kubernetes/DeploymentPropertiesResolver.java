@@ -428,6 +428,12 @@ class DeploymentPropertiesResolver {
 		return deployerProperties.getShareProcessNamespace();
 	}
 
+	String getPriorityClassName(Map<String, String> kubernetesDeployerProperties) {
+		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
+			this.propertyPrefix + ".priorityClassName", "priorityClassName");
+		return deployerProperties.getPriorityClassName();
+	}
+
 	private PodSecurityContext buildPodSecurityContext(KubernetesDeployerProperties deployerProperties) {
 		PodSecurityContextBuilder podSecurityContextBuilder = new PodSecurityContextBuilder()
 				.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())

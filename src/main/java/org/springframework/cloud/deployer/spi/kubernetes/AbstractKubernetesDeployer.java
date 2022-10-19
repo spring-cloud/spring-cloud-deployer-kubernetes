@@ -287,8 +287,13 @@ public class AbstractKubernetesDeployer {
 		}
 
 		Boolean shareProcessNamespace = this.deploymentPropertiesResolver.getShareProcessNamespace(deploymentProperties);
-		if(shareProcessNamespace != null) {
+		if (shareProcessNamespace != null) {
 			podSpec.withShareProcessNamespace(shareProcessNamespace);
+		}
+
+		String priorityClassName = this.deploymentPropertiesResolver.getPriorityClassName(deploymentProperties);
+		if (StringUtils.hasText(priorityClassName)) {
+			podSpec.withPriorityClassName(priorityClassName);
 		}
 
 		podSpec.addAllToContainers(this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties));
