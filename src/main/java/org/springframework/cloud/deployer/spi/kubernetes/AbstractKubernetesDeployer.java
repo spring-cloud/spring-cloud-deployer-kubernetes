@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import java.util.stream.Collectors;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
-import io.fabric8.kubernetes.api.model.HandlerBuilder;
 import io.fabric8.kubernetes.api.model.Lifecycle;
+import io.fabric8.kubernetes.api.model.LifecycleHandlerBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
@@ -222,12 +222,12 @@ public class AbstractKubernetesDeployer {
 
 		Lifecycle f8Lifecycle = new Lifecycle();
 		if (lifecycle.getPostStart() != null) {
-			f8Lifecycle.setPostStart(new HandlerBuilder()
+			f8Lifecycle.setPostStart(new LifecycleHandlerBuilder()
 					.withNewExec()
 					.addAllToCommand(lifecycle.getPostStart().getExec().getCommand()).and().build());
 		}
 		if (lifecycle.getPreStop() != null) {
-			f8Lifecycle.setPreStop(new HandlerBuilder()
+			f8Lifecycle.setPreStop(new LifecycleHandlerBuilder()
 					.withNewExec()
 					.addAllToCommand(lifecycle.getPreStop().getExec().getCommand()).and().build());
 		}
