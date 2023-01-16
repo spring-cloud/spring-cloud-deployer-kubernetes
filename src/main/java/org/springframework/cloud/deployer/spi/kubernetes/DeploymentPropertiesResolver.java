@@ -437,8 +437,11 @@ class DeploymentPropertiesResolver {
 	private PodSecurityContext buildPodSecurityContext(KubernetesDeployerProperties deployerProperties) {
 		PodSecurityContextBuilder podSecurityContextBuilder = new PodSecurityContextBuilder()
 				.withRunAsUser(deployerProperties.getPodSecurityContext().getRunAsUser())
+				.withRunAsNonRoot(deployerProperties.getPodSecurityContext().getRunAsNonRoot())
+				.withRunAsGroup(deployerProperties.getPodSecurityContext().getRunAsGroup())
 				.withFsGroup(deployerProperties.getPodSecurityContext().getFsGroup())
 				.withSupplementalGroups(deployerProperties.getPodSecurityContext().getSupplementalGroups());
+
 		if (deployerProperties.getPodSecurityContext().getSeccompProfile() != null) {
 			podSecurityContextBuilder.withNewSeccompProfile(
 					deployerProperties.getPodSecurityContext().getSeccompProfile().getLocalhostProfile(),
@@ -465,6 +468,8 @@ class DeploymentPropertiesResolver {
 		return new SecurityContextBuilder()
 				.withAllowPrivilegeEscalation(deployerProperties.getContainerSecurityContext().getAllowPrivilegeEscalation())
 				.withReadOnlyRootFilesystem(deployerProperties.getContainerSecurityContext().getReadOnlyRootFilesystem())
+				.withRunAsGroup(deployerProperties.getContainerSecurityContext().getRunAsGroup())
+				.withRunAsNonRoot(deployerProperties.getContainerSecurityContext().getRunAsNonRoot())
 				.build();
 	}
 

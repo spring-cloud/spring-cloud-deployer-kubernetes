@@ -1337,6 +1337,8 @@ public class KubernetesAppDeployerTests {
             securityContext.setFsGroup(65534L);
             securityContext.setRunAsUser(65534L);
             securityContext.setSupplementalGroups(new Long[]{65534L});
+            securityContext.setRunAsGroup(65534L);
+            securityContext.setRunAsNonRoot(Boolean.FALSE);
             KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
             seccompProfile.setType("Localhost");
             seccompProfile.setLocalhostProfile("profile.json");
@@ -1347,6 +1349,8 @@ public class KubernetesAppDeployerTests {
                     .withRunAsUser(65534L)
                     .withFsGroup(65534L)
                     .withSupplementalGroups(65534L)
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(Boolean.FALSE)
                     .withSeccompProfile(new SeccompProfile("profile.json", "Localhost"))
                     .build();
             assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
@@ -1360,17 +1364,21 @@ public class KubernetesAppDeployerTests {
             securityContext.setFsGroup(1000L);
             securityContext.setRunAsUser(1000L);
             securityContext.setSupplementalGroups(new Long[]{1000L});
+            securityContext.setRunAsGroup(1000L);
+            securityContext.setRunAsNonRoot(Boolean.FALSE);
             KubernetesDeployerProperties.SeccompProfile seccompProfile = new KubernetesDeployerProperties.SeccompProfile();
             seccompProfile.setType("Localhost");
             seccompProfile.setLocalhostProfile("sec/default-allow.json");
             securityContext.setSeccompProfile(seccompProfile);
             globalDeployerProps.setPodSecurityContext(securityContext);
             Map<String, String> deploymentProps = new HashMap<>();
-            deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, supplementalGroups: [65534,65535], seccompProfile: { type: Localhost, localhostProfile: sec/custom-allow.json } }");
+            deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{runAsUser: 65534, fsGroup: 65534, runAsGroup: 65534, runAsNonRoot: true, supplementalGroups: [65534,65535], seccompProfile: { type: Localhost, localhostProfile: sec/custom-allow.json } }");
             PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
                     .withRunAsUser(65534L)
                     .withFsGroup(65534L)
                     .withSupplementalGroups(65534L, 65535L)
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(Boolean.TRUE)
                     .withSeccompProfile(new SeccompProfile("sec/custom-allow.json", "Localhost"))
                     .build();
             assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
@@ -1446,11 +1454,15 @@ public class KubernetesAppDeployerTests {
             KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
             securityContext.setAllowPrivilegeEscalation(false);
             securityContext.setReadOnlyRootFilesystem(true);
+            securityContext.setRunAsGroup(6543L);
+            securityContext.setRunAsNonRoot(true);
             globalDeployerProps.setContainerSecurityContext(securityContext);
             Map<String, String> deploymentProps = Collections.emptyMap();
             SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
                     .withAllowPrivilegeEscalation(false)
                     .withReadOnlyRootFilesystem(true)
+                    .withRunAsNonRoot(true)
+                    .withRunAsGroup(6543L)
                     .build();
             assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
         }
@@ -1462,11 +1474,15 @@ public class KubernetesAppDeployerTests {
             KubernetesDeployerProperties.ContainerSecurityContext securityContext = new KubernetesDeployerProperties.ContainerSecurityContext();
             securityContext.setAllowPrivilegeEscalation(true);
             securityContext.setReadOnlyRootFilesystem(false);
+            securityContext.setRunAsGroup(1000L);
+            securityContext.setRunAsNonRoot(false);
             globalDeployerProps.setContainerSecurityContext(securityContext);
-            Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
+            Map<String, String> deploymentProps = Collections.singletonMap("spring.cloud.deployer.kubernetes.containerSecurityContext", "{runAsGroup: 6543, runAsNonRoot: true, allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}");
             SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
                     .withAllowPrivilegeEscalation(false)
                     .withReadOnlyRootFilesystem(true)
+                    .withRunAsNonRoot(true)
+                    .withRunAsGroup(6543L)
                     .build();
             assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
         }

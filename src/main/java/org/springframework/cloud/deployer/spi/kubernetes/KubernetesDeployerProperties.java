@@ -347,6 +347,17 @@ public class KubernetesDeployerProperties {
         private Long runAsUser;
 
         /**
+         * The numeric the primary group ID to run the entrypoint of the container process
+         */
+        private Long runAsGroup;
+
+
+        /**
+         * The boolean to run the entrypoint with nonRoot privileges
+         */
+        private Boolean runAsNonRoot;
+
+        /**
          * The numeric group ID for the volumes of the pod
          */
         private Long fsGroup;
@@ -391,6 +402,22 @@ public class KubernetesDeployerProperties {
 
         public void setSeccompProfile(SeccompProfile seccompProfile) {
             this.seccompProfile = seccompProfile;
+        }
+
+        public Long getRunAsGroup() {
+            return runAsGroup;
+        }
+
+        public void setRunAsGroup(Long runAsGroup) {
+            this.runAsGroup = runAsGroup;
+        }
+
+        public Boolean getRunAsNonRoot() {
+            return runAsNonRoot;
+        }
+
+        public void setRunAsNonRoot(Boolean runAsNonRoot) {
+            this.runAsNonRoot = runAsNonRoot;
         }
     }
 
@@ -437,6 +464,17 @@ public class KubernetesDeployerProperties {
          */
         private Boolean readOnlyRootFilesystem;
 
+        /**
+         * The numeric the primary group ID to run the entrypoint of the container process
+         */
+        private Long runAsGroup;
+
+
+        /**
+         * The boolean to run the entrypoint with nonRoot privileges
+         */
+        private Boolean runAsNonRoot;
+
         public void setAllowPrivilegeEscalation(Boolean allowPrivilegeEscalation) {
             this.allowPrivilegeEscalation = allowPrivilegeEscalation;
         }
@@ -451,6 +489,22 @@ public class KubernetesDeployerProperties {
 
         public Boolean getReadOnlyRootFilesystem() {
             return readOnlyRootFilesystem;
+        }
+
+        public Long getRunAsGroup() {
+            return runAsGroup;
+        }
+
+        public void setRunAsGroup(Long runAsGroup) {
+            this.runAsGroup = runAsGroup;
+        }
+
+        public Boolean getRunAsNonRoot() {
+            return runAsNonRoot;
+        }
+
+        public void setRunAsNonRoot(Boolean runAsNonRoot) {
+            this.runAsNonRoot = runAsNonRoot;
         }
     }
 
