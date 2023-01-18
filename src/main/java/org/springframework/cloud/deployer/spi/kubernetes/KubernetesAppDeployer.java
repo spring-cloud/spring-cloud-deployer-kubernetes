@@ -492,7 +492,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
         List<String> command = new LinkedList<>();
 
         String commandString = String
-                .format("%s && %s", setIndexProperty("INSTANCE_INDEX"), setIndexProperty("spring.application.index"));
+                .format("%s && %s", setIndexProperty("INSTANCE_INDEX"), setIndexProperty("spring.cloud.stream.instanceIndex"));
 
         command.add("sh");
         command.add("-c");
@@ -507,8 +507,8 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
     private String setIndexProperty(String name) {
         return String
-                .format("echo %s=\"$(expr $HOSTNAME | grep -o \"[[:digit:]]*$\")\" >> /config/application" + ".properties",
-                        name);
+                .format("echo %s=\"$(expr $HOSTNAME | grep -o \"[[:digit:]]*$\")\" >> "+
+                        "/config/application.properties", name);
     }
 
     private void deleteAllObjects(String appIdToDelete) {
