@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
 import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.core.io.Resource;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -283,6 +284,9 @@ public class AbstractKubernetesDeployer {
 
 		Container initContainer = this.deploymentPropertiesResolver.getInitContainer(deploymentProperties);
 		if (initContainer != null) {
+			if (initContainer.getSecurityContext() == null && containerSecurityContext != null) {
+				initContainer.setSecurityContext(containerSecurityContext);
+			}
 			podSpec.addToInitContainers(initContainer);
 		}
 
@@ -296,7 +300,12 @@ public class AbstractKubernetesDeployer {
 			podSpec.withPriorityClassName(priorityClassName);
 		}
 
-		podSpec.addAllToContainers(this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties));
+		List<Container> additionalContainers = this.deploymentPropertiesResolver.getAdditionalContainers(deploymentProperties);
+		if (containerSecurityContext != null && !CollectionUtils.isEmpty(additionalContainers)) {
+			additionalContainers.stream().filter((c) -> c.getSecurityContext() != null)
+					.forEach((c) -> c.setSecurityContext(containerSecurityContext));
+		}
+		podSpec.addAllToContainers(additionalContainers);
 		return podSpec.build();
 	}
 

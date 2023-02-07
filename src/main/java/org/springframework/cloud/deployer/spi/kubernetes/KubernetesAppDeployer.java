@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.ServiceList;
@@ -64,6 +65,7 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.kubernetes.support.ArgumentSanitizer;
 import org.springframework.cloud.deployer.spi.kubernetes.support.PropertyParserUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -78,6 +80,7 @@ import org.springframework.util.StringUtils;
  * @author Chris Schaefer
  * @author Christian Tzolov
  * @author Omar Gonzalez
+ * @author Chris Bono
  */
 public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements AppDeployer {
 
@@ -311,7 +314,7 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
 
         String statefulSetInitContainerImageName = this.deploymentPropertiesResolver.getStatefulSetInitContainerImageName(kubernetesDeployerProperties);
 
-        podSpec.getInitContainers().add(createStatefulSetInitContainer(statefulSetInitContainerImageName));
+        podSpec.getInitContainers().add(createStatefulSetInitContainer(podSpec, statefulSetInitContainerImageName));
 
         Map<String, String> deploymentLabels = this.deploymentPropertiesResolver.getDeploymentLabels(request.getDeploymentProperties());
         Map<String, String> annotations = this.deploymentPropertiesResolver.getPodAnnotations(kubernetesDeployerProperties);
@@ -485,24 +488,34 @@ public class KubernetesAppDeployer extends AbstractKubernetesDeployer implements
      * <p>
      * Since 1.8 the annotation method has been removed, and the initContainer API is supported since 1.6
      *
+	 * @param podSpec the current pod spec the container is being added to
      * @param imageName the image name to use in the init container
-     * @return a container definition with the above mentioned configuration
+     * @return a container definition with the  aforementioned configuration
      */
-    private Container createStatefulSetInitContainer(String imageName) {
+    private Container createStatefulSetInitContainer(PodSpec podSpec, String imageName) {
         List<String> command = new LinkedList<>();
 
         String commandString = String
                 .format("%s && %s", setIndexProperty("INSTANCE_INDEX"), setIndexProperty("spring.cloud.stream.instanceIndex"));
 
-        command.add("sh");
+		command.add("sh");
         command.add("-c");
         command.add(commandString);
-        return new ContainerBuilder().withName("index-provider")
+
+        ContainerBuilder containerBuilder = new ContainerBuilder().withName("index-provider")
                 .withImage(imageName)
                 .withImagePullPolicy("IfNotPresent")
                 .withCommand(command)
-                .withVolumeMounts(new VolumeMountBuilder().withName("config").withMountPath("/config").build())
-                .build();
+                .withVolumeMounts(new VolumeMountBuilder().withName("config").withMountPath("/config").build());
+
+		if (!CollectionUtils.isEmpty(podSpec.getContainers())) {
+			SecurityContext securityContext = podSpec.getContainers().get(0).getSecurityContext();
+			if (securityContext != null) {
+				containerBuilder.withSecurityContext(securityContext);
+			}
+		}
+
+		return containerBuilder.build();
     }
 
     private String setIndexProperty(String name) {
