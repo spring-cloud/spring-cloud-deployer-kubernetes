@@ -1679,7 +1679,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
     }
 
 	@Nested
-	class SecurityContextTests {
+	class SecurityContextITs {
 
 		@Test
 		void podWithInitContainerAndAdditionalContainers() {
