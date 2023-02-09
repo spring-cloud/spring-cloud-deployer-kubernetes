@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -341,25 +341,57 @@ public class KubernetesDeployerProperties {
     }
 
     public static class PodSecurityContext {
-        /**
-         * The numeric user ID to run pod container processes under
-         */
-        private Long runAsUser;
+		/**
+		 * The numeric user ID to run pod container processes under
+		 */
+		private Long runAsUser;
+
+		/**
+		 * The numeric group id to run the entrypoint of the container process
+		 */
+		private Long runAsGroup;
+
+		/**
+		 * Indicates that the container must run as a non-root user
+		 */
+		private Boolean runAsNonRoot;
 
         /**
          * The numeric group ID for the volumes of the pod
          */
         private Long fsGroup;
 
+		/**
+		 * Defines behavior of changing ownership and permission of the volume before being
+		 * exposed inside pod (only applies to volume types which support fsGroup based
+		 * ownership and permissions) - possible values are "OnRootMismatch", "Always"
+		 */
+		private String fsGroupChangePolicy;
+
         /**
          * The numeric group IDs applied to the pod container processes, in addition to the container's primary group ID
          */
         private Long[] supplementalGroups;
 
-        /**
-         * The seccomp options to use for the pod containers
-         */
-        private SeccompProfile seccompProfile;
+		/**
+		 * The seccomp options to use for the pod containers
+		 */
+		private SeccompProfile seccompProfile;
+
+		/**
+		 * The SELinux context to be applied to the pod containers
+		 */
+		private SELinuxOptions seLinuxOptions;
+
+		/**
+		 * List of namespaced sysctls used for the pod (not used when spec.os.name is windows).
+		 */
+		private List<SysctlInfo> sysctls;
+
+		/**
+		 * The Windows specific settings applied to all containers.
+		 */
+		private WindowsSecurityContextOptions windowsOptions;
 
         public void setRunAsUser(Long runAsUser) {
             this.runAsUser = runAsUser;
@@ -369,7 +401,23 @@ public class KubernetesDeployerProperties {
             return this.runAsUser;
         }
 
-        public void setFsGroup(Long fsGroup) {
+		public Long getRunAsGroup() {
+			return runAsGroup;
+		}
+
+		public void setRunAsGroup(Long runAsGroup) {
+			this.runAsGroup = runAsGroup;
+		}
+
+		public Boolean getRunAsNonRoot() {
+			return runAsNonRoot;
+		}
+
+		public void setRunAsNonRoot(Boolean runAsNonRoot) {
+			this.runAsNonRoot = runAsNonRoot;
+		}
+
+		public void setFsGroup(Long fsGroup) {
             this.fsGroup = fsGroup;
         }
 
@@ -377,7 +425,15 @@ public class KubernetesDeployerProperties {
             return fsGroup;
         }
 
-        public void setSupplementalGroups(Long[] supplementalGroups) {
+		public String getFsGroupChangePolicy() {
+			return fsGroupChangePolicy;
+		}
+
+		public void setFsGroupChangePolicy(String fsGroupChangePolicy) {
+			this.fsGroupChangePolicy = fsGroupChangePolicy;
+		}
+
+		public void setSupplementalGroups(Long[] supplementalGroups) {
             this.supplementalGroups = supplementalGroups;
         }
 
@@ -392,12 +448,213 @@ public class KubernetesDeployerProperties {
         public void setSeccompProfile(SeccompProfile seccompProfile) {
             this.seccompProfile = seccompProfile;
         }
-    }
 
-    /**
+		public SELinuxOptions getSeLinuxOptions() {
+			return seLinuxOptions;
+		}
+
+		public void setSeLinuxOptions(SELinuxOptions seLinuxOptions) {
+			this.seLinuxOptions = seLinuxOptions;
+		}
+
+		public List<SysctlInfo> getSysctls() {
+			return sysctls;
+		}
+
+		public void setSysctls(List<SysctlInfo> sysctls) {
+			this.sysctls = sysctls;
+		}
+
+		public WindowsSecurityContextOptions getWindowsOptions() {
+			return windowsOptions;
+		}
+
+		public void setWindowsOptions(WindowsSecurityContextOptions windowsOptions) {
+			this.windowsOptions = windowsOptions;
+		}
+	}
+
+	public static class ContainerSecurityContext {
+
+		/**
+		 * Whether a process can gain more privileges than its parent process
+		 */
+		private Boolean allowPrivilegeEscalation;
+
+		/**
+		 * The capabilities to add/drop when running the container (cannot be set when spec.os.name is windows)
+		 */
+		private Capabilities capabilities;
+
+		/**
+		 * Run container in privileged mode.
+		 */
+		private Boolean privileged;
+
+		/**
+		 * The type of proc mount to use for the container (cannot be set when spec.os.name is windows)
+		 */
+		private String procMount;
+
+		/**
+		 * Mounts the container's root filesystem as read-only
+		 */
+		private Boolean readOnlyRootFilesystem;
+
+		/**
+		 * The numeric user ID to run pod container processes under
+		 */
+		private Long runAsUser;
+
+		/**
+		 * The numeric group id to run the entrypoint of the container process
+		 */
+		private Long runAsGroup;
+
+		/**
+		 * Indicates that the container must run as a non-root user
+		 */
+		private Boolean runAsNonRoot;
+
+		/**
+		 * The seccomp options to use for the container
+		 */
+		private SeccompProfile seccompProfile;
+
+		/**
+		 * The SELinux context to be applied to the container.
+		 */
+		private SELinuxOptions seLinuxOptions;
+
+		/**
+		 * The Windows specific settings applied to the container.
+		 */
+		private WindowsSecurityContextOptions windowsOptions;
+
+		public Boolean getAllowPrivilegeEscalation() {
+			return allowPrivilegeEscalation;
+		}
+
+		public void setAllowPrivilegeEscalation(Boolean allowPrivilegeEscalation) {
+			this.allowPrivilegeEscalation = allowPrivilegeEscalation;
+		}
+
+		public Capabilities getCapabilities() {
+			return capabilities;
+		}
+
+		public void setCapabilities(Capabilities capabilities) {
+			this.capabilities = capabilities;
+		}
+
+		public Boolean getPrivileged() {
+			return privileged;
+		}
+
+		public void setPrivileged(Boolean privileged) {
+			this.privileged = privileged;
+		}
+
+		public String getProcMount() {
+			return procMount;
+		}
+
+		public void setProcMount(String procMount) {
+			this.procMount = procMount;
+		}
+
+		public Boolean getReadOnlyRootFilesystem() {
+			return readOnlyRootFilesystem;
+		}
+
+		public void setReadOnlyRootFilesystem(Boolean readOnlyRootFilesystem) {
+			this.readOnlyRootFilesystem = readOnlyRootFilesystem;
+		}
+
+		public Long getRunAsUser() {
+			return runAsUser;
+		}
+
+		public void setRunAsUser(Long runAsUser) {
+			this.runAsUser = runAsUser;
+		}
+
+		public Long getRunAsGroup() {
+			return runAsGroup;
+		}
+
+		public void setRunAsGroup(Long runAsGroup) {
+			this.runAsGroup = runAsGroup;
+		}
+
+		public Boolean getRunAsNonRoot() {
+			return runAsNonRoot;
+		}
+
+		public void setRunAsNonRoot(Boolean runAsNonRoot) {
+			this.runAsNonRoot = runAsNonRoot;
+		}
+
+		public SeccompProfile getSeccompProfile() {
+			return seccompProfile;
+		}
+
+		public void setSeccompProfile(SeccompProfile seccompProfile) {
+			this.seccompProfile = seccompProfile;
+		}
+
+		public SELinuxOptions getSeLinuxOptions() {
+			return seLinuxOptions;
+		}
+
+		public void setSeLinuxOptions(SELinuxOptions seLinuxOptions) {
+			this.seLinuxOptions = seLinuxOptions;
+		}
+
+		public WindowsSecurityContextOptions getWindowsOptions() {
+			return windowsOptions;
+		}
+
+		public void setWindowsOptions(WindowsSecurityContextOptions windowsOptions) {
+			this.windowsOptions = windowsOptions;
+		}
+	}
+
+	/**
+	 * Adds and removes POSIX capabilities from running containers.
+	 */
+	public static class Capabilities {
+		/**
+		 * Added capabilities.
+		 */
+		private List<String> add;
+
+		/**
+		 * Removed capabilities.
+		 */
+		private List<String> drop;
+
+		public List<String> getAdd() {
+			return add;
+		}
+
+		public void setAdd(List<String> add) {
+			this.add = add;
+		}
+
+		public List<String> getDrop() {
+			return drop;
+		}
+
+		public void setDrop(List<String> drop) {
+			this.drop = drop;
+		}
+	}
+
+	/**
      * Defines a pod seccomp profile settings.
      */
-    public static class SeccompProfile {
+	public static class SeccompProfile {
 
         /**
          * Type of seccomp profile.
@@ -426,35 +683,154 @@ public class KubernetesDeployerProperties {
         }
     }
 
-    public static class ContainerSecurityContext {
-        /**
-         * Whether a process can gain more privileges than its parent process
-         */
-        private Boolean allowPrivilegeEscalation;
+	/**
+	 * The labels to be applied to the container.
+	 */
+	public static class SELinuxOptions {
+		/**
+		 * Level label applied to the container
+		 */
+		private String level;
 
-        /**
-         * Mounts the container's root filesystem as read-only
-         */
-        private Boolean readOnlyRootFilesystem;
+		/**
+		 * Role Level label applied to the container
+		 */
+		private String role;
 
-        public void setAllowPrivilegeEscalation(Boolean allowPrivilegeEscalation) {
-            this.allowPrivilegeEscalation = allowPrivilegeEscalation;
-        }
+		/**
+		 * Type label applied to the container
+		 */
+		private String type;
 
-        public Boolean getAllowPrivilegeEscalation() {
-            return allowPrivilegeEscalation;
-        }
+		/**
+		 * User label applied to the container
+		 */
+		private String user;
 
-        public void setReadOnlyRootFilesystem(Boolean readOnlyRootFilesystem) {
-            this.readOnlyRootFilesystem = readOnlyRootFilesystem;
-        }
+		public String getLevel() {
+			return level;
+		}
 
-        public Boolean getReadOnlyRootFilesystem() {
-            return readOnlyRootFilesystem;
-        }
-    }
+		public void setLevel(String level) {
+			this.level = level;
+		}
 
-    public static class Lifecycle {
+		public String getRole() {
+			return role;
+		}
+
+		public void setRole(String role) {
+			this.role = role;
+		}
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+		public String getUser() {
+			return user;
+		}
+
+		public void setUser(String user) {
+			this.user = user;
+		}
+	}
+
+	/**
+	 * Sysctl defines a kernel parameter to be set on the pod.
+	 */
+	public static class SysctlInfo {
+		/**
+		 * Name of the property
+		 */
+		private String name;
+
+		/**
+		 * Value of the property
+		 */
+		private String value;
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		public String getValue() {
+			return value;
+		}
+
+		public void setValue(String value) {
+			this.value = value;
+		}
+	}
+
+	/**
+	 * Contains Windows-specific options and credentials.
+	 */
+	public static class WindowsSecurityContextOptions {
+
+		/**
+		 * Where the GMSA admission webhook inlines the contents of the GMSA credential spec
+		 * named by the GMSACredentialSpecName field.
+		 */
+		private String gmsaCredentialSpec;
+
+		/**
+		 * The name of the GMSA credential spec to use.
+		 */
+		private String gmsaCredentialSpecName;
+
+		/**
+		 * Whether a container should be run as a 'Host Process' container.
+		 */
+		private Boolean hostProcess;
+
+		/**
+		 * The username in Windows to run the entrypoint of the container process.
+		 */
+		private String runAsUserName;
+
+		public String getGmsaCredentialSpec() {
+			return gmsaCredentialSpec;
+		}
+
+		public void setGmsaCredentialSpec(String gmsaCredentialSpec) {
+			this.gmsaCredentialSpec = gmsaCredentialSpec;
+		}
+
+		public String getGmsaCredentialSpecName() {
+			return gmsaCredentialSpecName;
+		}
+
+		public void setGmsaCredentialSpecName(String gmsaCredentialSpecName) {
+			this.gmsaCredentialSpecName = gmsaCredentialSpecName;
+		}
+
+		public Boolean getHostProcess() {
+			return hostProcess;
+		}
+
+		public void setHostProcess(Boolean hostProcess) {
+			this.hostProcess = hostProcess;
+		}
+
+		public String getRunAsUserName() {
+			return runAsUserName;
+		}
+
+		public void setRunAsUserName(String runAsUserName) {
+			this.runAsUserName = runAsUserName;
+		}
+	}
+
+	public static class Lifecycle {
         private Hook postStart;
         private Hook preStop;
 
@@ -500,7 +876,7 @@ public class KubernetesDeployerProperties {
         }
     }
 
-    public static class InitContainer extends ContainerProperties {
+	public static class InitContainer extends ContainerProperties {
     }
 
     static class Container extends io.fabric8.kubernetes.api.model.Container {
