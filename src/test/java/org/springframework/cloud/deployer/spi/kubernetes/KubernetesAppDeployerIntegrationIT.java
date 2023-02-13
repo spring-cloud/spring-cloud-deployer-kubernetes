@@ -1690,7 +1690,7 @@ public class KubernetesAppDeployerIntegrationIT extends AbstractAppDeployerInteg
 			deploymentProps.put("spring.cloud.deployer.kubernetes.additional-containers",
 					"[" +
 						"{ name: 'extra-container-5150', image: 'busybox:latest', command: ['sh', '-c'], args: [\"while true; do echo ‘hello 5150’ & sleep 2; done\"]}," +
-						"{ name: 'extra-container-6160', image: 'busybox:latest', command: ['sh', '-c'], args: [\"while true; do echo ‘hello 5150’ & sleep 2; done\"]}" +
+						"{ name: 'extra-container-6160', image: 'busybox:latest', command: ['sh', '-c'], args: [\"while true; do echo ‘hello 6160’ & sleep 2; done\"]}" +
 					"]");
 			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext",
 					"{ fsGroup: 65534" +
