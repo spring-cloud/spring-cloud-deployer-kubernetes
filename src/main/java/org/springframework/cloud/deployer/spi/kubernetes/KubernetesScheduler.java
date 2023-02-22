@@ -52,8 +52,10 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 	protected static final String SPRING_CRONJOB_ID_KEY = "spring-cronjob-id";
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
-	
+
 	static final String KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.concurrencyPolicy";
+
+	static final String KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.ttlSecondsAfterFinished";
 
 	public KubernetesScheduler(KubernetesClient client,
 			KubernetesDeployerProperties properties) {
@@ -65,8 +67,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		this.containerFactory = new DefaultContainerFactory(properties);
 		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
 				(properties instanceof KubernetesSchedulerProperties) ?
-				KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX:
-				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, properties);
+						KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX:
+						KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, properties);
 	}
 
 	@Override
@@ -204,7 +206,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 				schedulerProperties.get("spring.cloud.deployer.kubernetes.cron.expression") :
 				schedulerProperties.get(SchedulerPropertyKeys.CRON_EXPRESSION);
 		Assert.hasText(schedule, "The property spring.cloud.deployer.cron.expression must be defined");
-		
+
 		String concurrencyPolicy = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY);
 		// check default server properties
 		if (!StringUtils.hasText(concurrencyPolicy)) {
@@ -212,7 +214,13 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		}
 		if(concurrencyPolicy==null) {
 			concurrencyPolicy = "Allow";
-		} 
+		}
+
+		Integer ttlSecondsAfterFinished = null;
+		String ttlSecondsAfterFinishedString = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED);
+		if (StringUtils.hasText(ttlSecondsAfterFinishedString) && Pattern.matches("^[0-9]+$", ttlSecondsAfterFinishedString)) {
+			ttlSecondsAfterFinished = Integer.parseInt(ttlSecondsAfterFinishedString);
+		}
 
 		PodSpec podSpec = createPodSpec(new ScheduleRequest(scheduleRequest.getDefinition(),schedulerProperties, scheduleRequest.getCommandlineArguments(), scheduleRequest.getScheduleName(),scheduleRequest.getResource()));
 		String taskServiceAccountName = this.deploymentPropertiesResolver.getTaskServiceAccountName(schedulerProperties);
@@ -226,7 +234,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		CronJob cronJob = new CronJobBuilder().withNewMetadata().withName(scheduleRequest.getScheduleName())
 				.withLabels(labels).withAnnotations(this.deploymentPropertiesResolver.getJobAnnotations(schedulerProperties)).endMetadata()
 				.withNewSpec().withSchedule(schedule).withConcurrencyPolicy(concurrencyPolicy).withNewJobTemplate()
-				.withNewSpec().withNewTemplate().withNewMetadata().addToAnnotations(annotations).addToLabels(labels)
+				.withNewSpec().withTtlSecondsAfterFinished(ttlSecondsAfterFinished)
+				.withNewTemplate().withNewMetadata().addToAnnotations(annotations).addToLabels(labels)
 				.endMetadata().withSpec(podSpec).endTemplate().endSpec()
 				.endJobTemplate().endSpec().build();
 

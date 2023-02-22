@@ -965,7 +965,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	
 	@ParameterizedTest
 	@ValueSource(strings = {"Forbid","Allow","Replace"})
-	public void testConcurencyPolicy(String concurrencyPolicy) {
+	public void testConcurrencyPolicy(String concurrencyPolicy) {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -988,6 +988,34 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {"100", "86400"})
+	public void testTtlSecondsAfterFinished(String ttlSecondsAfterFinished) {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
+		schedulerProperties.put(KubernetesScheduler.KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED, ttlSecondsAfterFinished);
+
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties,
+				getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTtlSecondsAfterFinished())
+				.isEqualTo(Integer.parseInt(ttlSecondsAfterFinished));
+
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
 
 	@Test
 	public void testConcurencyPolicyDefault() {
