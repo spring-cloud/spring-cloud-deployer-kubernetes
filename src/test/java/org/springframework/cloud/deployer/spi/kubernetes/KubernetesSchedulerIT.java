@@ -107,12 +107,12 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	protected Map<String, String> getSchedulerProperties() {
 		return Collections.singletonMap(SchedulerPropertyKeys.CRON_EXPRESSION, "57 13 ? * *");
 	}
-	
-	
+
+
 	private Map<String, String> getSchedulerProperties(String concurrencyPolicy) {
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(KubernetesScheduler.KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY, concurrencyPolicy);
-		return schedulerProperties;		
+		return schedulerProperties;
 	}
 
 	@Override
@@ -195,12 +195,12 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		assertThat(mergedProperties
 				.get(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".imagePullPolicy"))
-						.as("Expected value from Scheduler properties, but found in Deployer properties")
-						.isEqualTo("Never");
+				.as("Expected value from Scheduler properties, but found in Deployer properties")
+				.isEqualTo("Never");
 		assertThat(mergedProperties
 				.get(KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".environmentVariables"))
-						.as("Deployer property is expected to be merged as scheduler property")
-						.isEqualTo("MYVAR1=MYVAL1,MYVAR2=MYVAL2");
+				.as("Deployer property is expected to be merged as scheduler property")
+				.isEqualTo("MYVAR1=MYVAL1,MYVAR2=MYVAL2");
 	}
 
 	@Test
@@ -282,7 +282,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		assertThatThrownBy(() -> {
 			scheduler.schedule(scheduleRequest2);
 		}).isInstanceOf(CreateScheduleException.class)
-			.hasMessage(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
+				.hasMessage(String.format("Failed to create schedule because Schedule Name: '%s' has too many characters.  Schedule name length must be 52 characters or less", baseScheduleName + "1"));
 	}
 
 	@ParameterizedTest
@@ -321,7 +321,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testWithShellEntryPoint(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -354,7 +354,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testWithBootEntryPoint(boolean isDeprecated) throws IOException {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setEntryPointStyle(EntryPointStyle.boot);
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -432,7 +432,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testEntryPointStyleOverride(boolean isDeprecated) throws Exception {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -474,7 +474,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testEntryPointStyleDefault(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -503,7 +503,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testImagePullPolicyOverride(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -536,7 +536,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testJobAnnotationsAndLabelsFromSchedulerProperties(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setJobAnnotations("test1:value1");
 		kubernetesDeployerProperties.setPodAnnotations("podtest1:podvalue1");
 		kubernetesDeployerProperties.setDeploymentLabels("label1:value1,label2:value2");
@@ -592,7 +592,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testJobAnnotationsAndLabelsFromSchedulerRequest(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setJobAnnotations("test1:value1");
 		kubernetesDeployerProperties.setPodAnnotations("podtest1:podvalue1");
 		kubernetesDeployerProperties.setDeploymentLabels("label1:value1,label2:value2");
@@ -636,7 +636,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testJobAnnotationsOverride(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		kubernetesDeployerProperties.setJobAnnotations("test1:value1");
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -666,7 +666,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testImagePullPolicyDefault(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -678,7 +678,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), Collections.emptyMap(), getCommandLineArgs(), randomName(), testApplication()) :
-			new ScheduleRequest(appDefinition, getDeploymentProperties(), getCommandLineArgs(), randomName(), testApplication());
+				new ScheduleRequest(appDefinition, getDeploymentProperties(), getCommandLineArgs(), randomName(), testApplication());
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 		CronJobSpec cronJobSpec = cronJob.getSpec();
 
@@ -693,7 +693,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testImagePullSecret(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -726,7 +726,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testImagePullSecretDefault(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -754,7 +754,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testImagePullSecretFromSchedulerProperties(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -800,7 +800,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testGlobalEnvironmentVariables(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -831,7 +831,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testGlobalAndCustomEnvironmentVariables(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -855,7 +855,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testCustomEnvironmentVariablesOverrideGlobal(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -903,7 +903,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testTaskServiceAccountNameOverride(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -937,7 +937,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testTaskServiceAccountNameDefault(boolean isDeprecated) {
 		KubernetesDeployerProperties kubernetesDeployerProperties =
-						new KubernetesDeployerProperties();
+				new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
@@ -962,10 +962,10 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
-	
+
 	@ParameterizedTest
 	@ValueSource(strings = {"Forbid","Allow","Replace"})
-	public void testConcurencyPolicy(String concurrencyPolicy) {
+	public void testConcurrencyPolicy(String concurrencyPolicy) {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -978,19 +978,18 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(concurrencyPolicy),
-				 getCommandLineArgs(), randomName(), testApplication());
+				getCommandLineArgs(), randomName(), testApplication());
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
 		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo(concurrencyPolicy);
-		
-		
+
+
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
 
-
 	@Test
-	public void testConcurencyPolicyDefault() {
+	public void testConcurrencyPolicyDefault() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -1003,18 +1002,18 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
-				 getCommandLineArgs(), randomName(), testApplication());
+				getCommandLineArgs(), randomName(), testApplication());
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
 		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo("Allow");
-		
-		
+
+
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
-	
+
 	@Test
-	public void testConcurencyPolicyFromServerProperties() {
+	public void testConcurrencyPolicyFromServerProperties() {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
@@ -1028,16 +1027,108 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
-				 getCommandLineArgs(), randomName(), testApplication());
+				getCommandLineArgs(), randomName(), testApplication());
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
 		assertThat(cronJob.getSpec().getConcurrencyPolicy()).isEqualTo("Forbid");
-		
-		
+
+
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
-	
+
+	@ParameterizedTest
+	@ValueSource(strings = {"100", "86400"})
+	public void testTtlSecondsAfterFinished(String ttlSecondsAfterFinished) {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
+		schedulerProperties.put(KubernetesScheduler.KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED, ttlSecondsAfterFinished);
+
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties,
+				getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTtlSecondsAfterFinished())
+				.isEqualTo(Integer.parseInt(ttlSecondsAfterFinished));
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"100 2", "one", "10'"})
+	public void testInvalidTtlSecondsAfterFinished(String ttlSecondsAfterFinished) {
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
+		schedulerProperties.put(KubernetesScheduler.KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED, ttlSecondsAfterFinished);
+
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, schedulerProperties,
+				getCommandLineArgs(), randomName(), testApplication());
+
+		assertThatThrownBy(() -> {
+			scheduler.schedule(scheduleRequest);
+		}).isInstanceOf(NumberFormatException.class);
+	}
+
+	@Test
+	public void testTtlSecondsAfterFinishedDefault() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTtlSecondsAfterFinished())
+				.isNull();
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
+
+	@Test
+	public void testTtlSecondsAfterFinishedFromServerProperties() {
+		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+		if (kubernetesDeployerProperties.getNamespace() == null) {
+			kubernetesDeployerProperties.setNamespace("default");
+		}
+		kubernetesDeployerProperties.getCron().setTtlSecondsAfterFinished(86400);
+		KubernetesClient kubernetesClient = new DefaultKubernetesClient()
+				.inNamespace(kubernetesDeployerProperties.getNamespace());
+
+		KubernetesScheduler kubernetesScheduler = new KubernetesScheduler(kubernetesClient,
+				kubernetesDeployerProperties);
+
+		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
+		ScheduleRequest scheduleRequest = new ScheduleRequest(appDefinition, getSchedulerProperties(),
+				getCommandLineArgs(), randomName(), testApplication());
+
+		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
+
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTtlSecondsAfterFinished()).isEqualTo(86400);
+
+
+		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
+	}
 
 	@AfterAll
 	public static void cleanup() {
