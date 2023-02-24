@@ -216,10 +216,12 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 			concurrencyPolicy = "Allow";
 		}
 
-		Integer ttlSecondsAfterFinished = null;
+		final Integer ttlSecondsAfterFinished;
 		String ttlSecondsAfterFinishedString = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED);
-		if (StringUtils.hasText(ttlSecondsAfterFinishedString) && Pattern.matches("^[0-9]+$", ttlSecondsAfterFinishedString)) {
+		if (StringUtils.hasText(ttlSecondsAfterFinishedString)) {
 			ttlSecondsAfterFinished = Integer.parseInt(ttlSecondsAfterFinishedString);
+		} else {
+			ttlSecondsAfterFinished = this.properties.getCron().getTtlSecondsAfterFinished();
 		}
 
 		PodSpec podSpec = createPodSpec(new ScheduleRequest(scheduleRequest.getDefinition(),schedulerProperties, scheduleRequest.getCommandlineArguments(), scheduleRequest.getScheduleName(),scheduleRequest.getResource()));
