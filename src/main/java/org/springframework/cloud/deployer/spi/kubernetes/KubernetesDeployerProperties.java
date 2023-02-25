@@ -1480,11 +1480,11 @@ public class KubernetesDeployerProperties {
     public void setImagePullSecrets(List<String> imagePullSecrets) {
         this.imagePullSecrets = imagePullSecrets;
     }
-	
+
 	public static class CronConfig {
 		private String concurrencyPolicy;
 
-        private Integer ttlSecondsAfterFinished;
+		private Integer ttlSecondsAfterFinished;
 
 		public String getConcurrencyPolicy() {
 			return concurrencyPolicy;
@@ -1494,13 +1494,13 @@ public class KubernetesDeployerProperties {
 			this.concurrencyPolicy = concurrencyPolicy;
 		}
 
-        public Integer getTtlSecondsAfterFinished() {
-            return ttlSecondsAfterFinished;
-        }
+		public Integer getTtlSecondsAfterFinished() {
+			return ttlSecondsAfterFinished;
+		}
 
-        public void setTtlSecondsAfterFinished(Integer ttlSecondsAfterFinished) {
-            this.ttlSecondsAfterFinished = ttlSecondsAfterFinished;
-        }
+		public void setTtlSecondsAfterFinished(Integer ttlSecondsAfterFinished) {
+			this.ttlSecondsAfterFinished = ttlSecondsAfterFinished;
+		}
 	}
 
     public Boolean getShareProcessNamespace() {

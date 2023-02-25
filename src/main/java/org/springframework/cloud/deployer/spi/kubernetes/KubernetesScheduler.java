@@ -53,9 +53,9 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 
 	private static final String SCHEDULE_EXPRESSION_FIELD_NAME = "spec.schedule";
 
-	static final String KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.concurrencyPolicy";
+	static final String KUBERNETES_DEPLOYER_CRON_CONCURRENCY_POLICY = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".cron.concurrencyPolicy";
 
-	static final String KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX+".cron.ttlSecondsAfterFinished";
+	static final String KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED = KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX + ".cron.ttlSecondsAfterFinished";
 
 	public KubernetesScheduler(KubernetesClient client,
 			KubernetesDeployerProperties properties) {
@@ -67,7 +67,7 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		this.containerFactory = new DefaultContainerFactory(properties);
 		this.deploymentPropertiesResolver = new DeploymentPropertiesResolver(
 				(properties instanceof KubernetesSchedulerProperties) ?
-						KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX:
+						KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
 						KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX, properties);
 	}
 
@@ -220,7 +220,8 @@ public class KubernetesScheduler extends AbstractKubernetesDeployer implements S
 		String ttlSecondsAfterFinishedString = schedulerProperties.get(KUBERNETES_DEPLOYER_CRON_TTL_SECONDS_AFTER_FINISHED);
 		if (StringUtils.hasText(ttlSecondsAfterFinishedString)) {
 			ttlSecondsAfterFinished = Integer.parseInt(ttlSecondsAfterFinishedString);
-		} else {
+		}
+		else {
 			ttlSecondsAfterFinished = this.properties.getCron().getTtlSecondsAfterFinished();
 		}
 

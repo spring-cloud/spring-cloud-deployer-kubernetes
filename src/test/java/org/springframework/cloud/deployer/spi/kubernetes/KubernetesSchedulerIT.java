@@ -80,7 +80,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
-@ContextConfiguration(classes = { KubernetesSchedulerIT.Config.class })
+@ContextConfiguration(classes = {KubernetesSchedulerIT.Config.class})
 public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tests {
 
 	@Autowired
@@ -156,7 +156,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 	@ValueSource(booleans = {true, false})
 	public void testMissingSchedule(boolean isDeprecated) {
 		AppDefinition appDefinition = new AppDefinition(randomName(), null);
-		ScheduleRequest scheduleRequest = (isDeprecated)?
+		ScheduleRequest scheduleRequest = (isDeprecated) ?
 				new ScheduleRequest(appDefinition, null, null, null, null, testApplication()) :
 				new ScheduleRequest(appDefinition, null, (List<String>) null, null, testApplication());
 
@@ -171,7 +171,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		AppDefinition appDefinition = new AppDefinition("AAAAAA", null);
 		ScheduleRequest scheduleRequest = (isDeprecated) ?
 				new ScheduleRequest(appDefinition, null, null, null, "AAAAA", testApplication()) :
-				new ScheduleRequest(appDefinition, null,(List<String>) null, "AAAAA", testApplication());
+				new ScheduleRequest(appDefinition, null, (List<String>) null, "AAAAA", testApplication());
 
 		assertThatThrownBy(() -> {
 			scheduler.schedule(scheduleRequest);
@@ -302,7 +302,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 				kubernetesDeployerProperties);
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
-		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()):
+		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()) :
 				new ScheduleRequest(appDefinition, getDeploymentProperties(), getCommandLineArgs(), randomName(), testApplication());
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
@@ -312,7 +312,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		assertThat(container.getArgs()).as("Command line arguments should not be null").isNotNull();
 		assertThat(container.getEnv()).as("Environment variables should not be null").isNotNull();
-		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID").hasSize(1);
+		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID")
+				.hasSize(1);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -334,7 +335,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 				kubernetesDeployerProperties);
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
-		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()):
+		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()) :
 				new ScheduleRequest(appDefinition, getSchedulerProperties(), getCommandLineArgs(), randomName(), testApplication());
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 		CronJobSpec cronJobSpec = cronJob.getSpec();
@@ -366,7 +367,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 				kubernetesDeployerProperties);
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
-		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()):
+		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, getSchedulerProperties(), null, getCommandLineArgs(), randomName(), testApplication()) :
 				new ScheduleRequest(appDefinition, getSchedulerProperties(), getCommandLineArgs(), randomName(), testApplication());
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 		CronJobSpec cronJobSpec = cronJob.getSpec();
@@ -493,7 +494,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID").hasSize(1);
+		assertThat(container.getEnv()).as("Environment variables should only have SPRING_CLOUD_APPLICATION_GUID")
+				.hasSize(1);
 		assertThat(container.getArgs()).as("Command line arguments should not be empty").isNotEmpty();
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
@@ -555,10 +557,14 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
-		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value1");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations().get("podtest1")).as("Pod annotation is not set").isEqualTo("podvalue1");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set")
+				.isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations()
+				.get("podtest1")).as("Pod annotation is not set").isEqualTo("podvalue1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -582,7 +588,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
 		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations()).isNull();
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().size()).as("Should have one label").isEqualTo(1);
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.size()).as("Should have one label").isEqualTo(1);
 		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get(
 				KubernetesScheduler.SPRING_CRONJOB_ID_KEY)).as("Default label is not set").isNotNull();
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
@@ -608,7 +615,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		Map<String, String> scheduleProperties = new HashMap<>();
 		scheduleProperties.putAll(getSchedulerProperties());
-		if(isDeprecated) {
+		if (isDeprecated) {
 			scheduleProperties.put("spring.cloud.scheduler.kubernetes.deploymentLabels", "requestLabel1:requestValue1,requestLabel2:requestValue2");
 			scheduleProperties.put("spring.cloud.scheduler.kubernetes.podAnnotations", "requestPod1:requestPodValue1");
 		}
@@ -620,14 +627,20 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 				new ScheduleRequest(appDefinition, scheduleProperties, getCommandLineArgs(), randomName(), testApplication());
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
-		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value1");
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set")
+				.isEqualTo("value1");
 		// Pod annotation from the request should override the top level property values
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations().get("requestPod1")).as("Pod annotation is not set").isEqualTo("requestPodValue1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getAnnotations()
+				.get("requestPod1")).as("Pod annotation is not set").isEqualTo("requestPodValue1");
 		// Deployment label from the request should get appended to the top level property values
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("requestLabel1")).as("Pod Label1 from the request is not set").isEqualTo("requestValue1");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("requestLabel2")).as("Pod Label2 from the request is not set").isEqualTo("requestValue2");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
-		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels().get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("requestLabel1")).as("Pod Label1 from the request is not set").isEqualTo("requestValue1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("requestLabel2")).as("Pod Label2 from the request is not set").isEqualTo("requestValue2");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("label1")).as("Pod Label1 is not set").isEqualTo("value1");
+		assertThat(cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getMetadata().getLabels()
+				.get("label2")).as("Pod Label2 is not set").isEqualTo("value2");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -657,7 +670,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 
-		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set").isEqualTo("value2");
+		assertThat(cronJob.getMetadata().getAnnotations().get("test1")).as("Job annotation is not set")
+				.isEqualTo("value2");
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -684,7 +698,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		Container container = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec().getContainers().get(0);
 
-		assertThat(ImagePullPolicy.relaxedValueOf(container.getImagePullPolicy())).as("Unexpected default image pull policy").isEqualTo(ImagePullPolicy.IfNotPresent);
+		assertThat(ImagePullPolicy.relaxedValueOf(container.getImagePullPolicy())).as("Unexpected default image pull policy")
+				.isEqualTo(ImagePullPolicy.IfNotPresent);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
@@ -790,8 +805,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR1=MYVAL1,MYVAR2=MYVAL2");
 
-		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR1", "MYVAL1", null),
-				new EnvVar("MYVAR2", "MYVAL2", null) };
+		EnvVar[] expectedVars = new EnvVar[] {new EnvVar("MYVAR1", "MYVAL1", null),
+				new EnvVar("MYVAR2", "MYVAL2", null)};
 
 		testEnvironmentVariables(new KubernetesDeployerProperties(), schedulerProperties, expectedVars, isDeprecated);
 	}
@@ -804,10 +819,10 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
-		kubernetesDeployerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1" ,"MYVAR2=MYVAL2" });
+		kubernetesDeployerProperties.setEnvironmentVariables(new String[] {"MYVAR1=MYVAL1", "MYVAR2=MYVAL2"});
 
-		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR1", "MYVAL1", null),
-				new EnvVar("MYVAR2", "MYVAL2", null) };
+		EnvVar[] expectedVars = new EnvVar[] {new EnvVar("MYVAR1", "MYVAL1", null),
+				new EnvVar("MYVAR2", "MYVAL2", null)};
 
 		testEnvironmentVariables(kubernetesDeployerProperties, getSchedulerProperties(), expectedVars, isDeprecated);
 	}
@@ -821,8 +836,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR='VAL1,VAL2',MYVAR2=MYVAL2");
 
-		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR", "VAL1,VAL2", null),
-				new EnvVar("MYVAR2", "MYVAL2", null) };
+		EnvVar[] expectedVars = new EnvVar[] {new EnvVar("MYVAR", "VAL1,VAL2", null),
+				new EnvVar("MYVAR2", "MYVAL2", null)};
 
 		testEnvironmentVariables((isDeprecated) ? new KubernetesSchedulerProperties() : new KubernetesDeployerProperties(), schedulerProperties, expectedVars, isDeprecated);
 	}
@@ -836,7 +851,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
-		kubernetesDeployerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1","MYVAR2=MYVAL2" });
+		kubernetesDeployerProperties.setEnvironmentVariables(new String[] {"MYVAR1=MYVAL1", "MYVAR2=MYVAL2"});
 
 		String prefix = (isDeprecated) ? KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
 				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
@@ -844,9 +859,9 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR3=MYVAL3,MYVAR4=MYVAL4");
 
-		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR1", "MYVAL1", null),
+		EnvVar[] expectedVars = new EnvVar[] {new EnvVar("MYVAR1", "MYVAL1", null),
 				new EnvVar("MYVAR2", "MYVAL2", null), new EnvVar("MYVAR3", "MYVAL3", null),
-				new EnvVar("MYVAR4", "MYVAL4", null) };
+				new EnvVar("MYVAR4", "MYVAL4", null)};
 
 		testEnvironmentVariables(kubernetesDeployerProperties, schedulerProperties, expectedVars, isDeprecated);
 	}
@@ -859,7 +874,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		if (kubernetesDeployerProperties.getNamespace() == null) {
 			kubernetesDeployerProperties.setNamespace("default");
 		}
-		kubernetesDeployerProperties.setEnvironmentVariables(new String[] { "MYVAR1=MYVAL1", "MYVAR2=MYVAL2" });
+		kubernetesDeployerProperties.setEnvironmentVariables(new String[] {"MYVAR1=MYVAL1", "MYVAR2=MYVAL2"});
 
 		String prefix = (isDeprecated) ? KubernetesSchedulerProperties.KUBERNETES_SCHEDULER_PROPERTIES_PREFIX :
 				KubernetesDeployerProperties.KUBERNETES_DEPLOYER_PROPERTIES_PREFIX;
@@ -867,8 +882,8 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 		Map<String, String> schedulerProperties = new HashMap<>(getSchedulerProperties());
 		schedulerProperties.put(prefix + ".environmentVariables", "MYVAR2=OVERRIDE");
 
-		EnvVar[] expectedVars = new EnvVar[] { new EnvVar("MYVAR1", "MYVAL1", null),
-				new EnvVar("MYVAR2", "OVERRIDE", null) };
+		EnvVar[] expectedVars = new EnvVar[] {new EnvVar("MYVAR1", "MYVAL1", null),
+				new EnvVar("MYVAR2", "OVERRIDE", null)};
 
 		testEnvironmentVariables(kubernetesDeployerProperties, schedulerProperties, expectedVars, isDeprecated);
 	}
@@ -886,7 +901,7 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		AppDefinition appDefinition = new AppDefinition(randomName(), getAppProperties());
 		ScheduleRequest scheduleRequest = (isDeprecated) ? new ScheduleRequest(appDefinition, schedulerProperties, null, getCommandLineArgs(), randomName(), testApplication()) :
-				new ScheduleRequest(appDefinition, schedulerProperties,getCommandLineArgs(), randomName(), testApplication());
+				new ScheduleRequest(appDefinition, schedulerProperties, getCommandLineArgs(), randomName(), testApplication());
 		CronJob cronJob = kubernetesScheduler.createCronJob(scheduleRequest);
 		CronJobSpec cronJobSpec = cronJob.getSpec();
 
@@ -958,13 +973,14 @@ public class KubernetesSchedulerIT extends AbstractSchedulerIntegrationJUnit5Tes
 
 		String serviceAccountName = cronJobSpec.getJobTemplate().getSpec().getTemplate().getSpec()
 				.getServiceAccountName();
-		assertThat(serviceAccountName).as("Unexpected service account name").isEqualTo(KubernetesSchedulerProperties.DEFAULT_TASK_SERVICE_ACCOUNT_NAME);
+		assertThat(serviceAccountName).as("Unexpected service account name")
+				.isEqualTo(KubernetesSchedulerProperties.DEFAULT_TASK_SERVICE_ACCOUNT_NAME);
 
 		kubernetesScheduler.unschedule(cronJob.getMetadata().getName());
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"Forbid","Allow","Replace"})
+	@ValueSource(strings = {"Forbid", "Allow", "Replace"})
 	public void testConcurrencyPolicy(String concurrencyPolicy) {
 		KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
 		if (kubernetesDeployerProperties.getNamespace() == null) {
