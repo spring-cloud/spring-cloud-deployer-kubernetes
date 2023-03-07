@@ -7,7 +7,7 @@ A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer)
 |-----------------------|------|------|------|------|------|------|
 | **2.6.x**             | `✓`  | `✕`  | `✕`  | `✕`  | `✕`  | `✕`  |
 | **2.7.x**             | `✓`  | `✓`  | `✓`  | `✓`  | `?`  | `?`  |
-| **MAIN**              | `✕`  | `✓`  | `✓`  | `✓`  | `✓`  | `✓`  |
+| **MAIN**              | `✕`  | `?`  | `?`  | `✓`  | `✓`  | `✓`  |
 
 - `✓` Fully supported vers
 - `?` Due to breaking chans might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
