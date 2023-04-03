@@ -1,13 +1,17 @@
 # Spring Cloud Deployer Kubernetes
 A [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer) implementation for deploying long-lived streaming applications and short-lived tasks to Kubernetes.
 
-## Kubernetes Compatibilit
+This repository has been moved to [spring-cloud-deployer](https://github.com/spring-cloud/spring-cloud-deployer) where main has been updated to 2.9.0-SNAPSHOT
 
-| Deployer \ Kubernetes | 1.18 | 1.19 | 1.20 | 1.21 | 1.22 | 1.23 |
-|-----------------------|------|------|------|------|------|------|
-| **2.6.x**             | `✓`  | `✕`  | `✕`  | `✕`  | `✕`  | `✕`  |
-| **2.7.x**             | `✓`  | `✓`  | `✓`  | `✓`  | `?`  | `?`  |
-| **MAIN**              | `✕`  | `✓`  | `✓`  | `✓`  | `✓`  | `✓`  |
+_**2.9.x adds support for k8s 1.25 and drops support for k8s < 1.21**_
+
+## Kubernetes Compatibility
+
+| Deployer \ Kubernetes | 1.18 | 1.19 | 1.20 | 1.21 | 1.22 | 1.23 | 1.24 |
+|-----------------------|------|------|------|------|------|------|------|
+| **2.6.x**             | `✓`  | `✕`  | `✕`  | `✕`  | `✕`  | `✕`  | `✕`  |
+| **2.7.x**             | `✓`  | `✓`  | `✓`  | `✓`  | `?`  | `?`  | `?`  |
+| **2.8.x / MAIN**      | `✕`  | `✓`  | `✓`  | `✓`  | `✓`  | `✓`  | `✓`  |
 
 - `✓` Fully supported vers
 - `?` Due to breaking chans might not work _(e.g., ABAC vs RBAC)_. Also, we haven't thoroughly tested against this version.
