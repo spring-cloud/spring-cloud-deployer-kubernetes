@@ -598,9 +598,14 @@ class DeploymentPropertiesResolver {
 				this.propertyPrefix + ".initContainer.containerName");
 		String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".initContainer.imageName");
+
+		List<String> commands = new ArrayList<>();
 		String commandsStr = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".initContainer.commands");
-		List<String> commands = Arrays.stream(commandsStr.split(",")).collect(Collectors.toList());
+		if (commandsStr != null) {
+			Arrays.stream(commandsStr.split(",")).collect(Collectors.toList());
+		}
+
 		String envString = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
 				this.propertyPrefix + ".initContainer.environmentVariables");
 		List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
