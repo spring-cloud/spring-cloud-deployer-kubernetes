@@ -584,50 +584,58 @@ class DeploymentPropertiesResolver {
 	}
 
 	Container getInitContainer(Map<String, String> kubernetesDeployerProperties) {
-		Container container = null;
 		KubernetesDeployerProperties deployerProperties = bindProperties(kubernetesDeployerProperties,
 				this.propertyPrefix + ".initContainer", "initContainer");
 
-		if (deployerProperties.getInitContainer() == null) {
-			String containerName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".initContainer.containerName");
-
-			String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".initContainer.imageName");
-
-			String commands = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".initContainer.commands");
-
-			String envString = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
-					this.propertyPrefix + ".initContainer.environmentVariables");
-
-			List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
-
-			if (StringUtils.hasText(containerName) && StringUtils.hasText(imageName)) {
-				container = new ContainerBuilder()
-						.withName(containerName)
-						.withImage(imageName)
-						.withCommand(commands)
-						.withEnv(toEnvironmentVariables((envString != null)? envString.split(","): new String[0]))
-						.addAllToVolumeMounts(vms)
-						.build();
-			}
-		}
-		else {
-			InitContainer initContainer = deployerProperties.getInitContainer();
-
-			if (initContainer != null) {
-				container = new ContainerBuilder()
-						.withName(initContainer.getContainerName())
-						.withImage(initContainer.getImageName())
-						.withCommand(initContainer.getCommands())
-						.withEnv(toEnvironmentVariables(initContainer.getEnvironmentVariables()))
-						.addAllToVolumeMounts(Optional.ofNullable(initContainer.getVolumeMounts()).orElse(Collections.emptyList()))
-						.build();
-			}
+		// Deployment prop passed in for entire '.initContainer'
+		InitContainer initContainerProps = deployerProperties.getInitContainer();
+		if (initContainerProps != null) {
+			return containerFromProps(initContainerProps);
 		}
 
-		return container;
+		// Deployment props passed in for specific '.initContainer.<property>'
+		String containerName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".initContainer.containerName");
+		String imageName = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".initContainer.imageName");
+
+		List<String> commands = new ArrayList<>();
+		String commandsStr = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".initContainer.commands");
+		if (commandsStr != null) {
+			Arrays.stream(commandsStr.split(",")).collect(Collectors.toList());
+		}
+
+		String envString = PropertyParserUtils.getDeploymentPropertyValue(kubernetesDeployerProperties,
+				this.propertyPrefix + ".initContainer.environmentVariables");
+		List<VolumeMount> vms = this.getInitContainerVolumeMounts(kubernetesDeployerProperties);
+		if (StringUtils.hasText(containerName) && StringUtils.hasText(imageName)) {
+			return new ContainerBuilder()
+					.withName(containerName)
+					.withImage(imageName)
+					.withCommand(commands)
+					.withEnv(toEnvironmentVariables((envString != null)? envString.split(","): new String[0]))
+					.addAllToVolumeMounts(vms)
+					.build();
+		}
+
+		// Default is global initContainer
+		initContainerProps = this.properties.getInitContainer();
+		if (initContainerProps != null) {
+			return containerFromProps(initContainerProps);
+		}
+
+		return null;
+	}
+
+	private Container containerFromProps(InitContainer initContainerProps) {
+		return new ContainerBuilder()
+				.withName(initContainerProps.getContainerName())
+				.withImage(initContainerProps.getImageName())
+				.withCommand(initContainerProps.getCommands())
+				.withEnv(toEnvironmentVariables(initContainerProps.getEnvironmentVariables()))
+				.addAllToVolumeMounts(Optional.ofNullable(initContainerProps.getVolumeMounts()).orElse(Collections.emptyList()))
+				.build();
 	}
 
 	private List<EnvVar>  toEnvironmentVariables(String[] environmentVariables) {
@@ -907,6 +915,20 @@ class DeploymentPropertiesResolver {
 		exec.setCommand(Arrays.asList(command.split(",")));
 		hook.setExec(exec);
 		return hook;
+	}
+
+	/**
+	 * Determine the pod-level termination grace period seconds.
+	 * @param deploymentProperties the deployer properties
+	 * @return the termination grace period seconds to use for the pod's containers or null to use the default
+	 */
+	Long determineTerminationGracePeriodSeconds(Map<String, String> deploymentProperties) {
+		String gracePeriodStr = PropertyParserUtils.getDeploymentPropertyValue(deploymentProperties,
+				this.propertyPrefix + ".terminationGracePeriodSeconds", null);
+		if (gracePeriodStr != null) {
+			return Long.parseLong(gracePeriodStr);
+		}
+		return this.properties.getTerminiationGracePeriodSeconds();
 	}
 
 	/**

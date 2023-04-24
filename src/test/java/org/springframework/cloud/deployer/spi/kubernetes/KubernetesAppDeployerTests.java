@@ -1252,8 +1252,8 @@ public class KubernetesAppDeployerTests {
         assertThat(podAntiAffinityTest.getPreferredDuringSchedulingIgnoredDuringExecution().size()).as("PreferredDuringSchedulingIgnoredDuringExecution should have one element").isEqualTo(1);
     }
 
-	@Nested
-	@DisplayName("creates pod spec with pod security context")
+    @Nested
+    @DisplayName("creates pod spec with pod security context")
     class CreatePodSpecWithPodSecurityContext {
 
         @Test
@@ -1261,29 +1261,29 @@ public class KubernetesAppDeployerTests {
         void createdFromDeploymentPropertyWithAllFields() {
             KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
             Map<String, String> deploymentProps = new HashMap<>();
-			deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{" +
-					"  fsGroup: 65534" +
-					", fsGroupChangePolicy: Always" +
-					", runAsUser: 65534" +
-					", runAsGroup: 65534" +
-					", runAsNonRoot: true" +
-					", seLinuxOptions: { level: \"s0:c123,c456\" }" +
-					", seccompProfile: { type: Localhost, localhostProfile: my-profiles/profile-allow.json }" +
-					", supplementalGroups: [65534, 65535]" +
-					", sysctls: [{name: \"kernel.shm_rmid_forced\", value: 0}, {name: \"net.core.somaxconn\", value: 1024}]" +
-					", windowsOptions: { gmsaCredentialSpec: \"specA\", gmsaCredentialSpecName: \"specA-name\", hostProcess: true, runAsUserName: \"userA\" }" +
-					"}");
+            deploymentProps.put("spring.cloud.deployer.kubernetes.podSecurityContext", "{" +
+                    "  fsGroup: 65534" +
+                    ", fsGroupChangePolicy: Always" +
+                    ", runAsUser: 65534" +
+                    ", runAsGroup: 65534" +
+                    ", runAsNonRoot: true" +
+                    ", seLinuxOptions: { level: \"s0:c123,c456\" }" +
+                    ", seccompProfile: { type: Localhost, localhostProfile: my-profiles/profile-allow.json }" +
+                    ", supplementalGroups: [65534, 65535]" +
+                    ", sysctls: [{name: \"kernel.shm_rmid_forced\", value: 0}, {name: \"net.core.somaxconn\", value: 1024}]" +
+                    ", windowsOptions: { gmsaCredentialSpec: \"specA\", gmsaCredentialSpecName: \"specA-name\", hostProcess: true, runAsUserName: \"userA\" }" +
+                    "}");
             PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-					.withFsGroup(65534L)
-					.withFsGroupChangePolicy("Always")
+                    .withFsGroup(65534L)
+                    .withFsGroupChangePolicy("Always")
                     .withRunAsUser(65534L)
-					.withRunAsGroup(65534L)
-					.withRunAsNonRoot(true)
-					.withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
-					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
-					.withSupplementalGroups(65534L, 65535L)
-					.withSysctls(new Sysctl("kernel.shm_rmid_forced", "0"), new Sysctl("net.core.somaxconn", "1024"))
-					.withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(true)
+                    .withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
+                    .withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
+                    .withSupplementalGroups(65534L, 65535L)
+                    .withSysctls(new Sysctl("kernel.shm_rmid_forced", "0"), new Sysctl("net.core.somaxconn", "1024"))
+                    .withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
                     .build();
             assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
         }
@@ -1341,18 +1341,18 @@ public class KubernetesAppDeployerTests {
         void createdFromGlobalDeployerPropertySourcedFromYaml() throws Exception {
             KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
             Map<String, String> deploymentProps = new HashMap<>();
-			PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
-					.withFsGroup(65534L)
-					.withFsGroupChangePolicy("Always")
-					.withRunAsUser(65534L)
-					.withRunAsGroup(65534L)
-					.withRunAsNonRoot(true)
-					.withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
-					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
-					.withSupplementalGroups(65534L, 65535L)
-					.withSysctls(new Sysctl("kernel.shm_rmid_forced", "0"), new Sysctl("net.core.somaxconn", "1024"))
-					.withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
-					.build();
+            PodSecurityContext expectedPodSecurityContext = new PodSecurityContextBuilder()
+                    .withFsGroup(65534L)
+                    .withFsGroupChangePolicy("Always")
+                    .withRunAsUser(65534L)
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(true)
+                    .withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
+                    .withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
+                    .withSupplementalGroups(65534L, 65535L)
+                    .withSysctls(new Sysctl("kernel.shm_rmid_forced", "0"), new Sysctl("net.core.somaxconn", "1024"))
+                    .withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
+                    .build();
             assertThatDeployerCreatesPodSpecWithPodSecurityContext(globalDeployerProps, deploymentProps, expectedPodSecurityContext);
         }
 
@@ -1425,31 +1425,31 @@ public class KubernetesAppDeployerTests {
         void createdFromDeploymentPropertyWithAllFields() {
             KubernetesDeployerProperties globalDeployerProps = new KubernetesDeployerProperties();
             Map<String, String> deploymentProps = new HashMap<>();
-			deploymentProps.put("spring.cloud.deployer.kubernetes.containerSecurityContext", "{" +
-					"  allowPrivilegeEscalation: true" +
-					", capabilities: { add: [ \"a\", \"b\" ], drop: [ \"c\" ] }" +
-					", privileged: true" +
-					", procMount: DefaultProcMount" +
-					", readOnlyRootFilesystem: true" +
-					", runAsUser: 65534" +
-					", runAsGroup: 65534" +
-					", runAsNonRoot: true" +
-					", seLinuxOptions: { level: \"s0:c123,c456\" }" +
-					", seccompProfile: { type: Localhost, localhostProfile: my-profiles/profile-allow.json }" +
-					", windowsOptions: { gmsaCredentialSpec: \"specA\", gmsaCredentialSpecName: \"specA-name\", hostProcess: true, runAsUserName: \"userA\" }" +
-					"}");
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+            deploymentProps.put("spring.cloud.deployer.kubernetes.containerSecurityContext", "{" +
+                    "  allowPrivilegeEscalation: true" +
+                    ", capabilities: { add: [ \"a\", \"b\" ], drop: [ \"c\" ] }" +
+                    ", privileged: true" +
+                    ", procMount: DefaultProcMount" +
+                    ", readOnlyRootFilesystem: true" +
+                    ", runAsUser: 65534" +
+                    ", runAsGroup: 65534" +
+                    ", runAsNonRoot: true" +
+                    ", seLinuxOptions: { level: \"s0:c123,c456\" }" +
+                    ", seccompProfile: { type: Localhost, localhostProfile: my-profiles/profile-allow.json }" +
+                    ", windowsOptions: { gmsaCredentialSpec: \"specA\", gmsaCredentialSpecName: \"specA-name\", hostProcess: true, runAsUserName: \"userA\" }" +
+                    "}");
+            SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
                     .withAllowPrivilegeEscalation(true)
-					.withCapabilities(new Capabilities(Arrays.asList("a", "b"), Arrays.asList("c")))
-					.withPrivileged(true)
-					.withProcMount("DefaultProcMount")
-					.withReadOnlyRootFilesystem(true)
-					.withRunAsUser(65534L)
-					.withRunAsGroup(65534L)
-					.withRunAsNonRoot(true)
-					.withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
-					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
-					.withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
+                    .withCapabilities(new Capabilities(Arrays.asList("a", "b"), Arrays.asList("c")))
+                    .withPrivileged(true)
+                    .withProcMount("DefaultProcMount")
+                    .withReadOnlyRootFilesystem(true)
+                    .withRunAsUser(65534L)
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(true)
+                    .withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
+                    .withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
+                    .withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
                     .build();
             assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
         }
@@ -1481,19 +1481,19 @@ public class KubernetesAppDeployerTests {
         void createdFromGlobalDeployerPropertySourcedFromYaml() throws Exception {
             KubernetesDeployerProperties globalDeployerProps = bindDeployerProperties();
             Map<String, String> deploymentProps = Collections.emptyMap();
-			SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
-					.withAllowPrivilegeEscalation(true)
-					.withCapabilities(new Capabilities(Arrays.asList("a", "b"), Arrays.asList("c")))
-					.withPrivileged(true)
-					.withProcMount("DefaultProcMount")
-					.withReadOnlyRootFilesystem(true)
-					.withRunAsUser(65534L)
-					.withRunAsGroup(65534L)
-					.withRunAsNonRoot(true)
-					.withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
-					.withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
-					.withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
-					.build();
+            SecurityContext expectedContainerSecurityContext = new SecurityContextBuilder()
+                    .withAllowPrivilegeEscalation(true)
+                    .withCapabilities(new Capabilities(Arrays.asList("a", "b"), Arrays.asList("c")))
+                    .withPrivileged(true)
+                    .withProcMount("DefaultProcMount")
+                    .withReadOnlyRootFilesystem(true)
+                    .withRunAsUser(65534L)
+                    .withRunAsGroup(65534L)
+                    .withRunAsNonRoot(true)
+                    .withSeLinuxOptions(new SELinuxOptions("s0:c123,c456", null, null, null))
+                    .withSeccompProfile(new SeccompProfile("my-profiles/profile-allow.json", "Localhost"))
+                    .withWindowsOptions(new WindowsSecurityContextOptions("specA", "specA-name", true, "userA"))
+                    .build();
             assertThatDeployerCreatesPodSpecWithContainerSecurityContext(globalDeployerProps, deploymentProps, expectedContainerSecurityContext);
         }
 
@@ -1658,6 +1658,40 @@ public class KubernetesAppDeployerTests {
                         "/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done");
         assertThat(podSpec.getContainers().get(0).getLifecycle().getPostStart().getExec().getCommand())
                 .containsExactlyInAnyOrder("echo", "postStart");
+    }
+
+    @Test
+    public void terminationGracePeriodFromDeployerProp() {
+        Map<String, String> props = new HashMap<>();
+        props.put("spring.cloud.deployer.kubernetes.terminationGracePeriodSeconds", "5150");
+        AppDefinition definition = new AppDefinition("app-test", null);
+        AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), props);
+        KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+        kubernetesDeployerProperties.setTerminiationGracePeriodSeconds(6160L);
+        deployer = k8sAppDeployer(kubernetesDeployerProperties);
+        PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+        assertThat(podSpec.getTerminationGracePeriodSeconds()).isEqualTo(5150L);
+    }
+
+    @Test
+    public void terminationGracePeriodFromGlobalProp() {
+        AppDefinition definition = new AppDefinition("app-test", null);
+        AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), Collections.emptyMap());
+        KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+        kubernetesDeployerProperties.setTerminiationGracePeriodSeconds(6160L);
+        deployer = k8sAppDeployer(kubernetesDeployerProperties);
+        PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+        assertThat(podSpec.getTerminationGracePeriodSeconds()).isEqualTo(6160L);
+    }
+
+    @Test
+    public void terminationGracePeriodNotSpecified() {
+        AppDefinition definition = new AppDefinition("app-test", null);
+        AppDeploymentRequest appDeploymentRequest = new AppDeploymentRequest(definition, getResource(), Collections.emptyMap());
+        KubernetesDeployerProperties kubernetesDeployerProperties = new KubernetesDeployerProperties();
+        deployer = k8sAppDeployer(kubernetesDeployerProperties);
+        PodSpec podSpec = deployer.createPodSpec(appDeploymentRequest);
+        assertThat(podSpec.getTerminationGracePeriodSeconds()).isNull();
     }
 
     private Resource getResource() {
