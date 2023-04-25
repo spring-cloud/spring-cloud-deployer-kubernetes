@@ -50,6 +50,14 @@ jobs:
       run: |
         jfrog rt mvn -U -B clean install
         jfrog rt build-publish
+    - name: Capture Test Results
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: '**/target/surefire-reports/**/*.*'
+        retention-days: 7
+        if-no-files-found: ignore
     # clean m2 cache
     - name: Clean cache
       run: |
